@@ -1,24 +1,28 @@
 package cron
 
 import (
+	"context"
+
 	batch "k8s.io/api/batch/v1beta1"
-	batchclient "k8s.io/client-go/kubernetes/typed/batch/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // Orchestrator holds information for all cronjobs
 type Orchestrator struct {
 	cronMap map[string]*batch.CronJob
-	batchClient *batchclient.BatchV1Client
+	kubeClient *kubernetes.Clientset
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
 func NewOrchestrator() *Orchestrator {
-	return &Orchestrator{make(map[string]*batch.CronJob), CreateKubeBatchClient()}
+	return &Orchestrator{make(map[string]*batch.CronJob), CreateKubeClient()}
 }
 
 // AddJob adds a CronJob object to the Orchestrator
 func (orchestrator Orchestrator) AddJob(job *batch.CronJob) {
 	orchestrator.cronMap[job.ObjectMeta.Name] = job
+	orchestrator.kubeClient.BatchV1beta1().CronJobs("default").Create(context.TODO(), job, v1.CreateOptions{})
 }
 
 // Jobs returns a CronJob list

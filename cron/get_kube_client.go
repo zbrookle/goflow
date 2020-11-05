@@ -1,10 +1,11 @@
 package cron
 
 import (
-	batchclient "k8s.io/client-go/kubernetes/typed/batch/v1"
 	rest "k8s.io/client-go/rest"
 	"os/exec"
 	"strings"
+	"k8s.io/client-go/kubernetes"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func getMinikubeIP() string {
@@ -16,9 +17,9 @@ func getMinikubeIP() string {
 	return strings.TrimSpace(bytesString)
 }
 
-// CreateKubeBatchClient returns a kubernetes client authenticated using kubeconfig
-func CreateKubeBatchClient() *batchclient.BatchV1Client {
+// CreateKubeClient returns a kubernetes client authenticated using kubeconfig
+func CreateKubeClient() *kubernetes.Clientset {
 	config := &rest.Config{Host: getMinikubeIP()}
 
-	return batchclient.NewForConfigOrDie(config)
+	return kubernetes.NewForConfigOrDie(config)
 }
