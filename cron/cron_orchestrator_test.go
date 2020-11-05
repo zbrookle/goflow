@@ -35,7 +35,7 @@ func TestGetCronJobs(t *testing.T) {
 		cronMap[job.ObjectMeta.Name] = job
 	}
 	var orch = Orchestrator{cronMap: cronMap}
-	for j, job := range orch.GetJobs() {
+	for j, job := range orch.Jobs() {
 		if cronJobs[j] != job {
 			t.Error("CronJob lists do not match")
 		}
