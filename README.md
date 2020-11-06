@@ -26,7 +26,7 @@ time they need to focus on code rather than infrastructure.
 
 4. GoFlow will have built in support for ElasticSearch logging. (Coming soon...)
 
-# Design
+## Design
 
 GoFlow relies on a central orchestrator to maintain and monitor the CronJobs that it has placed into the Kubernetes 
 environment. These jobs are declared using DAGs as is traditional in Apache Airflow. GoFlow keeps track of the days 
