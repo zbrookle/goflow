@@ -1,25 +1,50 @@
 package cron
 
 import (
+	"context"
 	"fmt"
-	batch "k8s.io/api/batch/v1beta1"
+	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
-func CreateCronJob(cronID int) *batch.CronJob {
-	var cronName = fmt.Sprint("cronJob&d", cronID)
-	var kubeType = meta.TypeMeta{Kind: "CronJob", APIVersion: batch.SchemeGroupVersion.Version}
+func CreateCronJob(cronID int) *batchv1beta1.CronJob {
+	var cronName = fmt.Sprintf("cron-job-%d", cronID)
+	var kubeType = meta.TypeMeta{Kind: "CronJob", APIVersion: batchv1beta1.SchemeGroupVersion.Version}
 	var objectMeta = meta.ObjectMeta{Name: cronName}
-	var cronSpec = batch.CronJobSpec{Schedule: "* * * * *", JobTemplate: batch.JobTemplateSpec{}}
-	return &batch.CronJob{TypeMeta: kubeType, ObjectMeta: objectMeta, Spec: cronSpec, Status: batch.CronJobStatus{}}
+	var cronSpec = batchv1beta1.CronJobSpec{Schedule: "* * * * *", JobTemplate: batchv1beta1.JobTemplateSpec{Spec: batchv1.JobSpec{Template: core.PodTemplateSpec{
+		ObjectMeta: meta.ObjectMeta{
+			Labels: map[string]string{
+				"app": "demo",
+			},
+		},
+		Spec: core.PodSpec{
+			Containers: []core.Container{
+				{
+					Name:  "web",
+					Image: "nginx:1.12",
+					Ports: []core.ContainerPort{
+						{
+							Name:          "http",
+							Protocol:      core.ProtocolTCP,
+							ContainerPort: 80,
+						},
+					},
+				},
+			},
+			RestartPolicy: "Never",
+		},
+	}}}}
+	return &batchv1beta1.CronJob{TypeMeta: kubeType, ObjectMeta: objectMeta, Spec: cronSpec, Status: batchv1beta1.CronJobStatus{}}
 }
 
-func TestAddCronJobToOrchestrator(t *testing.T) {
-	var job = CreateCronJob(0)
-	var orch = NewOrchestrator()
+func TestRegisterCronJob(t *testing.T) {
+	job := CreateCronJob(0)
+	orch := NewOrchestrator()
 	const expectedLength = 1
-	orch.AddJob(job)
+	orch.registerJob(job)
 	if orch.cronMap[job.ObjectMeta.Name] != job {
 		t.Error("CronJob not added at correct key")
 	}
@@ -28,9 +53,28 @@ func TestAddCronJobToOrchestrator(t *testing.T) {
 	}
 }
 
+func TestCreateCronJobInK8S(t *testing.T) {
+	job := CreateCronJob(0)
+	orch := NewOrchestrator()
+	orch.createKubeJob(job)
+	kubeClient := createKubeClient()
+
+	expectedJobsSet := NewSetFromList([]batchv1beta1.CronJob{*job})
+
+	retrievedJobListObject, err := kubeClient.BatchV1beta1().CronJobs("default").List(context.TODO(), meta.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	retrievedJobSet := NewSetFromList(retrievedJobListObject.Items)
+	if !retrievedJobSet.Equals(&expectedJobsSet) {
+		t.Errorf("Retrieved job list did not match expected job list. \nExpected: %s\nRetrieved:%s", expectedJobsSet.String(), retrievedJobSet.String())
+	}
+}
+
 func TestGetCronJobs(t *testing.T) {
-	var cronJobs = []*batch.CronJob{CreateCronJob(0), CreateCronJob(1)}
-	var cronMap = make(map[string]*batch.CronJob)
+	var cronJobs = []*batchv1beta1.CronJob{CreateCronJob(0), CreateCronJob(1)}
+	var cronMap = make(map[string]*batchv1beta1.CronJob)
 	for _, job := range cronJobs {
 		cronMap[job.ObjectMeta.Name] = job
 	}
