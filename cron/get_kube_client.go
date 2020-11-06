@@ -1,25 +1,23 @@
 package cron
 
 import (
-	rest "k8s.io/client-go/rest"
-	"os/exec"
-	"strings"
 	"k8s.io/client-go/kubernetes"
-	"github.com/davecgh/go-spew/spew"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"path/filepath"
 )
 
-func getMinikubeIP() string {
-	bytesIP, err := exec.Command("minikube", "ip").Output()
-	if err != nil {
-		panic(err)
-	}
-	bytesString := string(bytesIP)
-	return strings.TrimSpace(bytesString)
-}
+// createKubeClient returns a kubernetes client authenticated using kubeconfig
+func createKubeClient() *kubernetes.Clientset {
+	var kubeconfig string
+	home := homedir.HomeDir()
+	kubeconfig = filepath.Join(home, ".kube", "config")
 
-// CreateKubeClient returns a kubernetes client authenticated using kubeconfig
-func CreateKubeClient() *kubernetes.Clientset {
-	config := &rest.Config{Host: getMinikubeIP()}
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	return kubernetes.NewForConfigOrDie(config)
 }
