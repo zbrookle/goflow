@@ -1,7 +1,6 @@
 package cron
 
 import (
-	"encoding/json"
 	"strings"
 	batch "k8s.io/api/batch/v1beta1"
 )
@@ -11,14 +10,9 @@ type JobSet struct {
 	cronJobMap map[string]bool
 }
 
-func getJobHash(job batch.CronJob) string {
-	hashString, _ := json.Marshal(job)
-	return string(hashString)
-}
-
 // In returns true if cronJob is in the set else false
 func (jobSet JobSet) In(job batch.CronJob) bool {
-	if _, ok := jobSet.cronJobMap[getJobHash(job)]; ok {
+	if _, ok := jobSet.cronJobMap[getJobJSONString(job)]; ok {
 		return true
 	}
 	return false
@@ -26,7 +20,7 @@ func (jobSet JobSet) In(job batch.CronJob) bool {
 
 // Add adds a cronJob to the set
 func (jobSet JobSet) Add(job batch.CronJob) {
-	jobSet.cronJobMap[getJobHash(job)] = true
+	jobSet.cronJobMap[getJobJSONString(job)] = true
 }
 
 // map1InMap2 returns true if all elements in set1 are in the set2
