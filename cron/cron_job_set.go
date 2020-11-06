@@ -2,6 +2,7 @@ package cron
 
 import (
 	"encoding/json"
+	"strings"
 	batch "k8s.io/api/batch/v1beta1"
 )
 
@@ -15,17 +16,8 @@ func getJobHash(job batch.CronJob) string {
 	return string(hashString)
 }
 
-// Jobs returns a slice of the jobs in the set
-// func (jobSet *JobSet) Jobs() []string {
-// 	jobKeys := make([]string, 0, len(jobSet.cronJobMap))
-// 	for key := range jobSet.cronJobMap {
-// 		jobKeys = append(jobKeys, key)
-// 	}
-// 	return jobKeys
-// }
-
 // In returns true if cronJob is in the set else false
-func (jobSet *JobSet) In(job batch.CronJob) bool {
+func (jobSet JobSet) In(job batch.CronJob) bool {
 	if _, ok := jobSet.cronJobMap[getJobHash(job)]; ok {
 		return true
 	}
@@ -33,7 +25,7 @@ func (jobSet *JobSet) In(job batch.CronJob) bool {
 }
 
 // Add adds a cronJob to the set
-func (jobSet *JobSet) Add(job batch.CronJob) {
+func (jobSet JobSet) Add(job batch.CronJob) {
 	jobSet.cronJobMap[getJobHash(job)] = true
 }
 
@@ -49,17 +41,17 @@ func map1InMap2(map1 map[string]bool, map2 map[string]bool) bool {
 }
 
 // Equals returns true if the other set is equal to this set
-func (jobSet *JobSet) Equals(otherJobSet *JobSet) bool {
+func (jobSet JobSet) Equals(otherJobSet *JobSet) bool {
 	return map1InMap2(jobSet.cronJobMap, otherJobSet.cronJobMap) && map1InMap2(otherJobSet.cronJobMap, jobSet.cronJobMap)
 }
 
-// ToJSON returns the string json representation of the JobSet
-func (jobSet *JobSet) ToJSON() string {
-	jobSetBytes, err := json.Marshal(jobSet)
-	if err != nil {
-		panic(err)
+// String returns the string json representation of the JobSet
+func (jobSet JobSet) String() string {
+	jobStringSlice := make([]string, 0, len(jobSet.cronJobMap))
+	for key := range jobSet.cronJobMap {
+		jobStringSlice = append(jobStringSlice, key)
 	}
-	return string(jobSetBytes)
+	return strings.Join(jobStringSlice, ", ")
 }
 
 // NewSet creates a new job set
