@@ -1,10 +1,11 @@
 package cron
 
 import (
+	"path/filepath"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	"path/filepath"
 )
 
 // createKubeClient returns a kubernetes client authenticated using kubeconfig

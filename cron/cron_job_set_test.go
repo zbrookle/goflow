@@ -8,7 +8,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func stringInMap (s string, sMap map[string]bool) bool {
+func stringInMap(s string, sMap map[string]bool) bool {
 	_, ok := sMap[s]
 	return ok
 }
@@ -24,7 +24,7 @@ func TestCronJobAdd(t *testing.T) {
 
 	jobSet.Add(job)
 
-	if ! stringInMap(jobString, jobSet.cronJobMap) {
+	if !stringInMap(jobString, jobSet.cronJobMap) {
 		t.Errorf("Job %s should be in cronjob map", jobString)
 	}
 }

@@ -2,6 +2,7 @@ package cron
 
 import (
 	"strings"
+
 	batch "k8s.io/api/batch/v1beta1"
 )
 
@@ -36,7 +37,8 @@ func map1InMap2(map1 map[string]bool, map2 map[string]bool) bool {
 
 // Equals returns true if the other set is equal to this set
 func (jobSet JobSet) Equals(otherJobSet *JobSet) bool {
-	return map1InMap2(jobSet.cronJobMap, otherJobSet.cronJobMap) && map1InMap2(otherJobSet.cronJobMap, jobSet.cronJobMap)
+	return map1InMap2(jobSet.cronJobMap, otherJobSet.cronJobMap) &&
+		map1InMap2(otherJobSet.cronJobMap, jobSet.cronJobMap)
 }
 
 // String returns the string json representation of the JobSet

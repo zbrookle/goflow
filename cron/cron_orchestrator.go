@@ -2,16 +2,16 @@ package cron
 
 import (
 	"context"
+	"goflow/logs"
 
 	batch "k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"fmt"
 )
 
 // Orchestrator holds information for all cronjobs
 type Orchestrator struct {
-	cronMap map[string]*batch.CronJob
+	cronMap    map[string]*batch.CronJob
 	kubeClient *kubernetes.Clientset
 }
 
@@ -27,17 +27,46 @@ func (orchestrator Orchestrator) registerJob(job *batch.CronJob) {
 
 // createKubeJob creates a k8s cron job in k8s
 func (orchestrator Orchestrator) createKubeJob(job *batch.CronJob) {
-	result, err := orchestrator.kubeClient.BatchV1beta1().CronJobs("default").Create(context.TODO(), job, v1.CreateOptions{})
+	result, err := orchestrator.kubeClient.BatchV1beta1().CronJobs(
+		"default",
+	).Create(
+		context.TODO(),
+		job,
+		v1.CreateOptions{},
+	)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Created CronJob %q.\n", result.GetObjectMeta().GetName())
+
+	logs.InfoLogger.Println(getJobFormattedJSONString(*result))
+	logs.InfoLogger.Printf("Created CronJob %q.\n", result.GetObjectMeta().GetName())
 }
 
 // AddJob adds a CronJob object to the Orchestrator and creates the job in kubernetes
 func (orchestrator Orchestrator) AddJob(job *batch.CronJob) {
 	orchestrator.registerJob(job)
 	orchestrator.createKubeJob(job)
+}
+
+// deleteKubeJob deletes a CronJob object in kubernetes
+func (orchestrator Orchestrator) deleteKubeJob(jobName string, namespace string) {
+	err := orchestrator.kubeClient.BatchV1beta1().CronJobs(
+		namespace,
+	).Delete(
+		context.TODO(),
+		jobName,
+		v1.DeleteOptions{},
+	)
+	if err != nil {
+		panic(err)
+	}
+	logs.InfoLogger.Printf("CronJob %s was deleted from namespace %s", jobName, namespace)
+}
+
+// RemoveJob removes a CronJob object from the orchestrator
+func (orchestrator Orchestrator) RemoveJob(jobName string, namespace string) {
+	orchestrator.deleteKubeJob(jobName, namespace)
+	delete(orchestrator.cronMap, jobName)
 }
 
 // Jobs returns a CronJob list

@@ -3,11 +3,12 @@ package cron
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func CreateCronJob(cronID int) *batchv1beta1.CronJob {
@@ -37,7 +38,12 @@ func CreateCronJob(cronID int) *batchv1beta1.CronJob {
 			RestartPolicy: "Never",
 		},
 	}}}}
-	return &batchv1beta1.CronJob{TypeMeta: kubeType, ObjectMeta: objectMeta, Spec: cronSpec, Status: batchv1beta1.CronJobStatus{}}
+	return &batchv1beta1.CronJob{
+		TypeMeta:   kubeType,
+		ObjectMeta: objectMeta,
+		Spec:       cronSpec,
+		Status:     batchv1beta1.CronJobStatus{},
+	}
 }
 
 func TestRegisterCronJob(t *testing.T) {
@@ -60,15 +66,35 @@ func TestCreateCronJobInK8S(t *testing.T) {
 	kubeClient := createKubeClient()
 
 	expectedJobsSet := NewSetFromList([]batchv1beta1.CronJob{*job})
+	namespace := "default"
 
-	retrievedJobListObject, err := kubeClient.BatchV1beta1().CronJobs("default").List(context.TODO(), meta.ListOptions{})
+	// Retrieve jobs that are present in k8s
+	retrievedJobListObject, err := kubeClient.BatchV1beta1().CronJobs(
+		namespace,
+	).List(
+		context.TODO(),
+		meta.ListOptions{},
+	)
 	if err != nil {
 		panic(err)
 	}
 
+	// Delete test job
+	kubeClient.BatchV1beta1().CronJobs(
+		namespace,
+	).Delete(
+		context.TODO(),
+		job.Name,
+		meta.DeleteOptions{},
+	)
+
 	retrievedJobSet := NewSetFromList(retrievedJobListObject.Items)
 	if !retrievedJobSet.Equals(&expectedJobsSet) {
-		t.Errorf("Retrieved job list did not match expected job list. \nExpected: %s\nRetrieved:%s", expectedJobsSet.String(), retrievedJobSet.String())
+		t.Errorf(
+			"Retrieved job list did not match expected job list. \nExpected: %s\nRetrieved:%s",
+			expectedJobsSet.String(),
+			retrievedJobSet.String(),
+		)
 	}
 }
 
