@@ -9,7 +9,14 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
+
+var kubeClient *kubernetes.Clientset
+
+func TestMain(m *testing.M) {
+	kubeClient = createKubeClient()
+}
 
 func CreateCronJob(cronID int) *batchv1beta1.CronJob {
 	var cronName = fmt.Sprintf("cron-job-%d", cronID)
@@ -62,10 +69,10 @@ func TestRegisterCronJob(t *testing.T) {
 func TestCreateCronJobInK8S(t *testing.T) {
 	job := CreateCronJob(0)
 	orch := NewOrchestrator()
-	orch.createKubeJob(job)
-	kubeClient := createKubeClient()
+	createdJob := orch.createKubeJob(job)
+	
 
-	expectedJobsSet := NewSetFromList([]batchv1beta1.CronJob{*job})
+	expectedJobsSet := NewSetFromList([]batchv1beta1.CronJob{*createdJob})
 	namespace := "default"
 
 	// Retrieve jobs that are present in k8s
@@ -111,3 +118,4 @@ func TestGetCronJobs(t *testing.T) {
 		}
 	}
 }
+
