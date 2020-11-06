@@ -26,8 +26,8 @@ func (orchestrator Orchestrator) registerJob(job *batch.CronJob) {
 }
 
 // createKubeJob creates a k8s cron job in k8s
-func (orchestrator Orchestrator) createKubeJob(job *batch.CronJob) {
-	result, err := orchestrator.kubeClient.BatchV1beta1().CronJobs(
+func (orchestrator Orchestrator) createKubeJob(job *batch.CronJob) *batch.CronJob {
+	createdJob, err := orchestrator.kubeClient.BatchV1beta1().CronJobs(
 		"default",
 	).Create(
 		context.TODO(),
@@ -38,14 +38,18 @@ func (orchestrator Orchestrator) createKubeJob(job *batch.CronJob) {
 		panic(err)
 	}
 
-	logs.InfoLogger.Println(getJobFormattedJSONString(*result))
-	logs.InfoLogger.Printf("Created CronJob %q.\n", result.GetObjectMeta().GetName())
+	logs.InfoLogger.Printf(
+		"Created CronJob %q.\n, with configuration %s",
+		createdJob.GetObjectMeta().GetName(),
+		getJobFormattedJSONString(*createdJob),
+	)
+	return createdJob
 }
 
 // AddJob adds a CronJob object to the Orchestrator and creates the job in kubernetes
 func (orchestrator Orchestrator) AddJob(job *batch.CronJob) {
-	orchestrator.registerJob(job)
-	orchestrator.createKubeJob(job)
+	createdJob := orchestrator.createKubeJob(job)
+	orchestrator.registerJob(createdJob)
 }
 
 // deleteKubeJob deletes a CronJob object in kubernetes
