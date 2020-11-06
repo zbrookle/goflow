@@ -82,7 +82,7 @@ func (orchestrator Orchestrator) Jobs() []*batch.CronJob {
 	return jobs
 }
 
-// // fillJobs fills up the jobs layer with existing scheduled kubernetes jobs
-// func (orchestrator Orchestrator) fillJobs() {
-
-// }
+// AddNewJobs fills up the jobs layer with existing dags
+func (orchestrator Orchestrator) AddNewJobs() {
+	
+}
