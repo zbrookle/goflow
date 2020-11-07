@@ -1,4 +1,4 @@
-package cron
+package orchestrator
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"goflow/cron"
 )
 
 var kubeClient *kubernetes.Clientset
@@ -73,7 +74,7 @@ func TestCreateCronJobInK8S(t *testing.T) {
 	createdJob := orch.createKubeJob(job)
 	
 
-	expectedJobsSet := NewSetFromList([]batchv1beta1.CronJob{*createdJob})
+	expectedJobsSet := cron.NewSetFromList([]batchv1beta1.CronJob{*createdJob})
 	namespace := "default"
 
 	// Retrieve jobs that are present in k8s
@@ -96,7 +97,7 @@ func TestCreateCronJobInK8S(t *testing.T) {
 		meta.DeleteOptions{},
 	)
 
-	retrievedJobSet := NewSetFromList(retrievedJobListObject.Items)
+	retrievedJobSet := cron.NewSetFromList(retrievedJobListObject.Items)
 	if !retrievedJobSet.Equals(&expectedJobsSet) {
 		t.Errorf(
 			"Retrieved job list did not match expected job list. \nExpected: %s\nRetrieved:%s",

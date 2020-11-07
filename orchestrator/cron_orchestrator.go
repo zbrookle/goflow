@@ -1,4 +1,4 @@
-package cron
+package orchestrator
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	batch "k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"goflow/cron"
 )
 
 // Orchestrator holds information for all cronjobs
@@ -41,7 +42,7 @@ func (orchestrator Orchestrator) createKubeJob(job *batch.CronJob) *batch.CronJo
 	logs.InfoLogger.Printf(
 		"Created CronJob %q.\n, with configuration %s",
 		createdJob.GetObjectMeta().GetName(),
-		getJobFormattedJSONString(*createdJob),
+		cron.GetJobFormattedJSONString(*createdJob),
 	)
 	return createdJob
 }

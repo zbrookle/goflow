@@ -11,7 +11,8 @@ func getJobJSONString(job batch.CronJob) string {
 	return string(hashString)
 }
 
-func getJobFormattedJSONString(job batch.CronJob) string {
+// GetJobFormattedJSONString returns a JSON formatted string of a CronJob
+func GetJobFormattedJSONString(job batch.CronJob) string {
 	jobJSON, _ := json.MarshalIndent(job, "", "\t")
 	return string(jobJSON)
 }

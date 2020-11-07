@@ -1,7 +1,7 @@
 package main
 
 import (
-	"goflow/cron"
+	"goflow/orchestrator"
 	// "encoding/json"
 	// "github.com/davecgh/go-spew/spew"
 	"fmt"
@@ -49,9 +49,9 @@ func CreateCronJob(cronID int) *batchv1beta1.CronJob {
 
 func main() {
 	// spew.Config.Indent = "	"
-	var orchestrator = cron.NewOrchestrator()
+	var orch = orchestrator.NewOrchestrator()
 	job := CreateCronJob(0)
-	orchestrator.AddJob(job)
+	orch.AddJob(job)
 	// job := orchestrator.Jobs()[0]
 	// // spew.Dump(job)
 	// stringRep, err := json.MarshalIndent(job, "", "\t")
@@ -59,5 +59,5 @@ func main() {
 	// 	panic(err)
 	// }
 	// fmt.Printf("%s\n", stringRep)
-	orchestrator.RemoveJob(job.Name, "default")
+	orch.RemoveJob(job.Name, "default")
 }
