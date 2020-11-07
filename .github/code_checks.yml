@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v1
+
+    - name: Set Up Go
+      uses: actions/setup-go@v2
+      with:
+        stable: 'false'
+        go-version: '1.15.3'
+      run: |
+        go version
+        go get -u golang.org/x/lint/golint
+        go get -u golang.org/x/tools/cmd/goimports
+        go get -u github.com/segmentio/golines
+    
+    - name: Check formatting
+      run: |
+        if [[ $(golines . -l) ]]; then
+          echo "Golines would reformat the following files"
+          golines . -l
+          exit 1
+        else
+          echo "All files are properly formatted"
+        fi
+
+    - name: Run linter
+      run: |
+        go vet .
+        golint .
+
+    - name: Run tests
+      run: go test ./...
