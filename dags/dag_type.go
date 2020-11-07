@@ -3,9 +3,10 @@ package dags
 import (
 	"encoding/json"
 	"io/ioutil"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 // DAG is directed Acyclic graph for hold job information
@@ -60,11 +61,6 @@ func getDirSliceRecur(directory string) []string {
 	return files
 }
 
-func isFileJSON(file string) bool {
-	length := len(file)
-	return length > 5 && file[:length-5] == ".json"
-}
-
 // GetDAGSFromFolder returns a slice of DAG structs, one for each DAG file
 // Each file must have the "dag" suffix
 // E.g., my_dag.py, some_dag.json
@@ -72,7 +68,7 @@ func GetDAGSFromFolder(folder string) []DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]DAG, 0, len(files))
 	for _, file := range(files) {
-		if isFileJSON(file) {
+		if strings.ToLower(filepath.Ext(file)) == "json" {
 			dags = append(dags, getDAGFromJSON(file))
 		}
 	}
