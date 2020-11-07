@@ -16,6 +16,7 @@ var kubeClient *kubernetes.Clientset
 
 func TestMain(m *testing.M) {
 	kubeClient = createKubeClient()
+	m.Run()
 }
 
 func CreateCronJob(cronID int) *batchv1beta1.CronJob {
