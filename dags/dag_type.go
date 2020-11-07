@@ -45,7 +45,7 @@ func getDAGFromJSON(dagFilePath string) DAG {
 func getDirSliceRecur(directory string) []string {
 	files := []string{}
 	dagFileRegex := regexp.MustCompile(".*_dag.*\\.(go|json|py)")
-	appendToFiles := func(path string, info os.FileInfo, err error) error { 
+	appendToFiles := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func getDirSliceRecur(directory string) []string {
 func GetDAGSFromFolder(folder string) []DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]DAG, 0, len(files))
-	for _, file := range(files) {
+	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == "json" {
 			dags = append(dags, getDAGFromJSON(file))
 		}

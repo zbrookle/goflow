@@ -5,18 +5,23 @@ import (
 	"fmt"
 	"testing"
 
+	"goflow/cron"
+
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"goflow/cron"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
-var kubeClient *kubernetes.Clientset
+var kubeClient *fake.Clientset
+
+func createFakeKubeClient() *fake.Clientset {
+	return fake.NewSimpleClientset()
+}
 
 func TestMain(m *testing.M) {
-	kubeClient = createKubeClient()
+	kubeClient = createFakeKubeClient()
 	m.Run()
 }
 
@@ -57,7 +62,7 @@ func CreateCronJob(cronID int) *batchv1beta1.CronJob {
 
 func TestRegisterCronJob(t *testing.T) {
 	job := CreateCronJob(0)
-	orch := NewOrchestrator()
+	orch := newOrchestratorFromClient(kubeClient)
 	const expectedLength = 1
 	orch.registerJob(job)
 	if orch.cronMap[job.ObjectMeta.Name] != job {
@@ -70,9 +75,8 @@ func TestRegisterCronJob(t *testing.T) {
 
 func TestCreateCronJobInK8S(t *testing.T) {
 	job := CreateCronJob(0)
-	orch := NewOrchestrator()
+	orch := newOrchestratorFromClient(kubeClient)
 	createdJob := orch.createKubeJob(job)
-	
 
 	expectedJobsSet := cron.NewSetFromList([]batchv1beta1.CronJob{*createdJob})
 	namespace := "default"
@@ -108,16 +112,20 @@ func TestCreateCronJobInK8S(t *testing.T) {
 }
 
 func TestGetCronJobs(t *testing.T) {
-	var cronJobs = []*batchv1beta1.CronJob{CreateCronJob(0), CreateCronJob(1)}
+	var expectedCronJobs = []*batchv1beta1.CronJob{CreateCronJob(0), CreateCronJob(1)}
 	var cronMap = make(map[string]*batchv1beta1.CronJob)
-	for _, job := range cronJobs {
+	for _, job := range expectedCronJobs {
 		cronMap[job.ObjectMeta.Name] = job
 	}
 	var orch = Orchestrator{cronMap: cronMap}
-	for j, job := range orch.Jobs() {
-		if cronJobs[j] != job {
-			t.Error("CronJob lists do not match")
+	for j, foundCronJob := range orch.Jobs() {
+		expectedJob := expectedCronJobs[j]
+		if expectedJob != foundCronJob {
+			t.Errorf(
+				"Expected job %s, found job %s",
+				cron.GetJobFormattedJSONString(*expectedJob),
+				cron.GetJobFormattedJSONString(*foundCronJob),
+			)
 		}
 	}
 }
-

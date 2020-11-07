@@ -4,21 +4,26 @@ import (
 	"context"
 	"goflow/logs"
 
+	"goflow/cron"
+
 	batch "k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"goflow/cron"
 )
 
 // Orchestrator holds information for all cronjobs
 type Orchestrator struct {
 	cronMap    map[string]*batch.CronJob
-	kubeClient *kubernetes.Clientset
+	kubeClient kubernetes.Interface
+}
+
+func newOrchestratorFromClient(client kubernetes.Interface) *Orchestrator {
+	return &Orchestrator{make(map[string]*batch.CronJob), client}
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
 func NewOrchestrator() *Orchestrator {
-	return &Orchestrator{make(map[string]*batch.CronJob), createKubeClient()}
+	return newOrchestratorFromClient(createKubeClient())
 }
 
 // registerJob adds a job to the dictionary of jobs
@@ -85,5 +90,5 @@ func (orchestrator Orchestrator) Jobs() []*batch.CronJob {
 
 // AddNewJobs fills up the jobs layer with existing dags
 func (orchestrator Orchestrator) AddNewJobs() {
-	
+
 }
