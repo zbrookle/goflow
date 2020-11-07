@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"os"
 	"regexp"
-
 )
 
 // DAG is directed Acyclic graph for hold job information
