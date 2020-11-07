@@ -92,7 +92,3 @@ func TestReadFiles(t *testing.T){
 		}
 	}
 }
-
-func TestGetDagsFromFolder(t *testing.T) {
-	
-}
