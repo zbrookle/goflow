@@ -20,8 +20,9 @@ jobs:
       with:
         stable: 'false'
         go-version: '1.15.3'
+
+    - name: Install packages
       run: |
-        go version
         go get -u golang.org/x/lint/golint
         go get -u golang.org/x/tools/cmd/goimports
         go get -u github.com/segmentio/golines
