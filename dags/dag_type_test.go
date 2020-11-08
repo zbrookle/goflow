@@ -1,6 +1,8 @@
 package dags
 
 import (
+	"context"
+	"goflow/jsonpanic"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -9,9 +11,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var DAGPATH string
+var KUBECLIENT kubernetes.Interface
 
 func getTestFolder() string {
 	_, filename, _, _ := runtime.Caller(0)
@@ -24,6 +31,7 @@ func getTestFolder() string {
 
 func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(getTestFolder(), "test_dags")
+	KUBECLIENT = fake.NewSimpleClientset()
 	m.Run()
 }
 
@@ -115,9 +123,17 @@ func TestReadFiles(t *testing.T) {
 	}
 }
 
+func getTestDag() *DAG {
+	return NewDAG("test", "default", "* * * * *", "busybox", "Never", KUBECLIENT)
+}
+
+func getTestDate() time.Time {
+	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
+}
+
 func TestAddDagRun(t *testing.T) {
-	testDag := NewDAG("test", "default", "* * * * *", "busybox", "Never")
-	currentTime := time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
+	testDag := getTestDag()
+	currentTime := getTestDate()
 	testDag.AddDagRun(currentTime)
 	foundDagCount := len(testDag.DAGRuns)
 	expectedCount := 1
@@ -132,5 +148,22 @@ func TestAddDagRun(t *testing.T) {
 }
 
 func TestCreateJob(t *testing.T) {
-	// createDagRun()
+	dagRun := createDagRun(getTestDate(), getTestDag())
+	dagRun.CreateJob()
+	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
+		dagRun.DAG.Namespace,
+	).Get(
+		context.TODO(),
+		dagRun.Job.Name,
+		v1.GetOptions{},
+	)
+	if err != nil {
+		panic(err)
+	}
+	foundJobValue := jsonpanic.JSONPanic(*foundJob)
+	expectedValue := jsonpanic.JSONPanic(*dagRun.Job)
+	if foundJobValue != expectedValue {
+		t.Error("Expected:", expectedValue)
+		t.Error("Found:", foundJobValue)
+	}
 }

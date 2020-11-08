@@ -39,7 +39,7 @@ type DAGRun struct {
 	ExecutionDate k8sapi.Time // This is the date that will be passed to the job that runs
 	Start         k8sapi.Time
 	End           k8sapi.Time
-	Job           batch.Job
+	Job           *batch.Job
 }
 
 func readDAGFile(dagFilePath string) []byte {
@@ -107,14 +107,16 @@ func NewDAG(
 	schedule string,
 	dockerImage string,
 	retryPolicy string,
-) DAG {
-	return DAG{
+	kubeClient kubernetes.Interface,
+) *DAG {
+	return &DAG{
 		Name:        name,
 		Namespace:   namespace,
 		Schedule:    schedule,
 		DockerImage: dockerImage,
 		RetryPolicy: retryPolicy,
 		DAGRuns:     make([]*DAGRun, 0),
+		kubeClient:  kubeClient,
 	}
 }
 
@@ -195,5 +197,5 @@ func (dagRun *DAGRun) CreateJob() {
 	if err != nil {
 		panic(err)
 	}
-	dagRun.Job = *job
+	dagRun.Job = job
 }
