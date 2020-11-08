@@ -4,8 +4,10 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+	"time"
 
 	"encoding/json"
+	"fmt"
 	"runtime"
 )
 
@@ -48,25 +50,31 @@ func (stringMap StringMap) Bytes() []byte {
 	return bytes
 }
 
-func getMapFromJSONBytes(mapBytes []byte) StringMap {
-	returnMap := make(StringMap)
-	err := json.Unmarshal(mapBytes, &returnMap)
-	if err != nil {
-		panic(err)
-	}
-	return returnMap
-}
-
 func TestDAGFromJSONBytes(t *testing.T) {
-	jsonMap := StringMap{"Name": "test", "Namespace": "default"}
-	dagConfigBytes := jsonMap.Bytes()
-	dag := createDAGFromJSONBytes(dagConfigBytes)
+	name := "test"
+	namespace := "default"
+	schedule := "* * * * *"
+	image := "busybox"
+	retryPolicy := "Never"
+	formattedBytes := fmt.Sprintf(
+		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\",\"RetryPolicy\":\"%s\"",
+		name,
+		namespace,
+		schedule,
+		image,
+		retryPolicy,
+	)
+	expectedBytes := formattedBytes + ",\"DAGRuns\":[]}"
+	dag := createDAGFromJSONBytes([]byte(formattedBytes + "}"))
 	marshaledJSON, err := json.Marshal(dag)
 	if err != nil {
 		panic(err)
 	}
-	if !jsonMap.Equals(getMapFromJSONBytes(marshaledJSON)) {
+	marshaledJSONString := string(marshaledJSON)
+	if expectedBytes != marshaledJSONString {
 		t.Error("DAG struct does not match up with expected values")
+		t.Error("Found:", marshaledJSONString)
+		t.Error("Expected:", expectedBytes)
 	}
 }
 
@@ -90,5 +98,21 @@ func TestReadFiles(t *testing.T) {
 		if expectedFiles[i] != foundFile {
 			t.Errorf("Expected file %s, found file %s", expectedFile, foundFile)
 		}
+	}
+}
+
+func TestAddDagRun(t *testing.T) {
+	testDag := NewDAG("test", "default", "* * * * *", "busybox", "Never")
+	currentTime := time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
+	testDag.AddDagRun(currentTime)
+	foundDagCount := len(testDag.DAGRuns)
+	expectedCount := 1
+	if foundDagCount != expectedCount {
+		t.Errorf(
+			"DAG Run not properly added, expected %d dag run, found %d",
+			expectedCount,
+			foundDagCount,
+		)
+		t.Error("Found dags:", testDag.DAGRuns)
 	}
 }

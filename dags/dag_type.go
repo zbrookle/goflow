@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
+
+	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DAG is directed Acyclic graph for hold job information
@@ -16,6 +19,15 @@ type DAG struct {
 	Schedule    string
 	DockerImage string
 	RetryPolicy string
+	DAGRuns     []*DAGRun
+}
+
+// DAGRun is a single run of a given dag - corresponds with a kubernetes Job
+type DAGRun struct {
+	DAG           *DAG
+	ExecutionDate k8sapi.Time // This is the date that will be passed to the job that runs
+	Start         k8sapi.Time
+	End           k8sapi.Time
 }
 
 func readDAGFile(dagFilePath string) []byte {
@@ -32,6 +44,7 @@ func createDAGFromJSONBytes(dagBytes []byte) DAG {
 	if err != nil {
 		panic(err)
 	}
+	dagStruct.DAGRuns = make([]*DAGRun, 0)
 	return dagStruct
 }
 
@@ -73,4 +86,43 @@ func GetDAGSFromFolder(folder string) []DAG {
 		}
 	}
 	return dags
+}
+
+// NewDAG creates a new dag initialized with an empty DAGRuns slice
+func NewDAG(
+	name string,
+	namespace string,
+	schedule string,
+	dockerImage string,
+	retryPolicy string,
+) DAG {
+	return DAG{
+		Name:        name,
+		Namespace:   namespace,
+		Schedule:    schedule,
+		DockerImage: dockerImage,
+		RetryPolicy: retryPolicy,
+		DAGRuns:     make([]*DAGRun, 0),
+	}
+}
+
+func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
+	return &DAGRun{
+		DAG: dag,
+		ExecutionDate: k8sapi.Time{
+			Time: executionDate,
+		},
+		Start: k8sapi.Time{
+			Time: time.Now(),
+		},
+		End: k8sapi.Time{
+			Time: time.Time{},
+		},
+	}
+}
+
+// AddDagRun adds a DagRun for a scheduled point to the orchestrators set of dags
+func (dag *DAG) AddDagRun(executionDate time.Time) {
+	dagRun := createDagRun(executionDate, dag)
+	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 }
