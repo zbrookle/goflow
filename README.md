@@ -23,7 +23,8 @@ years and suits a great number of use cases. However, it is very difficult to se
 GoFlow only will run on Kubernetes, meaning that it will require less configuration and gives developers back the
 time they need to focus on code rather than infrastructure.
 
-1. Because Golang is compiled, GoFlow is much less prone to typing errors than Apache Airflow has been in the past.
+1. Because Golang is statically typed, it is much less prone to typing errors than Apache Airflow's language Python
+which is dynamically typed.
 
 1. GoFlow will have built in support for ElasticSearch logging. (Coming soon...)
 
