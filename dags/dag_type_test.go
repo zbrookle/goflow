@@ -56,25 +56,39 @@ func TestDAGFromJSONBytes(t *testing.T) {
 	schedule := "* * * * *"
 	image := "busybox"
 	retryPolicy := "Never"
-	formattedBytes := fmt.Sprintf(
-		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\",\"RetryPolicy\":\"%s\"",
+	command := "echo yes"
+	parallelism := int32(1)
+	timeLimit := int64(300)
+	retries := int32(2)
+	labels, _ := json.Marshal(map[string]string{"test": "test-label"})
+	annotations, _ := json.Marshal(map[string]string{"anno": "value"})
+	formattedJSONString := fmt.Sprintf(
+		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\","+
+			"\"RetryPolicy\":\"%s\",\"Command\":\"%s\",\"Parallelism\":%d,\"TimeLimit\":%d,"+
+			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s",
 		name,
 		namespace,
 		schedule,
 		image,
 		retryPolicy,
+		command,
+		parallelism,
+		timeLimit,
+		retries,
+		labels,
+		annotations,
 	)
-	expectedBytes := formattedBytes + ",\"DAGRuns\":[]}"
-	dag := createDAGFromJSONBytes([]byte(formattedBytes + "}"))
+	expectedJSONString := formattedJSONString + ",\"DAGRuns\":[]}"
+	dag := createDAGFromJSONBytes([]byte(formattedJSONString + "}"))
 	marshaledJSON, err := json.Marshal(dag)
 	if err != nil {
 		panic(err)
 	}
 	marshaledJSONString := string(marshaledJSON)
-	if expectedBytes != marshaledJSONString {
+	if expectedJSONString != marshaledJSONString {
 		t.Error("DAG struct does not match up with expected values")
 		t.Error("Found:", marshaledJSONString)
-		t.Error("Expected:", expectedBytes)
+		t.Error("Expected:", expectedJSONString)
 	}
 }
 
@@ -115,4 +129,8 @@ func TestAddDagRun(t *testing.T) {
 		)
 		t.Error("Found dags:", testDag.DAGRuns)
 	}
+}
+
+func TestCreateJob(t *testing.T) {
+	// createDagRun()
 }
