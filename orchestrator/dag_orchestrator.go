@@ -3,8 +3,10 @@ package orchestrator
 import (
 	"fmt"
 	"goflow/dags"
+	"time"
 
 	"goflow/config"
+	"goflow/k8sclient"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -25,7 +27,10 @@ func newOrchestratorFromClientAndConfig(
 
 // NewOrchestrator creates an empty instance of Orchestrator
 func NewOrchestrator(configPath string) *Orchestrator {
-	return newOrchestratorFromClientAndConfig(createKubeClient(), config.CreateConfig(configPath))
+	return newOrchestratorFromClientAndConfig(
+		k8sclient.CreateKubeClient(),
+		config.CreateConfig(configPath),
+	)
 }
 
 // AddDAG adds a CronJob object to the Orchestrator and creates the job in kubernetes
@@ -60,9 +65,10 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 }
 
 // Start starts the orchestrator process
-func (orchestrator Orchestrator) Start() {
+func (orchestrator Orchestrator) Start(cycleDuration time.Duration) {
 	serverRunning := true
 	for serverRunning {
-
+		orchestrator.CollectDAGs()
+		time.Sleep(cycleDuration)
 	}
 }

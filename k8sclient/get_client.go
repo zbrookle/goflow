@@ -1,4 +1,4 @@
-package orchestrator
+package k8sclient
 
 import (
 	"path/filepath"
@@ -8,8 +8,8 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// createKubeClient returns a kubernetes client authenticated using kubeconfig
-func createKubeClient() *kubernetes.Clientset {
+// CreateKubeClient returns a kubernetes client authenticated using kubeconfig
+func CreateKubeClient() *kubernetes.Clientset {
 	var kubeconfig string
 	home := homedir.HomeDir()
 	kubeconfig = filepath.Join(home, ".kube", "config")
