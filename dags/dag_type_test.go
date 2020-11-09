@@ -3,7 +3,7 @@ package dags
 import (
 	"context"
 	"goflow/jsonpanic"
-	"goflow/testpaths"
+	"goflow/testutils"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -22,26 +22,6 @@ import (
 var DAGPATH string
 var KUBECLIENT kubernetes.Interface
 
-func cleanUpJobs(client kubernetes.Interface) {
-	fmt.Println("Cleaning up...")
-	namespaceClient := client.CoreV1().Namespaces()
-	namespaceList, err := namespaceClient.List(context.TODO(), v1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-	for _, namespace := range namespaceList.Items {
-		jobsClient := client.BatchV1().Jobs(namespace.Name)
-		jobList, err := jobsClient.List(context.TODO(), v1.ListOptions{})
-		if err != nil {
-			panic(err)
-		}
-		for _, job := range jobList.Items {
-			fmt.Printf("Deleting job %s in namespace %s\n", job.ObjectMeta.Name, namespace.Name)
-			jobsClient.Delete(context.TODO(), job.ObjectMeta.Name, v1.DeleteOptions{})
-		}
-	}
-}
-
 func setUpNamespaces(client kubernetes.Interface) {
 	namespaceClient := client.CoreV1().Namespaces()
 	for _, name := range []string{"default"} {
@@ -54,7 +34,7 @@ func setUpNamespaces(client kubernetes.Interface) {
 }
 
 func TestMain(m *testing.M) {
-	DAGPATH = filepath.Join(testpaths.GetTestFolder(), "test_dags")
+	DAGPATH = filepath.Join(testutils.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
 	setUpNamespaces(KUBECLIENT)
 	m.Run()
@@ -176,7 +156,7 @@ func TestAddDagRun(t *testing.T) {
 }
 
 func TestCreateJob(t *testing.T) {
-	defer cleanUpJobs(KUBECLIENT)
+	defer testutils.CleanUpJobs(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDag())
 	dagRun.CreateJob()
 	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
@@ -207,7 +187,7 @@ func unmarshalJob(job batch.Job) string {
 }
 
 func TestDeleteJob(t *testing.T) {
-	defer cleanUpJobs(KUBECLIENT)
+	defer testutils.CleanUpJobs(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDag())
 	jobFrame := dagRun.getJobFrame()
 	jobsClient := KUBECLIENT.BatchV1().Jobs(dagRun.DAG.Namespace)
