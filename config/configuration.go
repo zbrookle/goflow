@@ -1,7 +1,6 @@
 package config
 
 type GoFlowConfig struct {
-	DefaultNamespace string
+	DefaultNamespace   string
 	DefaultDockerImage string
-	
 }
