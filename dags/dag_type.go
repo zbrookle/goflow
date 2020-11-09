@@ -3,6 +3,7 @@ package dags
 import (
 	"context"
 	"encoding/json"
+	"goflow/logs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -50,20 +51,25 @@ func readDAGFile(dagFilePath string) []byte {
 	return dat
 }
 
-func createDAGFromJSONBytes(dagBytes []byte) DAG {
+func createDAGFromJSONBytes(dagBytes []byte) (DAG, error) {
 	dagStruct := DAG{}
 	err := json.Unmarshal(dagBytes, &dagStruct)
 	if err != nil {
-		panic(err)
+		return dagStruct, err
 	}
 	dagStruct.DAGRuns = make([]*DAGRun, 0)
-	return dagStruct
+	return dagStruct, nil
 }
 
 // getDAGFromJSON creates a new dag struct from a dag file
-func getDAGFromJSON(dagFilePath string) DAG {
+func getDAGFromJSON(dagFilePath string) (DAG, error) {
 	dagBytes := readDAGFile(dagFilePath)
-	return createDAGFromJSONBytes(dagBytes)
+	dagJSON, err := createDAGFromJSONBytes(dagBytes)
+	if err != nil {
+		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
+		return DAG{}, err
+	}
+	return dagJSON, nil
 }
 
 // getDirSliceRecur recursively retrieves all file names from the directory
@@ -93,8 +99,11 @@ func GetDAGSFromFolder(folder string) []DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]DAG, 0, len(files))
 	for _, file := range files {
-		if strings.ToLower(filepath.Ext(file)) == "json" {
-			dags = append(dags, getDAGFromJSON(file))
+		if strings.ToLower(filepath.Ext(file)) == ".json" {
+			dag, err := getDAGFromJSON(file)
+			if err == nil {
+				dags = append(dags, dag)
+			}
 		}
 	}
 	return dags
