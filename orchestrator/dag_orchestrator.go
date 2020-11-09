@@ -5,6 +5,7 @@ import (
 	"goflow/logs"
 
 	"goflow/cron"
+	"goflow/dags"
 
 	batch "k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,8 +27,8 @@ func NewOrchestrator() *Orchestrator {
 	return newOrchestratorFromClient(createKubeClient())
 }
 
-// registerJob adds a job to the dictionary of jobs
-func (orchestrator Orchestrator) registerJob(job *batch.CronJob) {
+// registerDag adds a job to the dictionary of jobs
+func (orchestrator Orchestrator) registerDag(dag *dags.DAG) {
 	orchestrator.cronMap[job.ObjectMeta.Name] = job
 }
 
@@ -55,7 +56,7 @@ func (orchestrator Orchestrator) createKubeJob(job *batch.CronJob) *batch.CronJo
 // AddJob adds a CronJob object to the Orchestrator and creates the job in kubernetes
 func (orchestrator Orchestrator) AddJob(job *batch.CronJob) {
 	createdJob := orchestrator.createKubeJob(job)
-	orchestrator.registerJob(createdJob)
+	orchestrator.registerDag(createdJob)
 }
 
 // deleteKubeJob deletes a CronJob object in kubernetes
@@ -91,4 +92,12 @@ func (orchestrator Orchestrator) Jobs() []*batch.CronJob {
 // AddNewJobs fills up the jobs layer with existing dags
 func (orchestrator Orchestrator) AddNewJobs() {
 
+}
+
+// Start starts the orchestrator process
+func (orchestrator Orchestrator) Start() {
+	serverRunning := true
+	for serverRunning {
+		
+	}
 }

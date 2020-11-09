@@ -64,7 +64,7 @@ func TestRegisterCronJob(t *testing.T) {
 	job := CreateCronJob(0)
 	orch := newOrchestratorFromClient(kubeClient)
 	const expectedLength = 1
-	orch.registerJob(job)
+	orch.registerDag(job)
 	if orch.cronMap[job.ObjectMeta.Name] != job {
 		t.Error("CronJob not added at correct key")
 	}
