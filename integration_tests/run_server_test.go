@@ -1,4 +1,4 @@
-package create_and_monitor_job
+package servertest
 
 import (
 	"goflow/orchestrator"
@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestCreateAndMonitorJob(b *testing.B) {
+func BenchmarkStartServer(b *testing.B) {
 	orch := orchestrator.NewOrchestrator(testpaths.GetConfigPath())
 	orch.Start()
 }
