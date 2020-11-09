@@ -30,6 +30,7 @@ type DAG struct {
 	Retries     int32
 	Labels      map[string]string
 	Annotations map[string]string
+	Code		string
 	DAGRuns     []*DAGRun
 	kubeClient  kubernetes.Interface
 }
@@ -70,6 +71,7 @@ func getDAGFromJSON(dagFilePath string) (DAG, error) {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
 		return DAG{}, err
 	}
+	dagJSON.Code = string(dagBytes)
 	return dagJSON, nil
 }
 

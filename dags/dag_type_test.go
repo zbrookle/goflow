@@ -78,7 +78,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 	formattedJSONString := fmt.Sprintf(
 		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\","+
 			"\"RetryPolicy\":\"%s\",\"Command\":\"%s\",\"Parallelism\":%d,\"TimeLimit\":%d,"+
-			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s",
+			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s,\"Code\":\"\"",
 		name,
 		namespace,
 		schedule,
