@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	batch "k8s.io/api/batch/v1"
+	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -20,9 +22,41 @@ import (
 var DAGPATH string
 var KUBECLIENT kubernetes.Interface
 
+func cleanUpJobs(client kubernetes.Interface) {
+	fmt.Println("Cleaning up...")
+	namespaceClient := client.CoreV1().Namespaces()
+	namespaceList, err := namespaceClient.List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+	for _, namespace := range namespaceList.Items {
+		jobsClient := client.BatchV1().Jobs(namespace.Name)
+		jobList, err := jobsClient.List(context.TODO(), v1.ListOptions{})
+		if err != nil {
+			panic(err)
+		}
+		for _, job := range jobList.Items {
+			fmt.Printf("Deleting job %s in namespace %s\n", job.ObjectMeta.Name, namespace.Name)
+			jobsClient.Delete(context.TODO(), job.ObjectMeta.Name, v1.DeleteOptions{})
+		}
+	}
+}
+
+func setUpNamespaces(client kubernetes.Interface) {
+	namespaceClient := client.CoreV1().Namespaces()
+	for _, name := range []string{"default"} {
+		namespaceClient.Create(
+			context.TODO(),
+			&core.Namespace{ObjectMeta: v1.ObjectMeta{Name: name}},
+			v1.CreateOptions{},
+		)
+	}
+}
+
 func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(testpaths.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
+	setUpNamespaces(KUBECLIENT)
 	m.Run()
 }
 
@@ -142,6 +176,7 @@ func TestAddDagRun(t *testing.T) {
 }
 
 func TestCreateJob(t *testing.T) {
+	defer cleanUpJobs(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDag())
 	dagRun.CreateJob()
 	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
@@ -159,5 +194,37 @@ func TestCreateJob(t *testing.T) {
 	if foundJobValue != expectedValue {
 		t.Error("Expected:", expectedValue)
 		t.Error("Found:", foundJobValue)
+	}
+}
+
+func unmarshalJob(job batch.Job) string {
+	bytes := make([]byte, 0)
+	err := job.Unmarshal(bytes)
+	if err != nil {
+		panic(err)
+	}
+	return string(bytes)
+}
+
+func TestDeleteJob(t *testing.T) {
+	defer cleanUpJobs(KUBECLIENT)
+	dagRun := createDagRun(getTestDate(), getTestDag())
+	jobFrame := dagRun.getJobFrame()
+	jobsClient := KUBECLIENT.BatchV1().Jobs(dagRun.DAG.Namespace)
+
+	createdJob, err := jobsClient.Create(context.TODO(), &jobFrame, v1.CreateOptions{})
+	dagRun.Job = createdJob
+	if err != nil {
+		panic(err)
+	}
+	dagRun.deleteJob()
+	list, err := jobsClient.List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+	for _, job := range list.Items {
+		if unmarshalJob(*createdJob) == unmarshalJob(job) {
+			t.Errorf("Job %s should have been deleted", createdJob.Name)
+		}
 	}
 }

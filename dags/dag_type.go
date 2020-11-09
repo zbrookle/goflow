@@ -168,7 +168,7 @@ func (dagRun DAGRun) getJobFrame() batch.Job {
 			APIVersion: "v1",
 		},
 		ObjectMeta: k8sapi.ObjectMeta{
-			Name:        dag.Name,
+			Name:        dagRun.Name,
 			Namespace:   dag.Namespace,
 			Labels:      dag.Labels,
 			Annotations: dag.Annotations,
