@@ -88,6 +88,7 @@ func getDirSliceRecur(directory string) []string {
 	}
 	err := filepath.Walk(directory, appendToFiles)
 	if err != nil {
+		logs.ErrorLogger.Println(directory, "not found")
 		panic(err)
 	}
 	return files
