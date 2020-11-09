@@ -36,6 +36,7 @@ type DAG struct {
 
 // DAGRun is a single run of a given dag - corresponds with a kubernetes Job
 type DAGRun struct {
+	Name          string
 	DAG           *DAG
 	ExecutionDate k8sapi.Time // This is the date that will be passed to the job that runs
 	Start         k8sapi.Time
@@ -131,7 +132,8 @@ func NewDAG(
 
 func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
 	return &DAGRun{
-		DAG: dag,
+		Name: dag.Name + executionDate.String(),
+		DAG:  dag,
 		ExecutionDate: k8sapi.Time{
 			Time: executionDate,
 		},
@@ -148,6 +150,13 @@ func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
 func (dag *DAG) AddDagRun(executionDate time.Time) {
 	dagRun := createDagRun(executionDate, dag)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
+}
+
+// TerminateAndDeleteRuns removes all active DAG runs and their associated jobs
+func (dag *DAG) TerminateAndDeleteRuns() {
+	for _, run := range dag.DAGRuns {
+		run.deleteJob()
+	}
 }
 
 // getJobFrame returns a job from a DagRun
@@ -207,4 +216,18 @@ func (dagRun *DAGRun) CreateJob() {
 		panic(err)
 	}
 	dagRun.Job = job
+}
+
+// deleteJob
+func (dagRun *DAGRun) deleteJob() {
+	err := dagRun.DAG.kubeClient.BatchV1().Jobs(
+		dagRun.DAG.Namespace,
+	).Delete(
+		context.TODO(),
+		dagRun.Name,
+		k8sapi.DeleteOptions{},
+	)
+	if err != nil {
+		panic(err)
+	}
 }

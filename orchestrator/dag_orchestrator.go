@@ -35,8 +35,8 @@ func (orchestrator *Orchestrator) AddDAG(dag *dags.DAG) {
 
 // DeleteDAG removes a CronJob object from the orchestrator
 func (orchestrator Orchestrator) DeleteDAG(dagName string, namespace string) {
-	// dag := orchestrator.dagMap[dagName]
-	// dag.TerminateAndDeleteJobs()
+	dag := orchestrator.dagMap[dagName]
+	dag.TerminateAndDeleteRuns()
 	delete(orchestrator.dagMap, dagName)
 }
 
