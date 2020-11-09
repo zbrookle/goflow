@@ -26,3 +26,8 @@ func GetTestFolder() string {
 func GetConfigPath() string {
 	return filepath.Join(GetTestFolder(), "config.json")
 }
+
+// GetDagsFolder returns the folder where the test dags are stored
+func GetDagsFolder() string {
+	return filepath.Join(GetTestFolder(), "test_dags")
+}
