@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 )
 
+// GoFlowConfig is a configuration struct for the GoFlow application settings
 type GoFlowConfig struct {
 	DefaultNamespace   string
 	DefaultDockerImage string
