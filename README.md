@@ -1,6 +1,6 @@
 # GoFlow
 
-GoFlow is a job scheduler inspired by Apache Airflow and is designed to be a more cohesive package, 
+GoFlow is a job scheduler inspired by Apache Airflow and is designed to be a more cohesive package,
 directly integrated with Kubernetes. GoFlow parses DAGS into Kubernetes CronJobs, to remove the complexity
 of scheduling from it's internal structure. Rather than run the jobs, GoFlow monitors them and ensures that
 all jobs run smoothly.
