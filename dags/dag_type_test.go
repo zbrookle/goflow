@@ -1,15 +1,24 @@
 package dags
 
 import (
+	"context"
+	"goflow/jsonpanic"
 	"path/filepath"
 	"sort"
 	"testing"
+	"time"
 
 	"encoding/json"
+	"fmt"
 	"runtime"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var DAGPATH string
+var KUBECLIENT kubernetes.Interface
 
 func getTestFolder() string {
 	_, filename, _, _ := runtime.Caller(0)
@@ -22,6 +31,7 @@ func getTestFolder() string {
 
 func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(getTestFolder(), "test_dags")
+	KUBECLIENT = fake.NewSimpleClientset()
 	m.Run()
 }
 
@@ -48,25 +58,45 @@ func (stringMap StringMap) Bytes() []byte {
 	return bytes
 }
 
-func getMapFromJSONBytes(mapBytes []byte) StringMap {
-	returnMap := make(StringMap)
-	err := json.Unmarshal(mapBytes, &returnMap)
-	if err != nil {
-		panic(err)
-	}
-	return returnMap
-}
-
 func TestDAGFromJSONBytes(t *testing.T) {
-	jsonMap := StringMap{"Name": "test", "Namespace": "default"}
-	dagConfigBytes := jsonMap.Bytes()
-	dag := createDAGFromJSONBytes(dagConfigBytes)
+	name := "test"
+	namespace := "default"
+	schedule := "* * * * *"
+	image := "busybox"
+	retryPolicy := "Never"
+	command := "echo yes"
+	parallelism := int32(1)
+	timeLimit := int64(300)
+	retries := int32(2)
+	labels, _ := json.Marshal(map[string]string{"test": "test-label"})
+	annotations, _ := json.Marshal(map[string]string{"anno": "value"})
+	formattedJSONString := fmt.Sprintf(
+		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\","+
+			"\"RetryPolicy\":\"%s\",\"Command\":\"%s\",\"Parallelism\":%d,\"TimeLimit\":%d,"+
+			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s",
+		name,
+		namespace,
+		schedule,
+		image,
+		retryPolicy,
+		command,
+		parallelism,
+		timeLimit,
+		retries,
+		labels,
+		annotations,
+	)
+	expectedJSONString := formattedJSONString + ",\"DAGRuns\":[]}"
+	dag := createDAGFromJSONBytes([]byte(formattedJSONString + "}"))
 	marshaledJSON, err := json.Marshal(dag)
 	if err != nil {
 		panic(err)
 	}
-	if !jsonMap.Equals(getMapFromJSONBytes(marshaledJSON)) {
+	marshaledJSONString := string(marshaledJSON)
+	if expectedJSONString != marshaledJSONString {
 		t.Error("DAG struct does not match up with expected values")
+		t.Error("Found:", marshaledJSONString)
+		t.Error("Expected:", expectedJSONString)
 	}
 }
 
@@ -90,5 +120,50 @@ func TestReadFiles(t *testing.T) {
 		if expectedFiles[i] != foundFile {
 			t.Errorf("Expected file %s, found file %s", expectedFile, foundFile)
 		}
+	}
+}
+
+func getTestDag() *DAG {
+	return NewDAG("test", "default", "* * * * *", "busybox", "Never", KUBECLIENT)
+}
+
+func getTestDate() time.Time {
+	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
+}
+
+func TestAddDagRun(t *testing.T) {
+	testDag := getTestDag()
+	currentTime := getTestDate()
+	testDag.AddDagRun(currentTime)
+	foundDagCount := len(testDag.DAGRuns)
+	expectedCount := 1
+	if foundDagCount != expectedCount {
+		t.Errorf(
+			"DAG Run not properly added, expected %d dag run, found %d",
+			expectedCount,
+			foundDagCount,
+		)
+		t.Error("Found dags:", testDag.DAGRuns)
+	}
+}
+
+func TestCreateJob(t *testing.T) {
+	dagRun := createDagRun(getTestDate(), getTestDag())
+	dagRun.CreateJob()
+	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
+		dagRun.DAG.Namespace,
+	).Get(
+		context.TODO(),
+		dagRun.Job.Name,
+		v1.GetOptions{},
+	)
+	if err != nil {
+		panic(err)
+	}
+	foundJobValue := jsonpanic.JSONPanic(*foundJob)
+	expectedValue := jsonpanic.JSONPanic(*dagRun.Job)
+	if foundJobValue != expectedValue {
+		t.Error("Expected:", expectedValue)
+		t.Error("Found:", foundJobValue)
 	}
 }
