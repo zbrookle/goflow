@@ -37,9 +37,7 @@ func (config GoFlowConfig) SaveConfig(filePath string) {
 	if err != nil {
 		panic(err)
 	}
-	err = ioutil.WriteFile(filePath, configBytes, 0444)
-	// 010010010
-	// 2 + 16 + 128
+	err = ioutil.WriteFile(filePath, configBytes, 0666)
 	if err != nil {
 		panic(err)
 	}
