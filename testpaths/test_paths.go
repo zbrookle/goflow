@@ -1,7 +1,9 @@
 package testpaths
 
-import "runtime"
-import 	"path/filepath"
+import (
+	"path/filepath"
+	"runtime"
+)
 
 func getRootPath() string {
 	_, filename, _, _ := runtime.Caller(0)
@@ -14,7 +16,6 @@ func getRootPath() string {
 	rootPath := filepath.Dir(modPath)
 	return rootPath
 }
-
 
 // GetTestFolder returns the folder that the current test is running in
 func GetTestFolder() string {

@@ -7,7 +7,7 @@ import (
 
 var configPath string
 
-func TestMain(m *testing.M){
+func TestMain(m *testing.M) {
 	configPath = testpaths.GetConfigPath()
 	m.Run()
 }
