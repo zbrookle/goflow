@@ -9,6 +9,7 @@ import (
 type GoFlowConfig struct {
 	DefaultNamespace   string
 	DefaultDockerImage string
+	DAGPath            string
 }
 
 func readConfig(filePath string) []byte {

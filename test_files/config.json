@@ -1,4 +1,5 @@
 {
 	"DefaultNamespace": "default",
-	"DefaultDockerImage": "busybox"
+    "DefaultDockerImage": "busybox",
+    "DAGPath": "path"
 }

@@ -14,7 +14,7 @@ func TestMain(m *testing.M) {
 
 func TestReadConfig(t *testing.T) {
 	foundConfig := CreateConfig(configPath)
-	expectedConfig := GoFlowConfig{"default", "busybox"}
+	expectedConfig := GoFlowConfig{"default", "busybox", "path"}
 	if *foundConfig != expectedConfig {
 		t.Error("Configs do not match")
 		t.Errorf("Found: %s", foundConfig)
