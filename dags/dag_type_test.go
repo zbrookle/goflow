@@ -78,7 +78,10 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		annotations,
 	)
 	expectedJSONString := formattedJSONString + ",\"DAGRuns\":[]}"
-	dag := createDAGFromJSONBytes([]byte(formattedJSONString + "}"))
+	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString + "}"))
+	if err != nil {
+		panic(err)
+	}
 	marshaledJSON, err := json.Marshal(dag)
 	if err != nil {
 		panic(err)
