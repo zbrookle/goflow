@@ -1,4 +1,4 @@
-package testpaths
+package testutils
 
 import (
 	"path/filepath"
