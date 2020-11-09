@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// DAG is directed Acyclic graph for hold job information
+// DAG is directed acyclic graph for hold job information
 type DAG struct {
 	Name        string
 	Namespace   string
