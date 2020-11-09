@@ -30,7 +30,7 @@ type DAG struct {
 	Retries     int32
 	Labels      map[string]string
 	Annotations map[string]string
-	Code		string
+	Code        string
 	DAGRuns     []*DAGRun
 	kubeClient  kubernetes.Interface
 }
