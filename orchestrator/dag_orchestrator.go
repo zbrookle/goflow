@@ -6,23 +6,29 @@ import (
 
 	"goflow/dags"
 
+	"goflow/config"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
-	dagMap    map[string]*dags.DAG
+	dagMap     map[string]*dags.DAG
 	kubeClient kubernetes.Interface
+	config     *config.GoFlowConfig
 }
 
-func newOrchestratorFromClient(client kubernetes.Interface) *Orchestrator {
-	return &Orchestrator{make(map[string]*dags.DAG), client}
+func newOrchestratorFromClientAndConfig(
+	client kubernetes.Interface,
+	config *config.GoFlowConfig,
+) *Orchestrator {
+	return &Orchestrator{make(map[string]*dags.DAG), client, config}
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
-func NewOrchestrator() *Orchestrator {
-	return newOrchestratorFromClient(createKubeClient())
+func NewOrchestrator(configPath string) *Orchestrator {
+	return newOrchestratorFromClientAndConfig(createKubeClient(), config.CreateConfig(configPath))
 }
 
 // registerDag adds a job to the dictionary of DAGs
@@ -30,31 +36,9 @@ func (orchestrator Orchestrator) registerDag(dag *dags.DAG) {
 	orchestrator.dagMap[dag.Name] = dag
 }
 
-// createKubeJob creates a k8s cron job in k8s
-// func (orchestrator Orchestrator) createKubeJob(job *batch.CronJob) *batch.CronJob {
-// 	createdJob, err := orchestrator.kubeClient.BatchV1beta1().CronJobs(
-// 		"default",
-// 	).Create(
-// 		context.TODO(),
-// 		job,
-// 		v1.CreateOptions{},
-// 	)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	logs.InfoLogger.Printf(
-// 		"Created CronJob %q.\n, with configuration %s",
-// 		createdJob.GetObjectMeta().GetName(),
-// 		cron.GetJobFormattedJSONString(*createdJob),
-// 	)
-// 	return createdJob
-// }
-
 // AddDAG adds a CronJob object to the Orchestrator and creates the job in kubernetes
-func (orchestrator Orchestrator) AddDAG(job *dags.DAG) {
-	createdDAG := dags
-	orchestrator.registerDag(createdDAG)
+func (orchestrator Orchestrator) AddDAG(dag *dags.DAG) {
+	orchestrator.registerDag(dag)
 }
 
 // deleteDAG deletes a CronJob object in kubernetes
@@ -87,8 +71,8 @@ func (orchestrator Orchestrator) DAGs() []*dags.DAG {
 	return jobs
 }
 
-// AddNewDAGs fills up the jobs layer with existing dags
-func (orchestrator Orchestrator) AddNewDAGs() {
+// CollectDAGs fills up the dag map with existing dags
+func (orchestrator Orchestrator) CollectDAGs() {
 
 }
 
@@ -96,6 +80,6 @@ func (orchestrator Orchestrator) AddNewDAGs() {
 func (orchestrator Orchestrator) Start() {
 	serverRunning := true
 	for serverRunning {
-		
+
 	}
 }

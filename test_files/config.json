@@ -1,0 +1,4 @@
+{
+	"DefaultNamespace": "default",
+	"DefaultDockerImage": "busybox"
+}

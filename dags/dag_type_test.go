@@ -3,6 +3,7 @@ package dags
 import (
 	"context"
 	"goflow/jsonpanic"
+	"goflow/testpaths"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -10,7 +11,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-	"runtime"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -20,17 +20,8 @@ import (
 var DAGPATH string
 var KUBECLIENT kubernetes.Interface
 
-func getTestFolder() string {
-	_, filename, _, _ := runtime.Caller(0)
-	fileNameAbs, err := filepath.Abs(filename)
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Dir(fileNameAbs)
-}
-
 func TestMain(m *testing.M) {
-	DAGPATH = filepath.Join(getTestFolder(), "test_dags")
+	DAGPATH = filepath.Join(testpaths.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
 	m.Run()
 }
