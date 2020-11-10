@@ -1,3 +1,4 @@
 {
-    "Name": "test-dag"
+    "Name": "test-dag",
+    "Command": "echo 1"
 }

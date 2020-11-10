@@ -35,13 +35,19 @@ func NewOrchestrator(configPath string) *Orchestrator {
 	)
 }
 
-// AddDAG adds a CronJob object to the Orchestrator and creates the job in kubernetes
+// AddDAG adds a DAG to the Orchestrator
 func (orchestrator *Orchestrator) AddDAG(dag *dags.DAG) {
+	logs.InfoLogger.Printf(
+		"Added DAG %s which will run in namespace %s, with code %s",
+		dag.Name,
+		dag.Namespace,
+		dag.Code,
+	)
 	orchestrator.dagMap[dag.Name] = dag
 }
 
-// DeleteDAG removes a CronJob object from the orchestrator
-func (orchestrator Orchestrator) DeleteDAG(dagName string, namespace string) {
+// DeleteDAG removes a DAG from the orchestrator
+func (orchestrator *Orchestrator) DeleteDAG(dagName string, namespace string) {
 	dag := orchestrator.dagMap[dagName]
 	dag.TerminateAndDeleteRuns()
 	delete(orchestrator.dagMap, dagName)
@@ -62,8 +68,8 @@ func (orchestrator Orchestrator) isDagPresent(dag dags.DAG) bool {
 	return ok
 }
 
-// isDagDifferent returns true if the given dag source code is different
-func (orchestrator Orchestrator) isDagDifferent(dag dags.DAG) bool {
+// isStoredDagDifferent returns true if the given dag source code is different
+func (orchestrator Orchestrator) isStoredDagDifferent(dag dags.DAG) bool {
 	currentDag, _ := orchestrator.dagMap[dag.Name]
 	return currentDag.Code != dag.Code
 }
@@ -78,24 +84,19 @@ func (orchestrator Orchestrator) GetDag(dagName string) *dags.DAG {
 func (orchestrator *Orchestrator) CollectDAGs() {
 	dagSlice := dags.GetDAGSFromFolder(orchestrator.config.DAGPath)
 	for _, dag := range dagSlice {
-		dagPresent := orchestrator.isDagPresent(dag)
+		dagPresent := orchestrator.isDagPresent(*dag)
 		if !dagPresent {
-			fmt.Print("New dag", dag)
-			logs.InfoLogger.Printf(
-				"Added DAG %s which will run in namespace %s",
-				dag.Name,
-				dag.Namespace,
-			)
-			orchestrator.AddDAG(&dag)
-		} else if dagPresent && orchestrator.isDagDifferent(dag) {
-			logs.InfoLogger.Printf("Updated DAG %s which will run in namespace %s", dag.Name, dag.Namespace)
+			// fmt.Println("New dag:\n", dag.Name, dag)
+			orchestrator.AddDAG(dag)
+			stringJson, _ := json.MarshalIndent(orchestrator.dagMap, "", "\t")
+			fmt.Println(dag.Name, ":", string(stringJson))
+		} else if dagPresent && orchestrator.isStoredDagDifferent(*dag) {
+			logs.InfoLogger.Printf("Updating DAG %s which will run in namespace %s", dag.Name, dag.Namespace)
 			logs.InfoLogger.Printf("Old DAG code: %s\n", orchestrator.GetDag(dag.Name).Code)
 			logs.InfoLogger.Printf("New DAG code: %s\n", dag.Code)
 			// orchestrator.UpdateDag(&dag)
 		}
 	}
-	jsonBytes, _ := json.MarshalIndent(orchestrator.dagMap, "", "\t")
-	logs.InfoLogger.Println(string(jsonBytes))
 }
 
 // Start begins the orchestrator event loop

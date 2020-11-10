@@ -51,4 +51,9 @@ func TestCollectDags(t *testing.T) {
 	if dagCount == 0 {
 		t.Errorf("%d DAGs collected, expected more than 0", dagCount)
 	}
+	for dagName := range orch.dagMap {
+		if dagName != orch.dagMap[dagName].Name {
+			panic("Key doesn't match up with dag name!")
+		}
+	}
 }
