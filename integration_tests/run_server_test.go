@@ -39,5 +39,4 @@ func TestStartServer(t *testing.T) {
 	defer testutils.CleanUpJobs(k8sclient.CreateKubeClient())
 	orch := orchestrator.NewOrchestrator(configPath)
 	orch.Start(3)
-	panic("test")
 }
