@@ -34,13 +34,18 @@ type DAGConfig struct {
 	Annotations map[string]string
 }
 
-// JSON returns a json string representation of DAGConfig
-func (config DAGConfig) JSON() string {
+// Marshal returns a json bytes representation of DAGConfig
+func (config DAGConfig) Marshal() []byte {
 	jsonBytes, err := json.Marshal(config)
 	if err != nil {
 		panic(err)
 	}
-	return string(jsonBytes)
+	return jsonBytes
+}
+
+// JSON returns a json string representation of DAGConfig
+func (config DAGConfig) JSON() string {
+	return string(config.Marshal())
 }
 
 // DAG is directed acyclic graph for hold job information
