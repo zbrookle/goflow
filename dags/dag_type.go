@@ -1,7 +1,6 @@
 package dags
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"goflow/logs"
@@ -12,58 +11,20 @@ import (
 	"strings"
 	"time"
 
-	batch "k8s.io/api/batch/v1"
-	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-// DAGConfig is a struct storing the configurable values provided from the user in the DAG
-// definition file
-type DAGConfig struct {
-	Name        string
-	Namespace   string
-	Schedule    string
-	DockerImage string
-	RetryPolicy string
-	Command     string
-	Parallelism int32
-	TimeLimit   int64
-	Retries     int32
-	Labels      map[string]string
-	Annotations map[string]string
-}
-
-// Marshal returns a json bytes representation of DAGConfig
-func (config DAGConfig) Marshal() []byte {
-	jsonBytes, err := json.Marshal(config)
-	if err != nil {
-		panic(err)
-	}
-	return jsonBytes
-}
-
-// JSON returns a json string representation of DAGConfig
-func (config DAGConfig) JSON() string {
-	return string(config.Marshal())
-}
-
 // DAG is directed acyclic graph for hold job information
 type DAG struct {
-	Config     *DAGConfig
-	Code       string
-	DAGRuns    []*DAGRun
-	kubeClient kubernetes.Interface
-}
-
-// DAGRun is a single run of a given dag - corresponds with a kubernetes Job
-type DAGRun struct {
-	Name          string
-	DAG           *DAG
-	ExecutionDate k8sapi.Time // This is the date that will be passed to the job that runs
-	Start         k8sapi.Time
-	End           k8sapi.Time
-	Job           *batch.Job
+	Config                  *DAGConfig
+	Code                    string
+	StartDateTime           time.Time
+	EndDateTime             time.Time
+	DAGRuns                 []*DAGRun
+	kubeClient              kubernetes.Interface
+	ActiveRuns              int
+	MostRecentExecutionTime time.Time
 }
 
 // // Config returns a string Config representation of a DAGs configurable values
@@ -79,10 +40,23 @@ func readDAGFile(dagFilePath string) []byte {
 	return dat
 }
 
+func getDateFromString(dateStr string) time.Time {
+	fmt.Println("Here", dateStr)
+	time, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		panic(err)
+	}
+	return time
+}
+
 func createDAGFromDagConfigAndCode(config *DAGConfig, code string) DAG {
 	dag := DAG{Config: config}
 	dag.DAGRuns = make([]*DAGRun, 0)
 	dag.Code = code
+	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
+	if dag.Config.EndDateTime != "" {
+		dag.EndDateTime = getDateFromString(dag.Config.EndDateTime)
+	}
 	return dag
 }
 
@@ -90,6 +64,7 @@ func createDAGFromJSONBytes(dagBytes []byte) (DAG, error) {
 	dagConfigStruct := DAGConfig{}
 	fmt.Println(string(dagBytes))
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
+	fmt.Println(dagConfigStruct)
 	if err != nil {
 		return DAG{}, err
 	}
@@ -187,6 +162,7 @@ func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
 func (dag *DAG) AddDagRun(executionDate time.Time) {
 	dagRun := createDagRun(executionDate, dag)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
+	dag.ActiveRuns++
 }
 
 // TerminateAndDeleteRuns removes all active DAG runs and their associated jobs
@@ -196,75 +172,28 @@ func (dag *DAG) TerminateAndDeleteRuns() {
 	}
 }
 
-// getJobFrame returns a job from a DagRun
-func (dagRun DAGRun) getJobFrame() batch.Job {
-	dag := dagRun.DAG
-	return batch.Job{
-		TypeMeta: k8sapi.TypeMeta{
-			Kind:       "Job",
-			APIVersion: "v1",
-		},
-		ObjectMeta: k8sapi.ObjectMeta{
-			Name:        dagRun.Name,
-			Namespace:   dag.Config.Namespace,
-			Labels:      dag.Config.Labels,
-			Annotations: dag.Config.Annotations,
-		},
-		Spec: batch.JobSpec{
-			Parallelism:           &dag.Config.Parallelism,
-			ActiveDeadlineSeconds: &dag.Config.TimeLimit,
-			BackoffLimit:          &dag.Config.Retries,
-			Template: core.PodTemplateSpec{
-				ObjectMeta: k8sapi.ObjectMeta{
-					Name:      dag.Config.Name,
-					Namespace: dag.Config.Namespace,
-					// Labels: map[string]string{
-					// 	"": "",
-					// },
-					// Annotations: map[string]string{
-					// 	"": "",
-					// },
-				},
-				Spec: core.PodSpec{
-					Volumes:                       nil,
-					Containers:                    nil,
-					EphemeralContainers:           nil,
-					RestartPolicy:                 "",
-					TerminationGracePeriodSeconds: nil,
-					ActiveDeadlineSeconds:         nil,
-				},
-			},
-		},
-	}
+// Ready returns true if the DAG is ready for another DAG Run to be created
+func (dag *DAG) Ready() bool {
+	currentTime := time.Now()
+	scheduleReady := dag.MostRecentExecutionTime.Before(currentTime) ||
+		dag.MostRecentExecutionTime.Equal(currentTime)
+	return (dag.ActiveRuns < dag.Config.MaxActiveRuns) && scheduleReady
 }
 
-// CreateJob creates and registers a new job with
-func (dagRun *DAGRun) CreateJob() {
-	dag := dagRun.DAG
-	jobFrame := dagRun.getJobFrame()
-	job, err := dag.kubeClient.BatchV1().Jobs(
-		dag.Config.Namespace,
-	).Create(
-		context.TODO(),
-		&jobFrame,
-		k8sapi.CreateOptions{},
-	)
+// Marshal returns the JSON byte slice representation of the DAG
+func (dag *DAG) Marshal() []byte {
+	jsonString, err := json.Marshal(dag)
 	if err != nil {
 		panic(err)
 	}
-	dagRun.Job = job
+	return jsonString
 }
 
-// deleteJob
-func (dagRun *DAGRun) deleteJob() {
-	err := dagRun.DAG.kubeClient.BatchV1().Jobs(
-		dagRun.DAG.Config.Namespace,
-	).Delete(
-		context.TODO(),
-		dagRun.Name,
-		k8sapi.DeleteOptions{},
-	)
+// String returns a nice JSON representation of the dag
+func (dag *DAG) String() string {
+	jsonString, err := json.MarshalIndent(dag, "", "\t")
 	if err != nil {
 		panic(err)
 	}
+	return string(jsonString)
 }

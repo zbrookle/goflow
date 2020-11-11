@@ -6,12 +6,10 @@ import (
 	"goflow/testutils"
 	"path/filepath"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
 	"encoding/json"
-	"fmt"
 
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
@@ -65,51 +63,45 @@ func (stringMap StringMap) Bytes() []byte {
 }
 
 func TestDAGFromJSONBytes(t *testing.T) {
-	name := "test"
-	namespace := "default"
-	schedule := "* * * * *"
-	image := "busybox"
-	retryPolicy := "Never"
-	command := "echo yes"
-	parallelism := int32(1)
-	timeLimit := int64(300)
-	retries := int32(2)
-	labels, _ := json.Marshal(map[string]string{"test": "test-label"})
-	annotations, _ := json.Marshal(map[string]string{"anno": "value"})
-	formattedJSONString := fmt.Sprintf(
-		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\","+
-			"\"RetryPolicy\":\"%s\",\"Command\":\"%s\",\"Parallelism\":%d,\"TimeLimit\":%d,"+
-			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s}",
-		name,
-		namespace,
-		schedule,
-		image,
-		retryPolicy,
-		command,
-		parallelism,
-		timeLimit,
-		retries,
-		labels,
-		annotations,
-	)
-	expectedJSONString := fmt.Sprintf(
-		"{\"Config\":%s,\"Code\":\"%s\",\"DAGRuns\":[]}",
-		formattedJSONString,
-		strings.ReplaceAll(formattedJSONString, "\"", "\\\""),
-	)
+	config := DAGConfig{
+		Name:          "test",
+		Namespace:     "default",
+		Schedule:      "* * * * *",
+		DockerImage:   "busybox",
+		RetryPolicy:   "Never",
+		Command:       "echo yes",
+		Parallelism:   1,
+		TimeLimit:     int64(300),
+		Retries:       int32(2),
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "2020-01-01",
+		Labels:        map[string]string{"test": "test-label"},
+		Annotations:   map[string]string{"anno": "value"},
+	}
+	formattedJSONString := string(config.Marshal())
+	expectedDAG := DAG{
+		Config:                  &config,
+		Code:                    string(config.Marshal()),
+		StartDateTime:           time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC),
+		EndDateTime:             time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		DAGRuns:                 make([]*DAGRun, 0),
+		kubeClient:              nil,
+		ActiveRuns:              0,
+		MostRecentExecutionTime: time.Time{},
+	}
+	expectedJSONString := string(expectedDAG.Marshal())
 	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString))
 	if err != nil {
 		panic(err)
 	}
-	marshaledJSON, err := json.Marshal(dag)
+	marshaledJSON := string(dag.Marshal())
 	if err != nil {
 		panic(err)
 	}
-	marshaledJSONString := string(marshaledJSON)
-	if expectedJSONString != marshaledJSONString {
+	if expectedJSONString != marshaledJSON {
 		t.Error("DAG struct does not match up with expected values")
-		t.Error("Found:", marshaledJSONString)
-		t.Error("Expected:", expectedJSONString)
+		t.Error("Found:", dag)
+		t.Error("Expec:", expectedDAG)
 	}
 }
 
