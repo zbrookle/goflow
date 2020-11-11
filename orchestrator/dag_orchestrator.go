@@ -1,7 +1,6 @@
 package orchestrator
 
 import (
-	"encoding/json"
 	"fmt"
 	"goflow/dags"
 	"goflow/logs"
@@ -39,11 +38,11 @@ func NewOrchestrator(configPath string) *Orchestrator {
 func (orchestrator *Orchestrator) AddDAG(dag *dags.DAG) {
 	logs.InfoLogger.Printf(
 		"Added DAG %s which will run in namespace %s, with code %s",
-		dag.Name,
-		dag.Namespace,
+		dag.Config.Name,
+		dag.Config.Namespace,
 		dag.Code,
 	)
-	orchestrator.dagMap[dag.Name] = dag
+	orchestrator.dagMap[dag.Config.Name] = dag
 }
 
 // DeleteDAG removes a DAG from the orchestrator
@@ -64,13 +63,13 @@ func (orchestrator Orchestrator) DAGs() []*dags.DAG {
 
 // isDagPresent returns true if the given dag is present
 func (orchestrator Orchestrator) isDagPresent(dag dags.DAG) bool {
-	_, ok := orchestrator.dagMap[dag.Name]
+	_, ok := orchestrator.dagMap[dag.Config.Name]
 	return ok
 }
 
 // isStoredDagDifferent returns true if the given dag source code is different
 func (orchestrator Orchestrator) isStoredDagDifferent(dag dags.DAG) bool {
-	currentDag, _ := orchestrator.dagMap[dag.Name]
+	currentDag, _ := orchestrator.dagMap[dag.Config.Name]
 	return currentDag.Code != dag.Code
 }
 
@@ -84,15 +83,15 @@ func (orchestrator Orchestrator) GetDag(dagName string) *dags.DAG {
 func (orchestrator *Orchestrator) CollectDAGs() {
 	dagSlice := dags.GetDAGSFromFolder(orchestrator.config.DAGPath)
 	for _, dag := range dagSlice {
+		fmt.Println(*dag)
 		dagPresent := orchestrator.isDagPresent(*dag)
 		if !dagPresent {
-			// fmt.Println("New dag:\n", dag.Name, dag)
 			orchestrator.AddDAG(dag)
-			stringJson, _ := json.MarshalIndent(orchestrator.dagMap, "", "\t")
-			fmt.Println(dag.Name, ":", string(stringJson))
+			// stringJson, _ := json.MarshalIndent(orchestrator.dagMap, "", "\t")
+			// fmt.Println(dag.Name, ":", string(stringJson))
 		} else if dagPresent && orchestrator.isStoredDagDifferent(*dag) {
-			logs.InfoLogger.Printf("Updating DAG %s which will run in namespace %s", dag.Name, dag.Namespace)
-			logs.InfoLogger.Printf("Old DAG code: %s\n", orchestrator.GetDag(dag.Name).Code)
+			logs.InfoLogger.Printf("Updating DAG %s which will run in namespace %s", dag.Config.Name, dag.Config.Namespace)
+			logs.InfoLogger.Printf("Old DAG code: %s\n", orchestrator.GetDag(dag.Config.Name).Code)
 			logs.InfoLogger.Printf("New DAG code: %s\n", dag.Code)
 			// orchestrator.UpdateDag(&dag)
 		}

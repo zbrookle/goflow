@@ -3,6 +3,7 @@ package dags
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"goflow/logs"
 	"io/ioutil"
 	"os"
@@ -17,8 +18,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// DAG is directed acyclic graph for hold job information
-type DAG struct {
+// DAGConfig is a struct storing the configurable values provided from the user in the DAG
+// definition file
+type DAGConfig struct {
 	Name        string
 	Namespace   string
 	Schedule    string
@@ -30,9 +32,23 @@ type DAG struct {
 	Retries     int32
 	Labels      map[string]string
 	Annotations map[string]string
-	Code        string
-	DAGRuns     []*DAGRun
-	kubeClient  kubernetes.Interface
+}
+
+// JSON returns a json string representation of DAGConfig
+func (config DAGConfig) JSON() string {
+	jsonBytes, err := json.Marshal(config)
+	if err != nil {
+		panic(err)
+	}
+	return string(jsonBytes)
+}
+
+// DAG is directed acyclic graph for hold job information
+type DAG struct {
+	Config     *DAGConfig
+	Code       string
+	DAGRuns    []*DAGRun
+	kubeClient kubernetes.Interface
 }
 
 // DAGRun is a single run of a given dag - corresponds with a kubernetes Job
@@ -45,6 +61,11 @@ type DAGRun struct {
 	Job           *batch.Job
 }
 
+// // Config returns a string Config representation of a DAGs configurable values
+// func (dag DAG) Config() string {
+// 	return dag.dagConfig
+// }
+
 func readDAGFile(dagFilePath string) []byte {
 	dat, err := ioutil.ReadFile(dagFilePath)
 	if err != nil {
@@ -53,14 +74,22 @@ func readDAGFile(dagFilePath string) []byte {
 	return dat
 }
 
+func createDAGFromDagConfigAndCode(config *DAGConfig, code string) DAG {
+	dag := DAG{Config: config}
+	dag.DAGRuns = make([]*DAGRun, 0)
+	dag.Code = code
+	return dag
+}
+
 func createDAGFromJSONBytes(dagBytes []byte) (DAG, error) {
-	dagStruct := DAG{}
-	err := json.Unmarshal(dagBytes, &dagStruct)
+	dagConfigStruct := DAGConfig{}
+	fmt.Println(string(dagBytes))
+	err := json.Unmarshal(dagBytes, &dagConfigStruct)
 	if err != nil {
-		return dagStruct, err
+		return DAG{}, err
 	}
-	dagStruct.DAGRuns = make([]*DAGRun, 0)
-	return dagStruct, nil
+	dag := createDAGFromDagConfigAndCode(&dagConfigStruct, string(dagBytes))
+	return dag, nil
 }
 
 // getDAGFromJSON creates a new dag struct from a dag file
@@ -123,19 +152,19 @@ func NewDAG(
 	kubeClient kubernetes.Interface,
 ) *DAG {
 	return &DAG{
-		Name:        name,
-		Namespace:   namespace,
-		Schedule:    schedule,
-		DockerImage: dockerImage,
-		RetryPolicy: retryPolicy,
-		DAGRuns:     make([]*DAGRun, 0),
-		kubeClient:  kubeClient,
+		Config: &DAGConfig{Name: name,
+			Namespace:   namespace,
+			Schedule:    schedule,
+			DockerImage: dockerImage,
+			RetryPolicy: retryPolicy},
+		DAGRuns:    make([]*DAGRun, 0),
+		kubeClient: kubeClient,
 	}
 }
 
 func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
 	return &DAGRun{
-		Name: dag.Name + executionDate.String(),
+		Name: dag.Config.Name + executionDate.String(),
 		DAG:  dag,
 		ExecutionDate: k8sapi.Time{
 			Time: executionDate,
@@ -172,18 +201,18 @@ func (dagRun DAGRun) getJobFrame() batch.Job {
 		},
 		ObjectMeta: k8sapi.ObjectMeta{
 			Name:        dagRun.Name,
-			Namespace:   dag.Namespace,
-			Labels:      dag.Labels,
-			Annotations: dag.Annotations,
+			Namespace:   dag.Config.Namespace,
+			Labels:      dag.Config.Labels,
+			Annotations: dag.Config.Annotations,
 		},
 		Spec: batch.JobSpec{
-			Parallelism:           &dag.Parallelism,
-			ActiveDeadlineSeconds: &dag.TimeLimit,
-			BackoffLimit:          &dag.Retries,
+			Parallelism:           &dag.Config.Parallelism,
+			ActiveDeadlineSeconds: &dag.Config.TimeLimit,
+			BackoffLimit:          &dag.Config.Retries,
 			Template: core.PodTemplateSpec{
 				ObjectMeta: k8sapi.ObjectMeta{
-					Name:      dag.Name,
-					Namespace: dag.Namespace,
+					Name:      dag.Config.Name,
+					Namespace: dag.Config.Namespace,
 					// Labels: map[string]string{
 					// 	"": "",
 					// },
@@ -209,7 +238,7 @@ func (dagRun *DAGRun) CreateJob() {
 	dag := dagRun.DAG
 	jobFrame := dagRun.getJobFrame()
 	job, err := dag.kubeClient.BatchV1().Jobs(
-		dag.Namespace,
+		dag.Config.Namespace,
 	).Create(
 		context.TODO(),
 		&jobFrame,
@@ -224,7 +253,7 @@ func (dagRun *DAGRun) CreateJob() {
 // deleteJob
 func (dagRun *DAGRun) deleteJob() {
 	err := dagRun.DAG.kubeClient.BatchV1().Jobs(
-		dagRun.DAG.Namespace,
+		dagRun.DAG.Config.Namespace,
 	).Delete(
 		context.TODO(),
 		dagRun.Name,

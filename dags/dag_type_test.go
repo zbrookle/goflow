@@ -6,6 +6,7 @@ import (
 	"goflow/testutils"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -78,7 +79,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 	formattedJSONString := fmt.Sprintf(
 		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\","+
 			"\"RetryPolicy\":\"%s\",\"Command\":\"%s\",\"Parallelism\":%d,\"TimeLimit\":%d,"+
-			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s,\"Code\":\"\"",
+			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s}",
 		name,
 		namespace,
 		schedule,
@@ -91,8 +92,12 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		labels,
 		annotations,
 	)
-	expectedJSONString := formattedJSONString + ",\"DAGRuns\":[]}"
-	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString + "}"))
+	expectedJSONString := fmt.Sprintf(
+		"{\"Config\":%s,\"Code\":\"%s\",\"DAGRuns\":[]}",
+		formattedJSONString,
+		strings.ReplaceAll(formattedJSONString, "\"", "\\\""),
+	)
+	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString))
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +165,7 @@ func TestCreateJob(t *testing.T) {
 	dagRun := createDagRun(getTestDate(), getTestDag())
 	dagRun.CreateJob()
 	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
-		dagRun.DAG.Namespace,
+		dagRun.DAG.Config.Namespace,
 	).Get(
 		context.TODO(),
 		dagRun.Job.Name,
@@ -190,7 +195,7 @@ func TestDeleteJob(t *testing.T) {
 	defer testutils.CleanUpJobs(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDag())
 	jobFrame := dagRun.getJobFrame()
-	jobsClient := KUBECLIENT.BatchV1().Jobs(dagRun.DAG.Namespace)
+	jobsClient := KUBECLIENT.BatchV1().Jobs(dagRun.DAG.Config.Namespace)
 
 	createdJob, err := jobsClient.Create(context.TODO(), &jobFrame, v1.CreateOptions{})
 	dagRun.Job = createdJob

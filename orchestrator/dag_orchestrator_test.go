@@ -36,7 +36,7 @@ func TestRegisterDAG(t *testing.T) {
 	orch := testOrchestrator()
 	const expectedLength = 1
 	orch.AddDAG(dag)
-	if orch.dagMap[dag.Name] != dag {
+	if orch.dagMap[dag.Config.Name] != dag {
 		t.Error("DAG not added at correct key")
 	}
 	if len(orch.dagMap) != expectedLength {
@@ -52,7 +52,7 @@ func TestCollectDags(t *testing.T) {
 		t.Errorf("%d DAGs collected, expected more than 0", dagCount)
 	}
 	for dagName := range orch.dagMap {
-		if dagName != orch.dagMap[dagName].Name {
+		if dagName != orch.dagMap[dagName].Config.Name {
 			panic("Key doesn't match up with dag name!")
 		}
 	}
