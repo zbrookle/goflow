@@ -1,5 +1,6 @@
 {
     "DefaultNamespace": "default",
     "DefaultDockerImage": "busybox",
-    "DAGPath": "path"
+    "DAGPath": "path",
+    "DateFormat": "2019-01-01"
 }

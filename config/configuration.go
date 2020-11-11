@@ -10,6 +10,7 @@ type GoFlowConfig struct {
 	DefaultNamespace   string
 	DefaultDockerImage string
 	DAGPath            string
+	DateFormat         string
 }
 
 func readConfig(filePath string) []byte {
