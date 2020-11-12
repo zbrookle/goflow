@@ -1,7 +1,6 @@
 package orchestrator
 
 import (
-	"fmt"
 	"goflow/dags"
 	"goflow/logs"
 	"time"
@@ -79,14 +78,25 @@ func (orchestrator Orchestrator) GetDag(dagName string) *dags.DAG {
 	return dag
 }
 
+// DagRuns returns all the dag runs across all dags
+func (orchestrator Orchestrator) DagRuns() []dags.DAGRun {
+	runs := make([]dags.DAGRun, 0)
+	for _, dag := range orchestrator.DAGs() {
+		for _, run := range dag.DAGRuns {
+			runs = append(runs, *run)
+		}
+	}
+	return runs
+}
+
 // CollectDAGs fills up the dag map with existing dags
 func (orchestrator *Orchestrator) CollectDAGs() {
 	dagSlice := dags.GetDAGSFromFolder(orchestrator.config.DAGPath)
 	for _, dag := range dagSlice {
-		fmt.Println(*dag)
 		dagPresent := orchestrator.isDagPresent(*dag)
 		if !dagPresent {
 			orchestrator.AddDAG(dag)
+			// go dag.Start()
 			// stringJson, _ := json.MarshalIndent(orchestrator.dagMap, "", "\t")
 			// fmt.Println(dag.Name, ":", string(stringJson))
 		} else if dagPresent && orchestrator.isStoredDagDifferent(*dag) {
@@ -98,16 +108,18 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 	}
 }
 
+// RunDags schedules jobs for all dags that are ready
+func (orchestrator *Orchestrator) RunDags() {
+	for _, dag := range orchestrator.DAGs() {
+		dag.AddNextDagRunIfReady()
+	}
+}
+
 // Start begins the orchestrator event loop
-func (orchestrator *Orchestrator) Start(cycleDuration time.Duration) {
-	// serverRunning := true
-	// for serverRunning {
-	// 	orchestrator.CollectDAGs()
-	// 	time.Sleep(cycleDuration)
-	// }
-	runs := 50
-	for i := 0; i < runs; i++ {
+func (orchestrator *Orchestrator) Start(cycleDuration time.Duration, quit *bool) {
+	for !*quit {
 		orchestrator.CollectDAGs()
+		orchestrator.RunDags()
 		time.Sleep(cycleDuration)
 	}
 }
