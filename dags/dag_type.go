@@ -2,7 +2,6 @@ package dags
 
 import (
 	"encoding/json"
-	"fmt"
 	"goflow/logs"
 	"io/ioutil"
 	"os"
@@ -189,8 +188,6 @@ func (dag *DAG) Ready() bool {
 	currentTime := time.Now()
 	scheduleReady := dag.MostRecentExecution.Before(currentTime) ||
 		dag.MostRecentExecution.Equal(currentTime)
-	fmt.Println("Schedule", scheduleReady)
-	fmt.Println("Allowed to run", dag.ActiveRuns < dag.Config.MaxActiveRuns)
 	return (dag.ActiveRuns < dag.Config.MaxActiveRuns) && scheduleReady
 }
 
