@@ -2,7 +2,6 @@ package dags
 
 import (
 	"encoding/json"
-	"fmt"
 	"goflow/logs"
 	"io/ioutil"
 	"os"
@@ -17,14 +16,14 @@ import (
 
 // DAG is directed acyclic graph for hold job information
 type DAG struct {
-	Config                  *DAGConfig
-	Code                    string
-	StartDateTime           time.Time
-	EndDateTime             time.Time
-	DAGRuns                 []*DAGRun
-	kubeClient              kubernetes.Interface
-	ActiveRuns              int
-	MostRecentExecutionTime time.Time
+	Config              *DAGConfig
+	Code                string
+	StartDateTime       time.Time
+	EndDateTime         time.Time
+	DAGRuns             []*DAGRun
+	kubeClient          kubernetes.Interface
+	ActiveRuns          int
+	MostRecentExecution time.Time
 }
 
 // // Config returns a string Config representation of a DAGs configurable values
@@ -41,7 +40,6 @@ func readDAGFile(dagFilePath string) []byte {
 }
 
 func getDateFromString(dateStr string) time.Time {
-	fmt.Println("Here", dateStr)
 	time, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		panic(err)
@@ -62,9 +60,7 @@ func createDAGFromDagConfigAndCode(config *DAGConfig, code string) DAG {
 
 func createDAGFromJSONBytes(dagBytes []byte) (DAG, error) {
 	dagConfigStruct := DAGConfig{}
-	fmt.Println(string(dagBytes))
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
-	fmt.Println(dagConfigStruct)
 	if err != nil {
 		return DAG{}, err
 	}
@@ -165,6 +161,16 @@ func (dag *DAG) AddDagRun(executionDate time.Time) {
 	dag.ActiveRuns++
 }
 
+// AddNextDagRunIfReady adds the next dag run if ready for it
+func (dag *DAG) AddNextDagRunIfReady() {
+	if dag.Ready() {
+		if dag.MostRecentExecution.IsZero() {
+			dag.MostRecentExecution = dag.StartDateTime
+		}
+		dag.AddDagRun(dag.MostRecentExecution)
+	}
+}
+
 // TerminateAndDeleteRuns removes all active DAG runs and their associated jobs
 func (dag *DAG) TerminateAndDeleteRuns() {
 	for _, run := range dag.DAGRuns {
@@ -175,8 +181,8 @@ func (dag *DAG) TerminateAndDeleteRuns() {
 // Ready returns true if the DAG is ready for another DAG Run to be created
 func (dag *DAG) Ready() bool {
 	currentTime := time.Now()
-	scheduleReady := dag.MostRecentExecutionTime.Before(currentTime) ||
-		dag.MostRecentExecutionTime.Equal(currentTime)
+	scheduleReady := dag.MostRecentExecution.Before(currentTime) ||
+		dag.MostRecentExecution.Equal(currentTime)
 	return (dag.ActiveRuns < dag.Config.MaxActiveRuns) && scheduleReady
 }
 
