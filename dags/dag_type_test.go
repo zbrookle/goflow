@@ -80,14 +80,14 @@ func TestDAGFromJSONBytes(t *testing.T) {
 	}
 	formattedJSONString := string(config.Marshal())
 	expectedDAG := DAG{
-		Config:                  &config,
-		Code:                    string(config.Marshal()),
-		StartDateTime:           time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC),
-		EndDateTime:             time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-		DAGRuns:                 make([]*DAGRun, 0),
-		kubeClient:              nil,
-		ActiveRuns:              0,
-		MostRecentExecutionTime: time.Time{},
+		Config:              &config,
+		Code:                string(config.Marshal()),
+		StartDateTime:       time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC),
+		EndDateTime:         time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		DAGRuns:             make([]*DAGRun, 0),
+		kubeClient:          nil,
+		ActiveRuns:          0,
+		MostRecentExecution: time.Time{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
 	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString))
