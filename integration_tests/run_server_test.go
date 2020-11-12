@@ -32,7 +32,6 @@ func adjustConfigDagPath(configPath string, dagPath string) string {
 	}
 	json.Unmarshal(configBytes, fixedConfig)
 	fixedConfig.DAGPath = dagPath
-	fmt.Println(fixedConfig)
 	newConfigPath := filepath.Join(testutils.GetTestFolder(), "tmp_config.json")
 	fixedConfig.SaveConfig(newConfigPath)
 	return newConfigPath
@@ -72,34 +71,20 @@ func createDirIfNotExist(directory string) string {
 	return directory
 }
 
-func testStart(
-	orchestrator orchestrator.Orchestrator,
-	cycleDuration time.Duration,
-	kubeClient kubernetes.Interface,
-	breakLoop *bool,
-) {
-	dagCodes := []string{}
-	for !*breakLoop {
-		orchestrator.CollectDAGs()
-		time.Sleep(cycleDuration)
-		for _, dag := range orchestrator.DAGs() {
-			dagCodes = append(dagCodes, dag.Code)
-		}
-		// fmt.Println("Jobs collected so far ", dagCodes)
-		// fmt.Println("I'm here")
-	}
-}
-
 func createFakeDagFile(dagFolder string, dagNum int) {
 	fakeDagName := fmt.Sprintf("dag_file_%d.json", dagNum)
 	filePath := filepath.Join(dagFolder, fakeDagName)
 	fakeDagConfig := &dags.DAGConfig{Name: fakeDagName,
-		Namespace:   "default",
-		Schedule:    "* * * * *",
-		Command:     fmt.Sprintf("echo %d", dagNum),
-		Parallelism: 0,
-		TimeLimit:   0,
-		Retries:     2}
+		Namespace:     "default",
+		Schedule:      "* * * * *",
+		Command:       fmt.Sprintf("echo %d", dagNum),
+		Parallelism:   0,
+		TimeLimit:     0,
+		Retries:       2,
+		MaxActiveRuns: 1,
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "2020-01-01",
+	}
 	jsonContent := fakeDagConfig.Marshal()
 	ioutil.WriteFile(filePath, jsonContent, 0755)
 	fmt.Println(fakeDagConfig.JSON())
@@ -115,7 +100,7 @@ func createFakeDags(testFolder string) string {
 }
 
 func TestMain(m *testing.M) {
-	dagCount = 100
+	dagCount = 2
 	fakeDagsPath := createFakeDags(testutils.GetTestFolder())
 	defer os.RemoveAll(fakeDagsPath)
 	configPath = adjustConfigDagPath(testutils.GetConfigPath(), fakeDagsPath)
@@ -128,14 +113,18 @@ func TestStartServer(t *testing.T) {
 	defer testutils.CleanUpJobs(kubeClient)
 	orch := *orchestrator.NewOrchestrator(configPath)
 	loopBreaker := false
-	go testStart(orch, 3, kubeClient, &loopBreaker)
+	go orch.Start(1, &loopBreaker)
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(4 * time.Second)
 	loopBreaker = true
 
 	logs.InfoLogger.Println("Dags length", len(orch.DAGs()))
 
 	if len(orch.DAGs()) != dagCount {
 		t.Errorf("DAG list does not have expected length")
+	}
+
+	if len(orch.DagRuns()) == 0 {
+		t.Error("Expected runs to present but none were found")
 	}
 }
