@@ -2,10 +2,12 @@ package dags
 
 import (
 	"context"
+	"fmt"
 
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 // DAGRun is a single run of a given dag - corresponds with a kubernetes Job
@@ -13,9 +15,9 @@ type DAGRun struct {
 	Name          string
 	DAG           *DAG
 	ExecutionDate k8sapi.Time // This is the date that will be passed to the job that runs
-	Start         k8sapi.Time
-	End           k8sapi.Time
-	Job           *batch.Job
+	StartTime     k8sapi.Time
+	EndTime       k8sapi.Time
+	job           *batch.Job
 }
 
 // getJobFrame returns a job from a DagRun
@@ -60,8 +62,8 @@ func (dagRun DAGRun) getJobFrame() batch.Job {
 	}
 }
 
-// CreateJob creates and registers a new job with
-func (dagRun *DAGRun) CreateJob() {
+// createJob creates and registers a new job with
+func (dagRun *DAGRun) createJob() string {
 	dag := dagRun.DAG
 	jobFrame := dagRun.getJobFrame()
 	job, err := dag.kubeClient.BatchV1().Jobs(
@@ -74,7 +76,39 @@ func (dagRun *DAGRun) CreateJob() {
 	if err != nil {
 		panic(err)
 	}
-	dagRun.Job = job
+	dagRun.job = job
+	return job.Name
+}
+
+func (dagRun *DAGRun) monitorJob() watch.Event {
+	podClient := dagRun.DAG.kubeClient.CoreV1().Pods(
+		dagRun.job.Namespace,
+	)
+
+	watcher, err := podClient.Watch(context.TODO(), k8sapi.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+	result := <-watcher.ResultChan()
+	fmt.Println("Result", result)
+	return result
+	// req := podClient.GetLogs(
+	// 	dagRun.job.Name,
+	// 	&core.PodLogOptions{},
+	// )
+	// logs, err := req.Stream(context.TODO())
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// dagRun.DAG.kubeClient.CoreV1().Pods(dagRun.job.Namespace).Watch()
+	// fmt.Println("Logs", logs.)
+	// return logs.Read()
+}
+
+// Start starts and monitors the job and also tracks the logs from the job
+func (dagRun *DAGRun) Start(jobChannel chan string) {
+	jobChannel <- dagRun.createJob()
+	go dagRun.monitorJob()
 }
 
 // deleteJob
