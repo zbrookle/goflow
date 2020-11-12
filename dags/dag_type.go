@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -127,7 +128,7 @@ func NewDAG(
 	namespace string,
 	schedule string,
 	dockerImage string,
-	retryPolicy string,
+	retryPolicy core.RestartPolicy,
 	maxActiveRuns int,
 	kubeClient kubernetes.Interface,
 ) *DAG {

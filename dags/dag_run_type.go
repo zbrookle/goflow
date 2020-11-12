@@ -53,7 +53,7 @@ func (dagRun DAGRun) getJobFrame() batch.Job {
 					Volumes:                       nil,
 					Containers:                    nil,
 					EphemeralContainers:           nil,
-					RestartPolicy:                 "",
+					RestartPolicy:                 dag.Config.RetryPolicy,
 					TerminationGracePeriodSeconds: nil,
 					ActiveDeadlineSeconds:         nil,
 				},

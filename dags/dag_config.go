@@ -1,6 +1,10 @@
 package dags
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	core "k8s.io/api/core/v1"
+)
 
 // DAGConfig is a struct storing the configurable values provided from the user in the DAG
 // definition file
@@ -9,7 +13,7 @@ type DAGConfig struct {
 	Namespace     string
 	Schedule      string
 	DockerImage   string
-	RetryPolicy   string
+	RetryPolicy   core.RestartPolicy
 	Command       string
 	Parallelism   int32
 	TimeLimit     int64
