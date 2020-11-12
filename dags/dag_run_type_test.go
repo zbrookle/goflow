@@ -12,7 +12,7 @@ import (
 
 func TestCreateJob(t *testing.T) {
 	defer testutils.CleanUpJobs(KUBECLIENT)
-	dagRun := createDagRun(getTestDate(), getTestDag())
+	dagRun := createDagRun(getTestDate(), getTestDAG())
 	dagRun.CreateJob()
 	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
 		dagRun.DAG.Config.Namespace,
@@ -43,7 +43,7 @@ func unmarshalJob(job batch.Job) string {
 
 func TestDeleteJob(t *testing.T) {
 	defer testutils.CleanUpJobs(KUBECLIENT)
-	dagRun := createDagRun(getTestDate(), getTestDag())
+	dagRun := createDagRun(getTestDate(), getTestDAG())
 	jobFrame := dagRun.getJobFrame()
 	jobsClient := KUBECLIENT.BatchV1().Jobs(dagRun.DAG.Config.Namespace)
 
