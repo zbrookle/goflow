@@ -143,17 +143,25 @@ func NewDAG(
 	}
 }
 
+func cleanK8sName(name string) string {
+	name = strings.ReplaceAll(name, ":", "-")
+	name = strings.ReplaceAll(name, " ", "")
+	name = strings.ToLower(name)
+	return name
+}
+
 func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
+	dagName := cleanK8sName(dag.Config.Name + executionDate.String())
 	return &DAGRun{
-		Name: dag.Config.Name + executionDate.String(),
+		Name: dagName,
 		DAG:  dag,
 		ExecutionDate: k8sapi.Time{
 			Time: executionDate,
 		},
-		Start: k8sapi.Time{
+		StartTime: k8sapi.Time{
 			Time: time.Now(),
 		},
-		End: k8sapi.Time{
+		EndTime: k8sapi.Time{
 			Time: time.Time{},
 		},
 	}

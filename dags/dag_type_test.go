@@ -2,6 +2,7 @@ package dags
 
 import (
 	"context"
+	"goflow/k8sclient"
 	"goflow/testutils"
 	"path/filepath"
 	"sort"
@@ -127,8 +128,16 @@ func TestReadFiles(t *testing.T) {
 	}
 }
 
-func getTestDAG() *DAG {
-	return NewDAG("test", "default", "* * * * *", "busybox", "Never", 1, KUBECLIENT)
+func getTestDAG(client kubernetes.Interface) *DAG {
+	return NewDAG("test", "default", "* * * * *", "busybox", "Never", 1, client)
+}
+
+func getTestDAGFakeClient() *DAG {
+	return getTestDAG(KUBECLIENT)
+}
+
+func getTestDAGRealClient() *DAG {
+	return getTestDAG(k8sclient.CreateKubeClient())
 }
 
 func getTestDate() time.Time {
@@ -147,14 +156,14 @@ func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag 
 }
 
 func TestAddDagRun(t *testing.T) {
-	testDAG := getTestDAG()
+	testDAG := getTestDAGFakeClient()
 	currentTime := getTestDate()
 	testDAG.AddDagRun(currentTime)
 	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
 }
 
 func TestAddDagRunIfReady(t *testing.T) {
-	testDAG := getTestDAG()
+	testDAG := getTestDAGFakeClient()
 	testDAG.AddNextDagRunIfReady()
 	testDAG.AddNextDagRunIfReady()
 	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
