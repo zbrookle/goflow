@@ -90,7 +90,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		MostRecentExecution: time.Time{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
-	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString))
+	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString), fake.NewSimpleClientset())
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +129,19 @@ func TestReadFiles(t *testing.T) {
 }
 
 func getTestDAG(client kubernetes.Interface) *DAG {
-	return NewDAG("test", "default", "* * * * *", "busybox", "Never", 1, 20, client)
+	dag := CreateDAG(&DAGConfig{
+		Name:          "test",
+		Namespace:     "default",
+		Schedule:      "* * * * *",
+		DockerImage:   "busybox",
+		RetryPolicy:   "Never",
+		Command:       "echo yes",
+		TimeLimit:     20,
+		MaxActiveRuns: 1,
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "",
+	}, "", client)
+	return &dag
 }
 
 func getTestDAGFakeClient() *DAG {

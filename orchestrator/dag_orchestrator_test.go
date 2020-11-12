@@ -32,11 +32,22 @@ func testOrchestrator() *Orchestrator {
 }
 
 func TestRegisterDAG(t *testing.T) {
-	dag := dags.NewDAG("test", "default", "* * * * *", "busyboxy", "Never", 1, 20, kubeClient)
 	orch := testOrchestrator()
+	dag := dags.CreateDAG(&dags.DAGConfig{
+		Name:          "test",
+		Namespace:     "default",
+		Schedule:      "* * * * *",
+		DockerImage:   "busybox",
+		RetryPolicy:   "Never",
+		Command:       "echo yes",
+		TimeLimit:     20,
+		MaxActiveRuns: 1,
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "",
+	}, "", orch.kubeClient)
 	const expectedLength = 1
-	orch.AddDAG(dag)
-	if orch.dagMap[dag.Config.Name] != dag {
+	orch.AddDAG(&dag)
+	if orch.dagMap[dag.Config.Name] != &dag {
 		t.Error("DAG not added at correct key")
 	}
 	if len(orch.dagMap) != expectedLength {

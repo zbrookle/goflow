@@ -49,7 +49,7 @@ func TestStartJob(t *testing.T) {
 		v1.GetOptions{},
 	)
 
-	time.Sleep(6 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	if err != nil {
 		t.Errorf("Job %s could not be found", jobName)

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 // DAG is directed acyclic graph for hold job information
@@ -26,11 +26,6 @@ type DAG struct {
 	ActiveRuns          int
 	MostRecentExecution time.Time
 }
-
-// // Config returns a string Config representation of a DAGs configurable values
-// func (dag DAG) Config() string {
-// 	return dag.dagConfig
-// }
 
 func readDAGFile(dagFilePath string) []byte {
 	dat, err := ioutil.ReadFile(dagFilePath)
@@ -48,10 +43,9 @@ func getDateFromString(dateStr string) time.Time {
 	return time
 }
 
-func createDAGFromDagConfigAndCode(config *DAGConfig, code string) DAG {
-	dag := DAG{Config: config}
-	dag.DAGRuns = make([]*DAGRun, 0)
-	dag.Code = code
+// CreateDAG returns a dag using the configuration passed and stores the code string
+func CreateDAG(config *DAGConfig, code string, client kubernetes.Interface) DAG {
+	dag := DAG{Config: config, Code: code, DAGRuns: make([]*DAGRun, 0), kubeClient: client}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
 		dag.EndDateTime = getDateFromString(dag.Config.EndDateTime)
@@ -62,20 +56,20 @@ func createDAGFromDagConfigAndCode(config *DAGConfig, code string) DAG {
 	return dag
 }
 
-func createDAGFromJSONBytes(dagBytes []byte) (DAG, error) {
+func createDAGFromJSONBytes(dagBytes []byte, client kubernetes.Interface) (DAG, error) {
 	dagConfigStruct := DAGConfig{}
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
 	if err != nil {
 		return DAG{}, err
 	}
-	dag := createDAGFromDagConfigAndCode(&dagConfigStruct, string(dagBytes))
+	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client)
 	return dag, nil
 }
 
 // getDAGFromJSON creates a new dag struct from a dag file
-func getDAGFromJSON(dagFilePath string) (DAG, error) {
+func getDAGFromJSON(dagFilePath string, client kubernetes.Interface) (DAG, error) {
 	dagBytes := readDAGFile(dagFilePath)
-	dagJSON, err := createDAGFromJSONBytes(dagBytes)
+	dagJSON, err := createDAGFromJSONBytes(dagBytes, client)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
 		return DAG{}, err
@@ -113,38 +107,13 @@ func GetDAGSFromFolder(folder string) []*DAG {
 	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file)
+			dag, err := getDAGFromJSON(file, fake.NewSimpleClientset())
 			if err == nil {
 				dags = append(dags, &dag)
 			}
 		}
 	}
 	return dags
-}
-
-// NewDAG creates a new dag initialized with an empty DAGRuns slice
-func NewDAG(
-	name string,
-	namespace string,
-	schedule string,
-	dockerImage string,
-	retryPolicy core.RestartPolicy,
-	maxActiveRuns int,
-	timeLimit int64,
-	kubeClient kubernetes.Interface,
-) *DAG {
-	return &DAG{
-		Config: &DAGConfig{Name: name,
-			Namespace:     namespace,
-			Schedule:      schedule,
-			DockerImage:   dockerImage,
-			RetryPolicy:   retryPolicy,
-			MaxActiveRuns: maxActiveRuns,
-			TimeLimit:     timeLimit,
-		},
-		DAGRuns:    make([]*DAGRun, 0),
-		kubeClient: kubeClient,
-	}
 }
 
 func cleanK8sName(name string) string {
