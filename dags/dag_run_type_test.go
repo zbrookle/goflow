@@ -3,6 +3,7 @@ package dags
 import (
 	"context"
 	"goflow/jsonpanic"
+	"goflow/k8sclient"
 	"goflow/testutils"
 	"testing"
 	"time"
@@ -34,12 +35,13 @@ func TestCreateJob(t *testing.T) {
 }
 
 func TestStartJob(t *testing.T) {
-	defer testutils.CleanUpJobs(KUBECLIENT)
+	realClient := k8sclient.CreateKubeClient()
+	defer testutils.CleanUpJobs(realClient)
 	dagRun := createDagRun(getTestDate(), getTestDAGRealClient())
 	jobNameChannel := make(chan string, 1)
-	dagRun.Start(jobNameChannel)
+	go dagRun.Start(jobNameChannel)
 	jobName := <-jobNameChannel
-	job, err := KUBECLIENT.BatchV1().Jobs(
+	job, err := realClient.BatchV1().Jobs(
 		dagRun.DAG.Config.Namespace,
 	).Get(
 		context.TODO(),
@@ -51,6 +53,7 @@ func TestStartJob(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("Job %s could not be found", jobName)
+		panic("Job not found")
 	}
 
 	if job.Status.Succeeded != 1 {

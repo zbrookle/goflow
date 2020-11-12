@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"strings"
+
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +20,209 @@ type DAGRun struct {
 	StartTime     k8sapi.Time
 	EndTime       k8sapi.Time
 	job           *batch.Job
+}
+
+func (dagRun *DAGRun) getContainerFrame() core.Container {
+	return core.Container{
+		Name:       "job",
+		Image:      dagRun.DAG.Config.DockerImage,
+		Command:    strings.Split(dagRun.DAG.Config.Command, " "),
+		Args:       nil,
+		WorkingDir: "",
+		EnvFrom:    nil,
+		Env:        nil,
+		// Resources: core.ResourceRequirements{
+		// 	Limits: map[core.ResourceName]resource.Quantity{
+		// 		"": {
+		// 			Format: "",
+		// 		},
+		// 	},
+		// 	Requests: map[core.ResourceName]resource.Quantity{
+		// 		"": {
+		// 			Format: "",
+		// 		},
+		// 	},
+		// },
+		VolumeMounts:  nil,
+		VolumeDevices: nil,
+		// LivenessProbe: &core.Probe{
+		// 	Handler: core.Handler{
+		// 		Exec: &core.ExecAction{
+		// 			Command: nil,
+		// 		},
+		// 		HTTPGet: &core.HTTPGetAction{
+		// 			Path: "",
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host:        "",
+		// 			Scheme:      "",
+		// 			HTTPHeaders: nil,
+		// 		},
+		// 		TCPSocket: &core.TCPSocketAction{
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host: "",
+		// 		},
+		// 	},
+		// 	InitialDelaySeconds: 0,
+		// 	TimeoutSeconds:      0,
+		// 	PeriodSeconds:       0,
+		// 	SuccessThreshold:    0,
+		// 	FailureThreshold:    0,
+		// },
+		// ReadinessProbe: &core.Probe{
+		// 	Handler: core.Handler{
+		// 		Exec: &core.ExecAction{
+		// 			Command: nil,
+		// 		},
+		// 		HTTPGet: &core.HTTPGetAction{
+		// 			Path: "",
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host:        "",
+		// 			Scheme:      "",
+		// 			HTTPHeaders: nil,
+		// 		},
+		// 		TCPSocket: &core.TCPSocketAction{
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host: "",
+		// 		},
+		// 	},
+		// 	InitialDelaySeconds: 0,
+		// 	TimeoutSeconds:      0,
+		// 	PeriodSeconds:       0,
+		// 	SuccessThreshold:    0,
+		// 	FailureThreshold:    0,
+		// },
+		// StartupProbe: &core.Probe{
+		// 	Handler: core.Handler{
+		// 		Exec: &core.ExecAction{
+		// 			Command: nil,
+		// 		},
+		// 		HTTPGet: &core.HTTPGetAction{
+		// 			Path: "",
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host:        "",
+		// 			Scheme:      "",
+		// 			HTTPHeaders: nil,
+		// 		},
+		// 		TCPSocket: &core.TCPSocketAction{
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host: "",
+		// 		},
+		// 	},
+		// 	InitialDelaySeconds: 0,
+		// 	TimeoutSeconds:      0,
+		// 	PeriodSeconds:       0,
+		// 	SuccessThreshold:    0,
+		// 	FailureThreshold:    0,
+		// },
+		// Lifecycle: &core.Lifecycle{
+		// 	PostStart: &core.Handler{
+		// 		Exec: &core.ExecAction{
+		// 			Command: nil,
+		// 		},
+		// 		HTTPGet: &core.HTTPGetAction{
+		// 			Path: "",
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host:        "",
+		// 			Scheme:      "",
+		// 			HTTPHeaders: nil,
+		// 		},
+		// 		TCPSocket: &core.TCPSocketAction{
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host: "",
+		// 		},
+		// 	},
+		// 	PreStop: &core.Handler{
+		// 		Exec: &core.ExecAction{
+		// 			Command: nil,
+		// 		},
+		// 		HTTPGet: &core.HTTPGetAction{
+		// 			Path: "",
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host:        "",
+		// 			Scheme:      "",
+		// 			HTTPHeaders: nil,
+		// 		},
+		// 		TCPSocket: &core.TCPSocketAction{
+		// 			Port: intstr.IntOrString{
+		// 				Type:   0,
+		// 				IntVal: 0,
+		// 				StrVal: "",
+		// 			},
+		// 			Host: "",
+		// 		},
+		// 	},
+		// },
+		// TerminationMessagePath:   "",
+		// TerminationMessagePolicy: "",
+		ImagePullPolicy: "IfNotPresent",
+		// SecurityContext: &core.SecurityContext{
+		// 	Capabilities: &core.Capabilities{
+		// 		Add:  nil,
+		// 		Drop: nil,
+		// 	},
+		// 	Privileged: nil,
+		// 	SELinuxOptions: &core.SELinuxOptions{
+		// 		User:  "",
+		// 		Role:  "",
+		// 		Type:  "",
+		// 		Level: "",
+		// 	},
+		// 	WindowsOptions: &core.WindowsSecurityContextOptions{
+		// 		GMSACredentialSpecName: nil,
+		// 		GMSACredentialSpec:     nil,
+		// 		RunAsUserName:          nil,
+		// 	},
+		// 	RunAsUser:                nil,
+		// 	RunAsGroup:               nil,
+		// 	RunAsNonRoot:             nil,
+		// 	ReadOnlyRootFilesystem:   nil,
+		// 	AllowPrivilegeEscalation: nil,
+		// 	ProcMount:                nil,
+		// 	SeccompProfile: &core.SeccompProfile{
+		// 		Type:             "",
+		// 		LocalhostProfile: nil,
+		// 	},
+		// },
+		// Stdin:     false,
+		// StdinOnce: false,
+		// TTY:       false,
+	}
 }
 
 // getJobFrame returns a job from a DagRun
@@ -51,7 +256,7 @@ func (dagRun DAGRun) getJobFrame() batch.Job {
 				},
 				Spec: core.PodSpec{
 					Volumes:                       nil,
-					Containers:                    nil,
+					Containers:                    []core.Container{dagRun.getContainerFrame()},
 					EphemeralContainers:           nil,
 					RestartPolicy:                 dag.Config.RetryPolicy,
 					TerminationGracePeriodSeconds: nil,
@@ -90,6 +295,7 @@ func (dagRun *DAGRun) monitorJob() watch.Event {
 		panic(err)
 	}
 	result := <-watcher.ResultChan()
+	panic(result)
 	fmt.Println("Result", result)
 	return result
 	// req := podClient.GetLogs(
@@ -108,7 +314,7 @@ func (dagRun *DAGRun) monitorJob() watch.Event {
 // Start starts and monitors the job and also tracks the logs from the job
 func (dagRun *DAGRun) Start(jobChannel chan string) {
 	jobChannel <- dagRun.createJob()
-	go dagRun.monitorJob()
+	dagRun.monitorJob()
 }
 
 // deleteJob

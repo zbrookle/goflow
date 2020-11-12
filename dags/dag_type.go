@@ -130,6 +130,7 @@ func NewDAG(
 	dockerImage string,
 	retryPolicy core.RestartPolicy,
 	maxActiveRuns int,
+	timeLimit int64,
 	kubeClient kubernetes.Interface,
 ) *DAG {
 	return &DAG{
@@ -138,7 +139,9 @@ func NewDAG(
 			Schedule:      schedule,
 			DockerImage:   dockerImage,
 			RetryPolicy:   retryPolicy,
-			MaxActiveRuns: maxActiveRuns},
+			MaxActiveRuns: maxActiveRuns,
+			TimeLimit:     timeLimit,
+		},
 		DAGRuns:    make([]*DAGRun, 0),
 		kubeClient: kubeClient,
 	}

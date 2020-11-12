@@ -129,7 +129,7 @@ func TestReadFiles(t *testing.T) {
 }
 
 func getTestDAG(client kubernetes.Interface) *DAG {
-	return NewDAG("test", "default", "* * * * *", "busybox", "Never", 1, client)
+	return NewDAG("test", "default", "* * * * *", "busybox", "Never", 1, 20, client)
 }
 
 func getTestDAGFakeClient() *DAG {
