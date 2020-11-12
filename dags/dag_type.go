@@ -157,10 +157,10 @@ func (dag *DAG) AddNextDagRunIfReady() {
 	}
 }
 
-// TerminateAndDeleteRuns removes all active DAG runs and their associated jobs
+// TerminateAndDeleteRuns removes all active DAG runs and their associated pods
 func (dag *DAG) TerminateAndDeleteRuns() {
 	for _, run := range dag.DAGRuns {
-		run.deleteJob()
+		run.deletePod()
 	}
 }
 

@@ -53,11 +53,11 @@ func (orchestrator *Orchestrator) DeleteDAG(dagName string, namespace string) {
 
 // DAGs returns []DAGs with all DAGs present in the map
 func (orchestrator Orchestrator) DAGs() []*dags.DAG {
-	jobs := make([]*dags.DAG, 0, len(orchestrator.dagMap))
-	for job := range orchestrator.dagMap {
-		jobs = append(jobs, orchestrator.dagMap[job])
+	dagSlice := make([]*dags.DAG, 0, len(orchestrator.dagMap))
+	for dagName := range orchestrator.dagMap {
+		dagSlice = append(dagSlice, orchestrator.dagMap[dagName])
 	}
-	return jobs
+	return dagSlice
 }
 
 // isDagPresent returns true if the given dag is present
@@ -108,7 +108,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 	}
 }
 
-// RunDags schedules jobs for all dags that are ready
+// RunDags schedules pods for all dags that are ready
 func (orchestrator *Orchestrator) RunDags() {
 	for _, dag := range orchestrator.DAGs() {
 		dag.AddNextDagRunIfReady()

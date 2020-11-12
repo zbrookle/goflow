@@ -8,8 +8,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// CleanUpJobs deletes all jobs currently present in the k8s cluster in all namespaces that are accessible
-func CleanUpJobs(client kubernetes.Interface) {
+// CleanUpPods deletes all pods currently present in the k8s cluster in all namespaces that are accessible
+func CleanUpPods(client kubernetes.Interface) {
 	fmt.Println("Cleaning up...")
 	namespaceClient := client.CoreV1().Namespaces()
 	namespaceList, err := namespaceClient.List(context.TODO(), v1.ListOptions{})
@@ -17,14 +17,14 @@ func CleanUpJobs(client kubernetes.Interface) {
 		panic(err)
 	}
 	for _, namespace := range namespaceList.Items {
-		jobsClient := client.BatchV1().Jobs(namespace.Name)
-		jobList, err := jobsClient.List(context.TODO(), v1.ListOptions{})
+		podsClient := client.CoreV1().Pods(namespace.Name)
+		podList, err := podsClient.List(context.TODO(), v1.ListOptions{})
 		if err != nil {
 			panic(err)
 		}
-		for _, job := range jobList.Items {
-			fmt.Printf("Deleting job %s in namespace %s\n", job.ObjectMeta.Name, namespace.Name)
-			jobsClient.Delete(context.TODO(), job.ObjectMeta.Name, v1.DeleteOptions{})
+		for _, pod := range podList.Items {
+			fmt.Printf("Deleting pod %s in namespace %s\n", pod.ObjectMeta.Name, namespace.Name)
+			podsClient.Delete(context.TODO(), pod.ObjectMeta.Name, v1.DeleteOptions{})
 		}
 	}
 }

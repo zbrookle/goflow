@@ -2,31 +2,30 @@ package dags
 
 import (
 	"context"
-	"fmt"
 
 	"strings"
 
-	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-// DAGRun is a single run of a given dag - corresponds with a kubernetes Job
+// DAGRun is a single run of a given dag - corresponds with a kubernetes pod
 type DAGRun struct {
 	Name          string
 	DAG           *DAG
-	ExecutionDate k8sapi.Time // This is the date that will be passed to the job that runs
+	ExecutionDate k8sapi.Time // This is the date that will be passed to the pod that runs
 	StartTime     k8sapi.Time
 	EndTime       k8sapi.Time
-	job           *batch.Job
+	pod           *core.Pod
 }
 
 func (dagRun *DAGRun) getContainerFrame() core.Container {
+	command := strings.Split(dagRun.DAG.Config.Command, " ")
 	return core.Container{
-		Name:       "job",
+		Name:       "task",
 		Image:      dagRun.DAG.Config.DockerImage,
-		Command:    strings.Split(dagRun.DAG.Config.Command, " "),
+		Command:    command,
 		Args:       nil,
 		WorkingDir: "",
 		EnvFrom:    nil,
@@ -225,12 +224,12 @@ func (dagRun *DAGRun) getContainerFrame() core.Container {
 	}
 }
 
-// getJobFrame returns a job from a DagRun
-func (dagRun DAGRun) getJobFrame() batch.Job {
+// getPodFrame returns a pod from a DagRun
+func (dagRun DAGRun) getPodFrame() core.Pod {
 	dag := dagRun.DAG
-	return batch.Job{
+	return core.Pod{
 		TypeMeta: k8sapi.TypeMeta{
-			Kind:       "Job",
+			Kind:       "Pod",
 			APIVersion: "v1",
 		},
 		ObjectMeta: k8sapi.ObjectMeta{
@@ -239,87 +238,54 @@ func (dagRun DAGRun) getJobFrame() batch.Job {
 			Labels:      dag.Config.Labels,
 			Annotations: dag.Config.Annotations,
 		},
-		Spec: batch.JobSpec{
-			Parallelism:           &dag.Config.Parallelism,
-			ActiveDeadlineSeconds: &dag.Config.TimeLimit,
-			BackoffLimit:          &dag.Config.Retries,
-			Template: core.PodTemplateSpec{
-				ObjectMeta: k8sapi.ObjectMeta{
-					Name:      dag.Config.Name,
-					Namespace: dag.Config.Namespace,
-					// Labels: map[string]string{
-					// 	"": "",
-					// },
-					// Annotations: map[string]string{
-					// 	"": "",
-					// },
-				},
-				Spec: core.PodSpec{
-					Volumes:                       nil,
-					Containers:                    []core.Container{dagRun.getContainerFrame()},
-					EphemeralContainers:           nil,
-					RestartPolicy:                 dag.Config.RetryPolicy,
-					TerminationGracePeriodSeconds: nil,
-					ActiveDeadlineSeconds:         nil,
-				},
-			},
+		Spec: core.PodSpec{
+			Volumes:                       nil,
+			Containers:                    []core.Container{dagRun.getContainerFrame()},
+			EphemeralContainers:           nil,
+			RestartPolicy:                 dag.Config.RetryPolicy,
+			TerminationGracePeriodSeconds: nil,
+			ActiveDeadlineSeconds:         &dag.Config.TimeLimit,
 		},
 	}
 }
 
-// createJob creates and registers a new job with
-func (dagRun *DAGRun) createJob() string {
+// createPod creates and registers a new pod with
+func (dagRun *DAGRun) createPod() string {
 	dag := dagRun.DAG
-	jobFrame := dagRun.getJobFrame()
-	job, err := dag.kubeClient.BatchV1().Jobs(
+	podFrame := dagRun.getPodFrame()
+	pod, err := dag.kubeClient.CoreV1().Pods(
 		dag.Config.Namespace,
 	).Create(
 		context.TODO(),
-		&jobFrame,
+		&podFrame,
 		k8sapi.CreateOptions{},
 	)
 	if err != nil {
 		panic(err)
 	}
-	dagRun.job = job
-	return job.Name
+	dagRun.pod = pod
+	return pod.Name
 }
 
-func (dagRun *DAGRun) monitorJob() watch.Event {
-	podClient := dagRun.DAG.kubeClient.CoreV1().Pods(
-		dagRun.job.Namespace,
-	)
-
-	watcher, err := podClient.Watch(context.TODO(), k8sapi.ListOptions{})
+func (dagRun *DAGRun) monitorPod() watch.Event {
+	podsClient := dagRun.DAG.kubeClient.CoreV1().Pods(dagRun.pod.Namespace)
+	watcher, err := podsClient.Watch(context.TODO(), k8sapi.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
 	result := <-watcher.ResultChan()
-	panic(result)
-	fmt.Println("Result", result)
 	return result
-	// req := podClient.GetLogs(
-	// 	dagRun.job.Name,
-	// 	&core.PodLogOptions{},
-	// )
-	// logs, err := req.Stream(context.TODO())
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// dagRun.DAG.kubeClient.CoreV1().Pods(dagRun.job.Namespace).Watch()
-	// fmt.Println("Logs", logs.)
-	// return logs.Read()
 }
 
-// Start starts and monitors the job and also tracks the logs from the job
-func (dagRun *DAGRun) Start(jobChannel chan string) {
-	jobChannel <- dagRun.createJob()
-	dagRun.monitorJob()
+// Start starts and monitors the pod and also tracks the logs from the pod
+func (dagRun *DAGRun) Start() string {
+	podName := dagRun.createPod()
+	go dagRun.monitorPod()
+	return podName
 }
 
-// deleteJob
-func (dagRun *DAGRun) deleteJob() {
-	err := dagRun.DAG.kubeClient.BatchV1().Jobs(
+func (dagRun *DAGRun) deletePod() {
+	err := dagRun.DAG.kubeClient.CoreV1().Pods(
 		dagRun.DAG.Config.Namespace,
 	).Delete(
 		context.TODO(),

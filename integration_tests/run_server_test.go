@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	batch "k8s.io/api/batch/v1"
+	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -37,14 +37,14 @@ func adjustConfigDagPath(configPath string, dagPath string) string {
 	return newConfigPath
 }
 
-func getJobs(kubeClient kubernetes.Interface) *[]*batch.Job {
-	jobSlice := make([]*batch.Job, 0)
+func getPods(kubeClient kubernetes.Interface) *[]*core.Pod {
+	podSlice := make([]*core.Pod, 0)
 	namespaces, err := kubeClient.CoreV1().Namespaces().List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
 	for _, namespace := range namespaces.Items {
-		jobList, err := kubeClient.BatchV1().Jobs(
+		podList, err := kubeClient.CoreV1().Pods(
 			namespace.Name,
 		).List(
 			context.TODO(),
@@ -53,11 +53,11 @@ func getJobs(kubeClient kubernetes.Interface) *[]*batch.Job {
 		if err != nil {
 			panic(err)
 		}
-		for _, job := range jobList.Items {
-			jobSlice = append(jobSlice, &job)
+		for _, pod := range podList.Items {
+			podSlice = append(podSlice, &pod)
 		}
 	}
-	return &jobSlice
+	return &podSlice
 }
 
 func createDirIfNotExist(directory string) string {
@@ -110,7 +110,7 @@ func TestMain(m *testing.M) {
 
 func TestStartServer(t *testing.T) {
 	kubeClient := k8sclient.CreateKubeClient()
-	defer testutils.CleanUpJobs(kubeClient)
+	defer testutils.CleanUpPods(kubeClient)
 	orch := *orchestrator.NewOrchestrator(configPath)
 	loopBreaker := false
 	go orch.Start(1, &loopBreaker)

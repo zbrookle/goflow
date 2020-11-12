@@ -6,89 +6,77 @@ import (
 	"goflow/k8sclient"
 	"goflow/testutils"
 	"testing"
-	"time"
 
-	batch "k8s.io/api/batch/v1"
+	// "time"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestCreateJob(t *testing.T) {
-	defer testutils.CleanUpJobs(KUBECLIENT)
+func TestCreatePod(t *testing.T) {
+	defer testutils.CleanUpPods(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDAGFakeClient())
-	dagRun.createJob()
-	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
+	dagRun.createPod()
+	foundPod, err := dagRun.DAG.kubeClient.CoreV1().Pods(
 		dagRun.DAG.Config.Namespace,
 	).Get(
 		context.TODO(),
-		dagRun.job.Name,
+		dagRun.pod.Name,
 		v1.GetOptions{},
 	)
 	if err != nil {
 		panic(err)
 	}
-	foundJobValue := jsonpanic.JSONPanic(*foundJob)
-	expectedValue := jsonpanic.JSONPanic(*dagRun.job)
-	if foundJobValue != expectedValue {
+	foundPodValue := jsonpanic.JSONPanic(*foundPod)
+	expectedValue := jsonpanic.JSONPanic(*dagRun.pod)
+	if foundPodValue != expectedValue {
 		t.Error("Expected:", expectedValue)
-		t.Error("Found:", foundJobValue)
+		t.Error("Found:", foundPodValue)
 	}
 }
 
-func TestStartJob(t *testing.T) {
+func TestStartPod(t *testing.T) {
 	realClient := k8sclient.CreateKubeClient()
-	defer testutils.CleanUpJobs(realClient)
+	defer testutils.CleanUpPods(realClient)
 	dagRun := createDagRun(getTestDate(), getTestDAGRealClient())
-	jobNameChannel := make(chan string, 1)
-	go dagRun.Start(jobNameChannel)
-	jobName := <-jobNameChannel
-	job, err := realClient.BatchV1().Jobs(
+	podName := dagRun.Start()
+	_, err := realClient.CoreV1().Pods(
 		dagRun.DAG.Config.Namespace,
 	).Get(
 		context.TODO(),
-		jobName,
+		podName,
 		v1.GetOptions{},
 	)
 
-	time.Sleep(30 * time.Second)
+	// time.Sleep(30 * time.Second)
 
 	if err != nil {
-		t.Errorf("Job %s could not be found", jobName)
-		panic("Job not found")
+		t.Errorf("Pod %s could not be found", podName)
+		panic("Pod not found")
 	}
-
-	if job.Status.Succeeded != 1 {
-		t.Errorf("Job %s did not complete yet", jobName)
-	}
+	// if pod.Status. != 1 {
+	// 	t.Errorf("Pod %s did not complete yet", podName)
+	// }
 }
 
-func unmarshalJob(job batch.Job) string {
-	bytes := make([]byte, 0)
-	err := job.Unmarshal(bytes)
-	if err != nil {
-		panic(err)
-	}
-	return string(bytes)
-}
-
-func TestDeleteJob(t *testing.T) {
-	defer testutils.CleanUpJobs(KUBECLIENT)
+func TestDeletePod(t *testing.T) {
+	defer testutils.CleanUpPods(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDAGFakeClient())
-	jobFrame := dagRun.getJobFrame()
-	jobsClient := KUBECLIENT.BatchV1().Jobs(dagRun.DAG.Config.Namespace)
+	podFrame := dagRun.getPodFrame()
+	podsClient := KUBECLIENT.CoreV1().Pods(dagRun.DAG.Config.Namespace)
 
-	createdJob, err := jobsClient.Create(context.TODO(), &jobFrame, v1.CreateOptions{})
-	dagRun.job = createdJob
+	createdPod, err := podsClient.Create(context.TODO(), &podFrame, v1.CreateOptions{})
+	dagRun.pod = createdPod
 	if err != nil {
 		panic(err)
 	}
-	dagRun.deleteJob()
-	list, err := jobsClient.List(context.TODO(), v1.ListOptions{})
+	dagRun.deletePod()
+	list, err := podsClient.List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
-	for _, job := range list.Items {
-		if unmarshalJob(*createdJob) == unmarshalJob(job) {
-			t.Errorf("Job %s should have been deleted", createdJob.Name)
+	for _, pod := range list.Items {
+		if jsonpanic.JSONPanic(*createdPod) == jsonpanic.JSONPanic(pod) {
+			t.Errorf("Pod %s should have been deleted", createdPod.Name)
 		}
 	}
 }
