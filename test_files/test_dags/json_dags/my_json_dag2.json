@@ -1,5 +1,6 @@
 {
     "Name": "test-dag-2",
     "Command": "echo 2",
-    "StartDateTime": "2019-01-01"
+    "StartDateTime": "2019-01-01",
+    "MaxActiveRuns": 1
 }
