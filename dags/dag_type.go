@@ -2,6 +2,7 @@ package dags
 
 import (
 	"encoding/json"
+	"fmt"
 	"goflow/logs"
 	"io/ioutil"
 	"os"
@@ -54,6 +55,9 @@ func createDAGFromDagConfigAndCode(config *DAGConfig, code string) DAG {
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
 		dag.EndDateTime = getDateFromString(dag.Config.EndDateTime)
+	}
+	if dag.Config.MaxActiveRuns < 1 {
+		panic("MaxActiveRuns must be greater than 0!")
 	}
 	return dag
 }
@@ -125,14 +129,16 @@ func NewDAG(
 	schedule string,
 	dockerImage string,
 	retryPolicy string,
+	maxActiveRuns int,
 	kubeClient kubernetes.Interface,
 ) *DAG {
 	return &DAG{
 		Config: &DAGConfig{Name: name,
-			Namespace:   namespace,
-			Schedule:    schedule,
-			DockerImage: dockerImage,
-			RetryPolicy: retryPolicy},
+			Namespace:     namespace,
+			Schedule:      schedule,
+			DockerImage:   dockerImage,
+			RetryPolicy:   retryPolicy,
+			MaxActiveRuns: maxActiveRuns},
 		DAGRuns:    make([]*DAGRun, 0),
 		kubeClient: kubeClient,
 	}
@@ -183,6 +189,8 @@ func (dag *DAG) Ready() bool {
 	currentTime := time.Now()
 	scheduleReady := dag.MostRecentExecution.Before(currentTime) ||
 		dag.MostRecentExecution.Equal(currentTime)
+	fmt.Println("Schedule", scheduleReady)
+	fmt.Println("Allowed to run", dag.ActiveRuns < dag.Config.MaxActiveRuns)
 	return (dag.ActiveRuns < dag.Config.MaxActiveRuns) && scheduleReady
 }
 

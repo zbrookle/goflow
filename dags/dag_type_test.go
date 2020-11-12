@@ -75,6 +75,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		EndDateTime:   "2020-01-01",
 		Labels:        map[string]string{"test": "test-label"},
 		Annotations:   map[string]string{"anno": "value"},
+		MaxActiveRuns: 1,
 	}
 	formattedJSONString := string(config.Marshal())
 	expectedDAG := DAG{
@@ -126,31 +127,35 @@ func TestReadFiles(t *testing.T) {
 	}
 }
 
-func getTestDag() *DAG {
-	return NewDAG("test", "default", "* * * * *", "busybox", "Never", KUBECLIENT)
+func getTestDAG() *DAG {
+	return NewDAG("test", "default", "* * * * *", "busybox", "Never", 1, KUBECLIENT)
 }
 
 func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
 }
 
-func TestAddDagRun(t *testing.T) {
-	testDag := getTestDag()
-	currentTime := getTestDate()
-	testDag.AddDagRun(currentTime)
-	foundDagCount := len(testDag.DAGRuns)
-	expectedCount := 1
-	if foundDagCount != expectedCount {
+func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag *DAG) {
+	if foundCount != expectedCount {
 		t.Errorf(
 			"DAG Run not properly added, expected %d dag run, found %d",
 			expectedCount,
-			foundDagCount,
+			foundCount,
 		)
 		t.Error("Found dags:", testDag.DAGRuns)
 	}
 }
 
+func TestAddDagRun(t *testing.T) {
+	testDAG := getTestDAG()
+	currentTime := getTestDate()
+	testDAG.AddDagRun(currentTime)
+	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
+}
+
 func TestAddDagRunIfReady(t *testing.T) {
-	testDag := getTestDag()
-	panic(testDag)
+	testDAG := getTestDAG()
+	testDAG.AddNextDagRunIfReady()
+	testDAG.AddNextDagRunIfReady()
+	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
 }

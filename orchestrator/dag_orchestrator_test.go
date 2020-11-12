@@ -32,7 +32,7 @@ func testOrchestrator() *Orchestrator {
 }
 
 func TestRegisterDAG(t *testing.T) {
-	dag := dags.NewDAG("test", "default", "* * * * *", "busyboxy", "Never", kubeClient)
+	dag := dags.NewDAG("test", "default", "* * * * *", "busyboxy", "Never", 1, kubeClient)
 	orch := testOrchestrator()
 	const expectedLength = 1
 	orch.AddDAG(dag)
