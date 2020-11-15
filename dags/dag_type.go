@@ -45,6 +45,12 @@ func getDateFromString(dateStr string) time.Time {
 
 // CreateDAG returns a dag using the configuration passed and stores the code string
 func CreateDAG(config *DAGConfig, code string, client kubernetes.Interface) DAG {
+	if config.Annotations == nil {
+		config.Annotations = make(map[string]string)
+	}
+	if config.Labels == nil {
+		config.Labels = make(map[string]string)
+	}
 	dag := DAG{Config: config, Code: code, DAGRuns: make([]*DAGRun, 0), kubeClient: client}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -137,6 +143,7 @@ func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
 		EndTime: k8sapi.Time{
 			Time: time.Time{},
 		},
+		State: make(chan interface{}),
 	}
 }
 
