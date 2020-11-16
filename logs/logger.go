@@ -6,9 +6,14 @@ import (
 )
 
 var (
+	// WarningLogger is the logger for warnings
 	WarningLogger *log.Logger
-	InfoLogger    *log.Logger
-	ErrorLogger   *log.Logger
+
+	// InfoLogger is the logger for info
+	InfoLogger *log.Logger
+
+	// ErrorLogger is the logger for errors
+	ErrorLogger *log.Logger
 )
 
 func init() {
