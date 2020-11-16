@@ -88,7 +88,6 @@ func createFakeDagFile(dagFolder string, dagNum int) {
 	}
 	jsonContent := fakeDagConfig.Marshal()
 	ioutil.WriteFile(filePath, jsonContent, 0755)
-	fmt.Println(fakeDagConfig.JSON())
 }
 
 // createFakeDags creates fake dag files, and returns their location

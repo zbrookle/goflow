@@ -2,7 +2,7 @@ package podutils
 
 import (
 	"context"
-	"fmt"
+	"goflow/logs"
 
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +17,7 @@ const AppName = "goflow"
 
 // CleanUpPods deletes all pods currently present in the k8s cluster in all namespaces that are accessible
 func CleanUpPods(client kubernetes.Interface) {
-	fmt.Println("Cleaning up...")
+	logs.InfoLogger.Println("Cleaning up...")
 	namespaceClient := client.CoreV1().Namespaces()
 	namespaceList, err := namespaceClient.List(context.TODO(), v1.ListOptions{})
 	if err != nil {
@@ -34,7 +34,11 @@ func CleanUpPods(client kubernetes.Interface) {
 			panic(err)
 		}
 		for _, pod := range podList.Items {
-			fmt.Printf("Deleting pod %s in namespace %s\n", pod.ObjectMeta.Name, namespace.Name)
+			logs.InfoLogger.Printf(
+				"Deleting pod %s in namespace %s\n",
+				pod.ObjectMeta.Name,
+				namespace.Name,
+			)
 			podsClient.Delete(context.TODO(), pod.ObjectMeta.Name, v1.DeleteOptions{})
 		}
 	}

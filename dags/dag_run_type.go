@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 
-	// "goflow/jsonpanic"
 	"goflow/logs"
 	"goflow/podutils"
 	"io"
@@ -366,7 +364,7 @@ func (dagRun *DAGRun) readLogsUntilDelete(logger io.ReadCloser, watcher watch.In
 		event, ok := <-watcher.ResultChan()
 		if ok {
 			phase := eventObjectToPod(event).Status.Phase
-			fmt.Printf("Pod switched to phase %s\n", phase)
+			logs.InfoLogger.Printf("Pod switched to phase %s\n", phase)
 			if phase == core.PodSucceeded || phase == core.PodFailed {
 				dagRun.PodPhase = phase
 				break
