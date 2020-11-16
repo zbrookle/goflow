@@ -1,20 +1,20 @@
 package config
 
 import (
-	"goflow/testpaths"
+	"goflow/testutils"
 	"testing"
 )
 
 var configPath string
 
 func TestMain(m *testing.M) {
-	configPath = testpaths.GetConfigPath()
+	configPath = testutils.GetConfigPath()
 	m.Run()
 }
 
 func TestReadConfig(t *testing.T) {
 	foundConfig := CreateConfig(configPath)
-	expectedConfig := GoFlowConfig{"default", "busybox", "path"}
+	expectedConfig := GoFlowConfig{"default", "busybox", "path", "2019-01-01"}
 	if *foundConfig != expectedConfig {
 		t.Error("Configs do not match")
 		t.Errorf("Found: %s", foundConfig)

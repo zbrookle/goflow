@@ -10,6 +10,7 @@ type GoFlowConfig struct {
 	DefaultNamespace   string
 	DefaultDockerImage string
 	DAGPath            string
+	DateFormat         string
 }
 
 func readConfig(filePath string) []byte {
@@ -32,6 +33,13 @@ func CreateConfig(filePath string) *GoFlowConfig {
 }
 
 // SaveConfig saves the current in memory configuration to the config file
-func (config GoFlowConfig) SaveConfig() {
-
+func (config GoFlowConfig) SaveConfig(filePath string) {
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		panic(err)
+	}
+	err = ioutil.WriteFile(filePath, configBytes, 0666)
+	if err != nil {
+		panic(err)
+	}
 }

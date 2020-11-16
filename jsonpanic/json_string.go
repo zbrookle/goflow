@@ -4,7 +4,6 @@ import "encoding/json"
 
 // JSONPanic performances json.Marshal with built in panic
 func JSONPanic(v interface{}) string {
-	print(v)
 	jsonString, err := json.Marshal(v)
 	if err != nil {
 		panic(err)

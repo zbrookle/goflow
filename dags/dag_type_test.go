@@ -2,17 +2,15 @@ package dags
 
 import (
 	"context"
-	"goflow/jsonpanic"
-	"goflow/testpaths"
+	"goflow/k8sclient"
+	"goflow/testutils"
 	"path/filepath"
 	"sort"
 	"testing"
 	"time"
 
 	"encoding/json"
-	"fmt"
 
-	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -21,26 +19,6 @@ import (
 
 var DAGPATH string
 var KUBECLIENT kubernetes.Interface
-
-func cleanUpJobs(client kubernetes.Interface) {
-	fmt.Println("Cleaning up...")
-	namespaceClient := client.CoreV1().Namespaces()
-	namespaceList, err := namespaceClient.List(context.TODO(), v1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-	for _, namespace := range namespaceList.Items {
-		jobsClient := client.BatchV1().Jobs(namespace.Name)
-		jobList, err := jobsClient.List(context.TODO(), v1.ListOptions{})
-		if err != nil {
-			panic(err)
-		}
-		for _, job := range jobList.Items {
-			fmt.Printf("Deleting job %s in namespace %s\n", job.ObjectMeta.Name, namespace.Name)
-			jobsClient.Delete(context.TODO(), job.ObjectMeta.Name, v1.DeleteOptions{})
-		}
-	}
-}
 
 func setUpNamespaces(client kubernetes.Interface) {
 	namespaceClient := client.CoreV1().Namespaces()
@@ -54,7 +32,7 @@ func setUpNamespaces(client kubernetes.Interface) {
 }
 
 func TestMain(m *testing.M) {
-	DAGPATH = filepath.Join(testpaths.GetTestFolder(), "test_dags")
+	DAGPATH = filepath.Join(testutils.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
 	setUpNamespaces(KUBECLIENT)
 	m.Run()
@@ -84,47 +62,46 @@ func (stringMap StringMap) Bytes() []byte {
 }
 
 func TestDAGFromJSONBytes(t *testing.T) {
-	name := "test"
-	namespace := "default"
-	schedule := "* * * * *"
-	image := "busybox"
-	retryPolicy := "Never"
-	command := "echo yes"
-	parallelism := int32(1)
-	timeLimit := int64(300)
-	retries := int32(2)
-	labels, _ := json.Marshal(map[string]string{"test": "test-label"})
-	annotations, _ := json.Marshal(map[string]string{"anno": "value"})
-	formattedJSONString := fmt.Sprintf(
-		"{\"Name\":\"%s\",\"Namespace\":\"%s\",\"Schedule\":\"%s\",\"DockerImage\":\"%s\","+
-			"\"RetryPolicy\":\"%s\",\"Command\":\"%s\",\"Parallelism\":%d,\"TimeLimit\":%d,"+
-			"\"Retries\":%d,\"Labels\":%s,\"Annotations\":%s",
-		name,
-		namespace,
-		schedule,
-		image,
-		retryPolicy,
-		command,
-		parallelism,
-		timeLimit,
-		retries,
-		labels,
-		annotations,
-	)
-	expectedJSONString := formattedJSONString + ",\"DAGRuns\":[]}"
-	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString + "}"))
+	config := DAGConfig{
+		Name:          "test",
+		Namespace:     "default",
+		Schedule:      "* * * * *",
+		DockerImage:   "busybox",
+		RetryPolicy:   "Never",
+		Command:       []string{"echo", "yes"},
+		Parallelism:   1,
+		TimeLimit:     int64(300),
+		Retries:       int32(2),
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "2020-01-01",
+		Labels:        map[string]string{"test": "test-label"},
+		Annotations:   map[string]string{"anno": "value"},
+		MaxActiveRuns: 1,
+	}
+	formattedJSONString := string(config.Marshal())
+	expectedDAG := DAG{
+		Config:              &config,
+		Code:                string(config.Marshal()),
+		StartDateTime:       time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC),
+		EndDateTime:         time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		DAGRuns:             make([]*DAGRun, 0),
+		kubeClient:          nil,
+		ActiveRuns:          0,
+		MostRecentExecution: time.Time{},
+	}
+	expectedJSONString := string(expectedDAG.Marshal())
+	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString), fake.NewSimpleClientset())
 	if err != nil {
 		panic(err)
 	}
-	marshaledJSON, err := json.Marshal(dag)
+	marshaledJSON := string(dag.Marshal())
 	if err != nil {
 		panic(err)
 	}
-	marshaledJSONString := string(marshaledJSON)
-	if expectedJSONString != marshaledJSONString {
+	if expectedJSONString != marshaledJSON {
 		t.Error("DAG struct does not match up with expected values")
-		t.Error("Found:", marshaledJSONString)
-		t.Error("Expected:", expectedJSONString)
+		t.Error("Found:", dag)
+		t.Error("Expec:", expectedDAG)
 	}
 }
 
@@ -151,80 +128,55 @@ func TestReadFiles(t *testing.T) {
 	}
 }
 
-func getTestDag() *DAG {
-	return NewDAG("test", "default", "* * * * *", "busybox", "Never", KUBECLIENT)
+func getTestDAG(client kubernetes.Interface) *DAG {
+	dag := CreateDAG(&DAGConfig{
+		Name:          "test",
+		Namespace:     "default",
+		Schedule:      "* * * * *",
+		DockerImage:   "busybox",
+		RetryPolicy:   "Never",
+		Command:       []string{"echo", "\"Hello world!!!!!!!\""},
+		TimeLimit:     20,
+		MaxActiveRuns: 1,
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "",
+	}, "", client)
+	return &dag
+}
+
+func getTestDAGFakeClient() *DAG {
+	return getTestDAG(KUBECLIENT)
+}
+
+func getTestDAGRealClient() *DAG {
+	return getTestDAG(k8sclient.CreateKubeClient())
 }
 
 func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
 }
 
-func TestAddDagRun(t *testing.T) {
-	testDag := getTestDag()
-	currentTime := getTestDate()
-	testDag.AddDagRun(currentTime)
-	foundDagCount := len(testDag.DAGRuns)
-	expectedCount := 1
-	if foundDagCount != expectedCount {
+func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag *DAG) {
+	if foundCount != expectedCount {
 		t.Errorf(
 			"DAG Run not properly added, expected %d dag run, found %d",
 			expectedCount,
-			foundDagCount,
+			foundCount,
 		)
 		t.Error("Found dags:", testDag.DAGRuns)
 	}
 }
 
-func TestCreateJob(t *testing.T) {
-	defer cleanUpJobs(KUBECLIENT)
-	dagRun := createDagRun(getTestDate(), getTestDag())
-	dagRun.CreateJob()
-	foundJob, err := dagRun.DAG.kubeClient.BatchV1().Jobs(
-		dagRun.DAG.Namespace,
-	).Get(
-		context.TODO(),
-		dagRun.Job.Name,
-		v1.GetOptions{},
-	)
-	if err != nil {
-		panic(err)
-	}
-	foundJobValue := jsonpanic.JSONPanic(*foundJob)
-	expectedValue := jsonpanic.JSONPanic(*dagRun.Job)
-	if foundJobValue != expectedValue {
-		t.Error("Expected:", expectedValue)
-		t.Error("Found:", foundJobValue)
-	}
+func TestAddDagRun(t *testing.T) {
+	testDAG := getTestDAGFakeClient()
+	currentTime := getTestDate()
+	testDAG.AddDagRun(currentTime)
+	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
 }
 
-func unmarshalJob(job batch.Job) string {
-	bytes := make([]byte, 0)
-	err := job.Unmarshal(bytes)
-	if err != nil {
-		panic(err)
-	}
-	return string(bytes)
-}
-
-func TestDeleteJob(t *testing.T) {
-	defer cleanUpJobs(KUBECLIENT)
-	dagRun := createDagRun(getTestDate(), getTestDag())
-	jobFrame := dagRun.getJobFrame()
-	jobsClient := KUBECLIENT.BatchV1().Jobs(dagRun.DAG.Namespace)
-
-	createdJob, err := jobsClient.Create(context.TODO(), &jobFrame, v1.CreateOptions{})
-	dagRun.Job = createdJob
-	if err != nil {
-		panic(err)
-	}
-	dagRun.deleteJob()
-	list, err := jobsClient.List(context.TODO(), v1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-	for _, job := range list.Items {
-		if unmarshalJob(*createdJob) == unmarshalJob(job) {
-			t.Errorf("Job %s should have been deleted", createdJob.Name)
-		}
-	}
+func TestAddDagRunIfReady(t *testing.T) {
+	testDAG := getTestDAGFakeClient()
+	testDAG.AddNextDagRunIfReady()
+	testDAG.AddNextDagRunIfReady()
+	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
 }

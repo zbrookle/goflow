@@ -1,7 +1,6 @@
 package dags
 
 import (
-	"context"
 	"encoding/json"
 	"goflow/logs"
 	"io/ioutil"
@@ -11,37 +10,21 @@ import (
 	"strings"
 	"time"
 
-	batch "k8s.io/api/batch/v1"
-	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 // DAG is directed acyclic graph for hold job information
 type DAG struct {
-	Name        string
-	Namespace   string
-	Schedule    string
-	DockerImage string
-	RetryPolicy string
-	Command     string
-	Parallelism int32
-	TimeLimit   int64
-	Retries     int32
-	Labels      map[string]string
-	Annotations map[string]string
-	DAGRuns     []*DAGRun
-	kubeClient  kubernetes.Interface
-}
-
-// DAGRun is a single run of a given dag - corresponds with a kubernetes Job
-type DAGRun struct {
-	Name          string
-	DAG           *DAG
-	ExecutionDate k8sapi.Time // This is the date that will be passed to the job that runs
-	Start         k8sapi.Time
-	End           k8sapi.Time
-	Job           *batch.Job
+	Config              *DAGConfig
+	Code                string
+	StartDateTime       time.Time
+	EndDateTime         time.Time
+	DAGRuns             []*DAGRun
+	kubeClient          kubernetes.Interface
+	ActiveRuns          int
+	MostRecentExecution time.Time
 }
 
 func readDAGFile(dagFilePath string) []byte {
@@ -52,24 +35,52 @@ func readDAGFile(dagFilePath string) []byte {
 	return dat
 }
 
-func createDAGFromJSONBytes(dagBytes []byte) (DAG, error) {
-	dagStruct := DAG{}
-	err := json.Unmarshal(dagBytes, &dagStruct)
+func getDateFromString(dateStr string) time.Time {
+	time, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		return dagStruct, err
+		panic(err)
 	}
-	dagStruct.DAGRuns = make([]*DAGRun, 0)
-	return dagStruct, nil
+	return time
+}
+
+// CreateDAG returns a dag using the configuration passed and stores the code string
+func CreateDAG(config *DAGConfig, code string, client kubernetes.Interface) DAG {
+	if config.Annotations == nil {
+		config.Annotations = make(map[string]string)
+	}
+	if config.Labels == nil {
+		config.Labels = make(map[string]string)
+	}
+	dag := DAG{Config: config, Code: code, DAGRuns: make([]*DAGRun, 0), kubeClient: client}
+	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
+	if dag.Config.EndDateTime != "" {
+		dag.EndDateTime = getDateFromString(dag.Config.EndDateTime)
+	}
+	if dag.Config.MaxActiveRuns < 1 {
+		panic("MaxActiveRuns must be greater than 0!")
+	}
+	return dag
+}
+
+func createDAGFromJSONBytes(dagBytes []byte, client kubernetes.Interface) (DAG, error) {
+	dagConfigStruct := DAGConfig{}
+	err := json.Unmarshal(dagBytes, &dagConfigStruct)
+	if err != nil {
+		return DAG{}, err
+	}
+	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client)
+	return dag, nil
 }
 
 // getDAGFromJSON creates a new dag struct from a dag file
-func getDAGFromJSON(dagFilePath string) (DAG, error) {
+func getDAGFromJSON(dagFilePath string, client kubernetes.Interface) (DAG, error) {
 	dagBytes := readDAGFile(dagFilePath)
-	dagJSON, err := createDAGFromJSONBytes(dagBytes)
+	dagJSON, err := createDAGFromJSONBytes(dagBytes, client)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
 		return DAG{}, err
 	}
+	dagJSON.Code = string(dagBytes)
 	return dagJSON, nil
 }
 
@@ -88,6 +99,7 @@ func getDirSliceRecur(directory string) []string {
 	}
 	err := filepath.Walk(directory, appendToFiles)
 	if err != nil {
+		logs.ErrorLogger.Println(directory, "not found")
 		panic(err)
 	}
 	return files
@@ -96,51 +108,40 @@ func getDirSliceRecur(directory string) []string {
 // GetDAGSFromFolder returns a slice of DAG structs, one for each DAG file
 // Each file must have the "dag" suffix
 // E.g., my_dag.py, some_dag.json
-func GetDAGSFromFolder(folder string) []DAG {
+func GetDAGSFromFolder(folder string) []*DAG {
 	files := getDirSliceRecur(folder)
-	dags := make([]DAG, 0, len(files))
+	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file)
+			dag, err := getDAGFromJSON(file, fake.NewSimpleClientset())
 			if err == nil {
-				dags = append(dags, dag)
+				dags = append(dags, &dag)
 			}
 		}
 	}
 	return dags
 }
 
-// NewDAG creates a new dag initialized with an empty DAGRuns slice
-func NewDAG(
-	name string,
-	namespace string,
-	schedule string,
-	dockerImage string,
-	retryPolicy string,
-	kubeClient kubernetes.Interface,
-) *DAG {
-	return &DAG{
-		Name:        name,
-		Namespace:   namespace,
-		Schedule:    schedule,
-		DockerImage: dockerImage,
-		RetryPolicy: retryPolicy,
-		DAGRuns:     make([]*DAGRun, 0),
-		kubeClient:  kubeClient,
-	}
+func cleanK8sName(name string) string {
+	name = strings.ReplaceAll(name, ":", "-")
+	name = strings.ReplaceAll(name, " ", "")
+	name = strings.ReplaceAll(name, "+", "plus")
+	name = strings.ToLower(name)
+	return name
 }
 
 func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
+	dagName := cleanK8sName(dag.Config.Name + executionDate.String())
 	return &DAGRun{
-		Name: dag.Name + executionDate.String(),
+		Name: dagName,
 		DAG:  dag,
 		ExecutionDate: k8sapi.Time{
 			Time: executionDate,
 		},
-		Start: k8sapi.Time{
+		StartTime: k8sapi.Time{
 			Time: time.Now(),
 		},
-		End: k8sapi.Time{
+		EndTime: k8sapi.Time{
 			Time: time.Time{},
 		},
 	}
@@ -150,84 +151,48 @@ func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
 func (dag *DAG) AddDagRun(executionDate time.Time) {
 	dagRun := createDagRun(executionDate, dag)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
+	dag.ActiveRuns++
 }
 
-// TerminateAndDeleteRuns removes all active DAG runs and their associated jobs
+// AddNextDagRunIfReady adds the next dag run if ready for it
+func (dag *DAG) AddNextDagRunIfReady() {
+	if dag.Ready() {
+		if dag.MostRecentExecution.IsZero() {
+			dag.MostRecentExecution = dag.StartDateTime
+		}
+		dag.AddDagRun(dag.MostRecentExecution)
+	}
+}
+
+// TerminateAndDeleteRuns removes all active DAG runs and their associated pods
 func (dag *DAG) TerminateAndDeleteRuns() {
 	for _, run := range dag.DAGRuns {
-		run.deleteJob()
+		run.deletePod()
 	}
 }
 
-// getJobFrame returns a job from a DagRun
-func (dagRun DAGRun) getJobFrame() batch.Job {
-	dag := dagRun.DAG
-	return batch.Job{
-		TypeMeta: k8sapi.TypeMeta{
-			Kind:       "Job",
-			APIVersion: "v1",
-		},
-		ObjectMeta: k8sapi.ObjectMeta{
-			Name:        dagRun.Name,
-			Namespace:   dag.Namespace,
-			Labels:      dag.Labels,
-			Annotations: dag.Annotations,
-		},
-		Spec: batch.JobSpec{
-			Parallelism:           &dag.Parallelism,
-			ActiveDeadlineSeconds: &dag.TimeLimit,
-			BackoffLimit:          &dag.Retries,
-			Template: core.PodTemplateSpec{
-				ObjectMeta: k8sapi.ObjectMeta{
-					Name:      dag.Name,
-					Namespace: dag.Namespace,
-					// Labels: map[string]string{
-					// 	"": "",
-					// },
-					// Annotations: map[string]string{
-					// 	"": "",
-					// },
-				},
-				Spec: core.PodSpec{
-					Volumes:                       nil,
-					Containers:                    nil,
-					EphemeralContainers:           nil,
-					RestartPolicy:                 "",
-					TerminationGracePeriodSeconds: nil,
-					ActiveDeadlineSeconds:         nil,
-				},
-			},
-		},
-	}
+// Ready returns true if the DAG is ready for another DAG Run to be created
+func (dag *DAG) Ready() bool {
+	currentTime := time.Now()
+	scheduleReady := dag.MostRecentExecution.Before(currentTime) ||
+		dag.MostRecentExecution.Equal(currentTime)
+	return (dag.ActiveRuns < dag.Config.MaxActiveRuns) && scheduleReady
 }
 
-// CreateJob creates and registers a new job with
-func (dagRun *DAGRun) CreateJob() {
-	dag := dagRun.DAG
-	jobFrame := dagRun.getJobFrame()
-	job, err := dag.kubeClient.BatchV1().Jobs(
-		dag.Namespace,
-	).Create(
-		context.TODO(),
-		&jobFrame,
-		k8sapi.CreateOptions{},
-	)
+// Marshal returns the JSON byte slice representation of the DAG
+func (dag *DAG) Marshal() []byte {
+	jsonString, err := json.Marshal(dag)
 	if err != nil {
 		panic(err)
 	}
-	dagRun.Job = job
+	return jsonString
 }
 
-// deleteJob
-func (dagRun *DAGRun) deleteJob() {
-	err := dagRun.DAG.kubeClient.BatchV1().Jobs(
-		dagRun.DAG.Namespace,
-	).Delete(
-		context.TODO(),
-		dagRun.Name,
-		k8sapi.DeleteOptions{},
-	)
+// String returns a nice JSON representation of the dag
+func (dag *DAG) String() string {
+	jsonString, err := json.MarshalIndent(dag, "", "\t")
 	if err != nil {
 		panic(err)
 	}
+	return string(jsonString)
 }

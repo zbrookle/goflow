@@ -1,7 +1,7 @@
 package orchestrator
 
 import (
-	"goflow/testpaths"
+	"goflow/testutils"
 	"testing"
 
 	"goflow/config"
@@ -20,8 +20,8 @@ func createFakeKubeClient() *fake.Clientset {
 
 func TestMain(m *testing.M) {
 	kubeClient = createFakeKubeClient()
-	configPath = testpaths.GetConfigPath()
-	dagPath = testpaths.GetDagsFolder()
+	configPath = testutils.GetConfigPath()
+	dagPath = testutils.GetDagsFolder()
 	m.Run()
 }
 
@@ -32,11 +32,22 @@ func testOrchestrator() *Orchestrator {
 }
 
 func TestRegisterDAG(t *testing.T) {
-	dag := dags.NewDAG("test", "default", "* * * * *", "busyboxy", "Never", kubeClient)
 	orch := testOrchestrator()
+	dag := dags.CreateDAG(&dags.DAGConfig{
+		Name:          "test",
+		Namespace:     "default",
+		Schedule:      "* * * * *",
+		DockerImage:   "busybox",
+		RetryPolicy:   "Never",
+		Command:       []string{"echo", "yes"},
+		TimeLimit:     20,
+		MaxActiveRuns: 1,
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "",
+	}, "", orch.kubeClient)
 	const expectedLength = 1
-	orch.AddDAG(dag)
-	if orch.dagMap[dag.Name] != dag {
+	orch.AddDAG(&dag)
+	if orch.dagMap[dag.Config.Name] != &dag {
 		t.Error("DAG not added at correct key")
 	}
 	if len(orch.dagMap) != expectedLength {
@@ -50,5 +61,10 @@ func TestCollectDags(t *testing.T) {
 	dagCount := len(orch.DAGs())
 	if dagCount == 0 {
 		t.Errorf("%d DAGs collected, expected more than 0", dagCount)
+	}
+	for dagName := range orch.dagMap {
+		if dagName != orch.dagMap[dagName].Config.Name {
+			panic("Key doesn't match up with dag name!")
+		}
 	}
 }
