@@ -125,6 +125,7 @@ func GetDAGSFromFolder(folder string) []*DAG {
 func cleanK8sName(name string) string {
 	name = strings.ReplaceAll(name, ":", "-")
 	name = strings.ReplaceAll(name, " ", "")
+	name = strings.ReplaceAll(name, "+", "plus")
 	name = strings.ToLower(name)
 	return name
 }
