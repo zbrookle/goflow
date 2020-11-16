@@ -7,8 +7,7 @@ import (
 	"goflow/testutils"
 	"testing"
 
-	// "time"
-
+	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,24 +37,20 @@ func TestStartPod(t *testing.T) {
 	realClient := k8sclient.CreateKubeClient()
 	defer testutils.CleanUpPods(realClient)
 	dagRun := createDagRun(getTestDate(), getTestDAGRealClient())
-	podName := dagRun.Start()
-	_, err := realClient.CoreV1().Pods(
-		dagRun.DAG.Config.Namespace,
-	).Get(
-		context.TODO(),
-		podName,
-		v1.GetOptions{},
-	)
+	dagRun.Start()
 
-	// time.Sleep(30 * time.Second)
-
-	if err != nil {
-		t.Errorf("Pod %s could not be found", podName)
-		panic("Pod not found")
+	// Test for dag completion in state of dag
+	if (dagRun.PodPhase != core.PodSucceeded) && (dagRun.PodPhase != core.PodFailed) {
+		t.Errorf(
+			"A finished dagRun should be in phase %s or state %s, but found in state %s",
+			core.PodSucceeded,
+			core.PodFailed,
+			dagRun.PodPhase,
+		)
 	}
-	// if pod.Status. != 1 {
-	// 	t.Errorf("Pod %s did not complete yet", podName)
-	// }
+
+	// Test for log output
+
 }
 
 func TestDeletePod(t *testing.T) {

@@ -353,7 +353,7 @@ func (dagRun *DAGRun) getLogger() io.ReadCloser {
 	return logStreamer
 }
 
-func readLogsUntilDelete(logger io.ReadCloser, watcher watch.Interface) {
+func (dagRun *DAGRun) readLogsUntilDelete(logger io.ReadCloser, watcher watch.Interface) {
 	defer logger.Close()
 	for {
 		messageBytes := make([]byte, 0)
@@ -368,6 +368,7 @@ func readLogsUntilDelete(logger io.ReadCloser, watcher watch.Interface) {
 		if ok {
 			phase := eventObjectToPod(event).Status.Phase
 			if phase == core.PodSucceeded || phase == core.PodFailed {
+				dagRun.PodPhase = phase
 				return
 			}
 		}
@@ -378,7 +379,7 @@ func (dagRun *DAGRun) monitorPod() {
 	watcher := dagRun.watcher()
 	dagRun.waitForPodAdded(watcher)
 	logger := dagRun.getLogger()
-	readLogsUntilDelete(logger, watcher)
+	dagRun.readLogsUntilDelete(logger, watcher)
 }
 
 // Start starts and monitors the pod and also tracks the logs from the pod
