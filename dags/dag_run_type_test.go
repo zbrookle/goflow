@@ -50,7 +50,6 @@ func TestStartPod(t *testing.T) {
 	}
 
 	// Test for log output
-
 }
 
 func TestDeletePod(t *testing.T) {

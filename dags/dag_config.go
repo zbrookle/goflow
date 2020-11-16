@@ -14,7 +14,7 @@ type DAGConfig struct {
 	Schedule      string
 	DockerImage   string
 	RetryPolicy   core.RestartPolicy
-	Command       string
+	Command       []string
 	Parallelism   int32
 	TimeLimit     int64
 	Retries       int32

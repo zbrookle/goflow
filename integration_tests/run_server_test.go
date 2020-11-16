@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -77,7 +78,7 @@ func createFakeDagFile(dagFolder string, dagNum int) {
 	fakeDagConfig := &dags.DAGConfig{Name: fakeDagName,
 		Namespace:     "default",
 		Schedule:      "* * * * *",
-		Command:       fmt.Sprintf("echo %d", dagNum),
+		Command:       strings.Split(fmt.Sprintf("echo %d", dagNum), " "),
 		Parallelism:   0,
 		TimeLimit:     0,
 		Retries:       2,
