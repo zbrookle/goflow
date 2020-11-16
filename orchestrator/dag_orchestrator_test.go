@@ -1,7 +1,7 @@
 package orchestrator
 
 import (
-	"goflow/testutils"
+	"goflow/podutils"
 	"testing"
 
 	"goflow/config"
@@ -20,8 +20,8 @@ func createFakeKubeClient() *fake.Clientset {
 
 func TestMain(m *testing.M) {
 	kubeClient = createFakeKubeClient()
-	configPath = testutils.GetConfigPath()
-	dagPath = testutils.GetDagsFolder()
+	configPath = podutils.GetConfigPath()
+	dagPath = podutils.GetDagsFolder()
 	m.Run()
 }
 

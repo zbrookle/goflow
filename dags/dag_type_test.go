@@ -3,7 +3,7 @@ package dags
 import (
 	"context"
 	"goflow/k8sclient"
-	"goflow/testutils"
+	"goflow/podutils"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -32,7 +32,7 @@ func setUpNamespaces(client kubernetes.Interface) {
 }
 
 func TestMain(m *testing.M) {
-	DAGPATH = filepath.Join(testutils.GetTestFolder(), "test_dags")
+	DAGPATH = filepath.Join(podutils.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
 	setUpNamespaces(KUBECLIENT)
 	m.Run()

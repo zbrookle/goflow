@@ -4,7 +4,7 @@ import (
 	"context"
 	"goflow/jsonpanic"
 	"goflow/k8sclient"
-	"goflow/testutils"
+	"goflow/podutils"
 	"strings"
 	"testing"
 
@@ -13,7 +13,7 @@ import (
 )
 
 func TestCreatePod(t *testing.T) {
-	defer testutils.CleanUpPods(KUBECLIENT)
+	defer podutils.CleanUpPods(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDAGFakeClient())
 	dagRun.createPod()
 	foundPod, err := dagRun.DAG.kubeClient.CoreV1().Pods(
@@ -45,7 +45,7 @@ func TestStartPod(t *testing.T) {
 	}
 	for _, table := range tables {
 		func() {
-			defer testutils.CleanUpPods(realClient)
+			defer podutils.CleanUpPods(realClient)
 			dagRun := createDagRun(getTestDate(), getTestDAGRealClient())
 			if table.withLogs {
 				dagRun.withLogs()
@@ -82,7 +82,7 @@ func TestStartPod(t *testing.T) {
 }
 
 func TestDeletePod(t *testing.T) {
-	defer testutils.CleanUpPods(KUBECLIENT)
+	defer podutils.CleanUpPods(KUBECLIENT)
 	dagRun := createDagRun(getTestDate(), getTestDAGFakeClient())
 	podFrame := dagRun.getPodFrame()
 	podsClient := KUBECLIENT.CoreV1().Pods(dagRun.DAG.Config.Namespace)

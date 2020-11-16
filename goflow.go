@@ -5,21 +5,21 @@ import (
 	"goflow/k8sclient"
 	"goflow/logs"
 	"goflow/orchestrator"
-	"goflow/testutils"
+	"goflow/podutils"
 	"time"
 )
 
 func main() {
 	configPath := flag.String(
 		"path",
-		testutils.GetConfigPath(),
+		podutils.GetConfigPath(),
 		"The path to the configuration file",
 	)
 	flag.Parse()
 
 	kubeClient := k8sclient.CreateKubeClient()
 
-	defer testutils.CleanUpPods(kubeClient)
+	defer podutils.CleanUpPods(kubeClient)
 	orch := *orchestrator.NewOrchestrator(*configPath)
 	loopBreaker := false
 	go orch.Start(1, &loopBreaker)

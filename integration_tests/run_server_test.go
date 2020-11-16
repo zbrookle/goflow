@@ -9,7 +9,7 @@ import (
 	"goflow/k8sclient"
 	"goflow/logs"
 	"goflow/orchestrator"
-	"goflow/testutils"
+	"goflow/podutils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -33,7 +33,7 @@ func adjustConfigDagPath(configPath string, dagPath string) string {
 	}
 	json.Unmarshal(configBytes, fixedConfig)
 	fixedConfig.DAGPath = dagPath
-	newConfigPath := filepath.Join(testutils.GetTestFolder(), "tmp_config.json")
+	newConfigPath := filepath.Join(podutils.GetTestFolder(), "tmp_config.json")
 	fixedConfig.SaveConfig(newConfigPath)
 	return newConfigPath
 }
@@ -102,16 +102,16 @@ func createFakeDags(testFolder string) string {
 
 func TestMain(m *testing.M) {
 	dagCount = 2
-	fakeDagsPath := createFakeDags(testutils.GetTestFolder())
+	fakeDagsPath := createFakeDags(podutils.GetTestFolder())
 	defer os.RemoveAll(fakeDagsPath)
-	configPath = adjustConfigDagPath(testutils.GetConfigPath(), fakeDagsPath)
+	configPath = adjustConfigDagPath(podutils.GetConfigPath(), fakeDagsPath)
 	defer os.Remove(configPath)
 	m.Run()
 }
 
 func TestStartServer(t *testing.T) {
 	kubeClient := k8sclient.CreateKubeClient()
-	defer testutils.CleanUpPods(kubeClient)
+	defer podutils.CleanUpPods(kubeClient)
 	orch := *orchestrator.NewOrchestrator(configPath)
 	loopBreaker := false
 	go orch.Start(1, &loopBreaker)

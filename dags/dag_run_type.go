@@ -244,6 +244,7 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 	dag := dagRun.DAG
 	labels := copyStringMap(dag.Config.Labels)
 	labels["Name"] = dagRun.Name
+	labels["app"] = "goflow"
 	return core.Pod{
 		TypeMeta: k8sapi.TypeMeta{
 			Kind:       "Pod",
