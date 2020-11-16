@@ -1,13 +1,13 @@
 package dags
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 
 	// "goflow/jsonpanic"
 	"goflow/logs"
 	"io"
-	"strings"
 
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,14 +24,14 @@ type DAGRun struct {
 	EndTime       k8sapi.Time
 	pod           *core.Pod
 	PodPhase      core.PodPhase
+	Logs          chan string
 }
 
 func (dagRun *DAGRun) getContainerFrame() core.Container {
-	command := strings.Split(dagRun.DAG.Config.Command, " ")
 	return core.Container{
 		Name:       "task",
 		Image:      dagRun.DAG.Config.DockerImage,
-		Command:    command,
+		Command:    dagRun.DAG.Config.Command,
 		Args:       nil,
 		WorkingDir: "",
 		EnvFrom:    nil,
@@ -329,8 +329,8 @@ func (dagRun *DAGRun) waitForPodState(watcher watch.Interface, state watch.Event
 	}
 }
 
-// waitForPodAdded returns when the pod has been added
-func (dagRun *DAGRun) waitForPodAdded(watcher watch.Interface) {
+// waitForPodRunning returns when the pod has been added
+func (dagRun *DAGRun) waitForPodRunning(watcher watch.Interface) {
 	dagRun.waitForPodState(watcher, watch.Added)
 }
 
@@ -356,20 +356,21 @@ func (dagRun *DAGRun) getLogger() io.ReadCloser {
 func (dagRun *DAGRun) readLogsUntilDelete(logger io.ReadCloser, watcher watch.Interface) {
 	defer logger.Close()
 	for {
-		messageBytes := make([]byte, 0)
-		byteCount, err := logger.Read(messageBytes)
+		logBuffer := new(bytes.Buffer)
+		_, err := io.Copy(logBuffer, logger)
 		if err != nil {
 			panic(err)
 		}
-		if byteCount != 0 {
-			logs.InfoLogger.Println(string(messageBytes))
+		logString := logBuffer.String()
+		if logString != "" && dagRun.Logs != nil {
+			dagRun.Logs <- logString
 		}
 		event, ok := <-watcher.ResultChan()
 		if ok {
 			phase := eventObjectToPod(event).Status.Phase
 			if phase == core.PodSucceeded || phase == core.PodFailed {
 				dagRun.PodPhase = phase
-				return
+				break
 			}
 		}
 	}
@@ -377,7 +378,7 @@ func (dagRun *DAGRun) readLogsUntilDelete(logger io.ReadCloser, watcher watch.In
 
 func (dagRun *DAGRun) monitorPod() {
 	watcher := dagRun.watcher()
-	dagRun.waitForPodAdded(watcher)
+	dagRun.waitForPodRunning(watcher)
 	logger := dagRun.getLogger()
 	dagRun.readLogsUntilDelete(logger, watcher)
 }
@@ -397,4 +398,8 @@ func (dagRun *DAGRun) deletePod() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (dagRun *DAGRun) withLogs() {
+	dagRun.Logs = make(chan string, 1)
 }

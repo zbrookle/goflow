@@ -135,7 +135,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		Schedule:      "* * * * *",
 		DockerImage:   "busybox",
 		RetryPolicy:   "Never",
-		Command:       []string{"echo", "yes"},
+		Command:       []string{"echo", "\"Hello world!!!!!!!\""},
 		TimeLimit:     20,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",

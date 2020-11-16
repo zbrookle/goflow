@@ -5,6 +5,7 @@ import (
 	"goflow/jsonpanic"
 	"goflow/k8sclient"
 	"goflow/testutils"
+	"strings"
 	"testing"
 
 	core "k8s.io/api/core/v1"
@@ -34,22 +35,50 @@ func TestCreatePod(t *testing.T) {
 }
 
 func TestStartPod(t *testing.T) {
+	// Test with logs and without logs
 	realClient := k8sclient.CreateKubeClient()
-	defer testutils.CleanUpPods(realClient)
-	dagRun := createDagRun(getTestDate(), getTestDAGRealClient())
-	dagRun.Start()
+	tables := []struct {
+		withLogs bool
+	}{
+		{true},
+		{false},
+	}
+	for _, table := range tables {
+		func() {
+			defer testutils.CleanUpPods(realClient)
+			dagRun := createDagRun(getTestDate(), getTestDAGRealClient())
+			if table.withLogs {
+				dagRun.withLogs()
+			}
+			dagRun.Start()
 
-	// Test for dag completion in state of dag
-	if (dagRun.PodPhase != core.PodSucceeded) && (dagRun.PodPhase != core.PodFailed) {
-		t.Errorf(
-			"A finished dagRun should be in phase %s or state %s, but found in state %s",
-			core.PodSucceeded,
-			core.PodFailed,
-			dagRun.PodPhase,
-		)
+			// Test for dag completion in state of dag
+			if (dagRun.PodPhase != core.PodSucceeded) && (dagRun.PodPhase != core.PodFailed) {
+				t.Errorf(
+					"A finished dagRun should be in phase %s or state %s, but found in state %s",
+					core.PodSucceeded,
+					core.PodFailed,
+					dagRun.PodPhase,
+				)
+			}
+
+			// Test for log output if logs enabled
+			if table.withLogs {
+				logMsg := <-dagRun.Logs
+				expectedLogMessage := dagRun.DAG.Config.Command[1]
+				logMsg = strings.ReplaceAll(logMsg, "\n", "")
+				if logMsg != expectedLogMessage {
+					t.Errorf(
+						"Expected log message %s, found log message %s",
+						expectedLogMessage,
+						logMsg,
+					)
+				}
+			}
+		}()
+
 	}
 
-	// Test for log output
 }
 
 func TestDeletePod(t *testing.T) {
