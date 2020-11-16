@@ -38,12 +38,14 @@ func TestStartPod(t *testing.T) {
 	// Test with logs and without logs
 	realClient := k8sclient.CreateKubeClient()
 	tables := []struct {
+		name     string
 		withLogs bool
 	}{
-		{true},
-		{false},
+		{"With Logs", true},
+		{"Without Logs", false},
 	}
 	for _, table := range tables {
+		t.Logf("Test case: %s", table.name)
 		func() {
 			defer podutils.CleanUpPods(realClient)
 			dagRun := createDagRun(getTestDate(), getTestDAGRealClient())
