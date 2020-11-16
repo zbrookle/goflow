@@ -143,7 +143,6 @@ func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
 		EndTime: k8sapi.Time{
 			Time: time.Time{},
 		},
-		State: make(chan interface{}),
 	}
 }
 
