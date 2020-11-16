@@ -8,6 +8,7 @@ import (
 
 	// "goflow/jsonpanic"
 	"goflow/logs"
+	"goflow/podutils"
 	"io"
 
 	core "k8s.io/api/core/v1"
@@ -244,7 +245,7 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 	dag := dagRun.DAG
 	labels := copyStringMap(dag.Config.Labels)
 	labels["Name"] = dagRun.Name
-	labels["app"] = "goflow"
+	labels["App"] = "goflow"
 	return core.Pod{
 		TypeMeta: k8sapi.TypeMeta{
 			Kind:       "Pod",
@@ -302,17 +303,12 @@ func eventObjectToPod(result watch.Event) *core.Pod {
 }
 
 func (dagRun *DAGRun) watcher() watch.Interface {
-	nameSelector, err := k8sapi.LabelSelectorAsSelector(&k8sapi.LabelSelector{
-		MatchLabels: map[string]string{
-			"Name": dagRun.Name,
-		},
+	nameSelector := podutils.LabelSelectorString(map[string]string{
+		"Name": dagRun.Name,
 	})
-	if err != nil {
-		panic(err)
-	}
 	watcher, err := dagRun.podClient().Watch(
 		context.TODO(),
-		k8sapi.ListOptions{LabelSelector: nameSelector.String()},
+		k8sapi.ListOptions{LabelSelector: nameSelector},
 	)
 	if err != nil {
 		panic(err)
