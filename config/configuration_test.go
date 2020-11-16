@@ -1,14 +1,14 @@
 package config
 
 import (
-	"goflow/testutils"
+	"goflow/podutils"
 	"testing"
 )
 
 var configPath string
 
 func TestMain(m *testing.M) {
-	configPath = testutils.GetConfigPath()
+	configPath = podutils.GetConfigPath()
 	m.Run()
 }
 

@@ -1,4 +1,4 @@
-package testutils
+package podutils
 
 import (
 	"path/filepath"
