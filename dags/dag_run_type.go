@@ -319,6 +319,7 @@ func (dagRun *DAGRun) waitForPodState(watcher watch.Interface, state watch.Event
 	logs.InfoLogger.Printf("Wait for pod %s to reach state %s\n", dagRun.Name, state)
 	for {
 		result := <-watcher.ResultChan()
+		logs.InfoLogger.Println(result.Type)
 		if result.Type == state {
 			break
 		}
