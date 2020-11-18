@@ -1,7 +1,7 @@
 
 # GoFlow
 
-![CI](https://github.com/zbrookle/goflow/workflows/CI/badge.svg?branch=master)
+[![CI](https://github.com/zbrookle/goflow/workflows/CI/badge.svg?branch=master)](https://github.com/zbrookle/goflow/actions)
 [![go report](https://goreportcard.com/badge/github.com/zbrookle/goflow)](https://goreportcard.com/report/github.com/zbrookle/goflow)
 
 GoFlow is a job scheduler inspired by Apache Airflow and is designed to be a more cohesive package,
