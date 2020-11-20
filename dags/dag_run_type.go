@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 
 	"goflow/logs"
 	"goflow/podutils"
@@ -346,7 +347,12 @@ func (dagRun *DAGRun) getLogger() io.ReadCloser {
 		if err == nil {
 			break
 		}
-		logs.InfoLogger.Println(err.Error())
+
+		errorText := err.Error()
+		logs.InfoLogger.Println(errorText)
+		if strings.Contains(errorText, "not found") {
+			panic(err)
+		}
 	}
 	return logStreamer
 }
