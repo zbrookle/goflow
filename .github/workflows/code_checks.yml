@@ -34,6 +34,7 @@ jobs:
         minikube version: 'v1.12.3'
         kubernetes version: 'v1.18.3'
         driver: docker
+        start args: --cpus=1
 
     - name: Install packages
       run: |
