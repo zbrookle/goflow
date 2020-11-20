@@ -332,11 +332,6 @@ func (dagRun *DAGRun) waitForPodRunning(watcher watch.Interface) {
 	dagRun.waitForPodState(watcher, watch.Added)
 }
 
-// waitForPodDelete returns when the pod has been deleted
-func (dagRun *DAGRun) waitForPodDelete(watcher watch.Interface) {
-	dagRun.waitForPodState(watcher, watch.Deleted)
-}
-
 // getLogger returns when logs are ready to be received
 func (dagRun *DAGRun) getLogger() io.ReadCloser {
 	var logStreamer io.ReadCloser
