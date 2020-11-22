@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	// "goflow/jsonpanic"
 	"goflow/logs"
 	"goflow/podutils"
 	"io"
@@ -12,28 +14,115 @@ import (
 
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	// "k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
+
+type funcChannels struct {
+	add    chan *core.Pod
+	update chan *core.Pod
+	remove chan *core.Pod
+}
 
 // PodWatcher watches events and streams logs from pods while they are running
 type PodWatcher struct {
-	podName    string
-	namespace  string
-	kubeClient kubernetes.Interface
-	Logs       chan string
-	withLogs   bool
-	Phase      core.PodPhase
+	podName         string
+	namespace       string
+	kubeClient      kubernetes.Interface
+	Logs            chan string
+	withLogs        bool
+	Phase           core.PodPhase
+	informer        cache.SharedInformer
+	informerChans   funcChannels
+	informerStopper chan struct{}
 }
 
+func newWatcher(podName string, podClient v1.PodInterface) watch.Interface {
+	nameSelector := podutils.LabelSelectorString(map[string]string{
+		"Name": podName,
+	})
+	watcher, err := podClient.Watch(
+		context.TODO(),
+		k8sapi.ListOptions{LabelSelector: nameSelector},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return watcher
+}
+
+func getPodFromInterface(obj interface{}) *core.Pod {
+	pod, ok := obj.(*core.Pod)
+	if !ok {
+		panic(fmt.Sprintf("Expected %T, but go %T", &core.Pod{}, obj))
+	}
+	return pod
+}
+
+func getSharedInformer(
+	client kubernetes.Interface,
+	name string,
+	namespace string,
+	addFuncChannel chan int,
+) (cache.SharedInformer, funcChannels) {
+	// listWatcher := cache.NewListWatchFromClient(
+	// 	client.CoreV1().RESTClient(),
+	// 	"pods",
+	// 	namespace,
+	// 	fields.Everything(),
+	// 	// fields.OneTermEqualSelector("metadata.name", name),
+	// )
+	// informer := cache.NewSharedInformer(listWatcher, api.Pod{}, 0)
+	// cache.po
+	factory := informers.NewSharedInformerFactory(client, 0)
+	informer := factory.Core().V1().Pods().Informer()
+
+	channels := funcChannels{
+		make(chan *core.Pod, 1),
+		make(chan *core.Pod),
+		make(chan *core.Pod),
+	}
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			channels.add <- getPodFromInterface(obj)
+		},
+		UpdateFunc: func(old interface{}, new interface{}) {
+			logs.InfoLogger.Println("Updating Pod!!!!")
+			channels.update <- getPodFromInterface(new)
+		},
+		// DeleteFunc: func(obj interface{}) { channels.remove <- obj },
+	})
+	return informer, channels
+}
+
+// NewPodWatcher returns a new pod watcher
 func NewPodWatcher(
 	name string,
 	namespace string,
 	client kubernetes.Interface,
 	withLogs bool,
-) PodWatcher {
-	return PodWatcher{name, namespace, client, make(chan string, 1), withLogs, core.PodPending}
+) *PodWatcher {
+	addFuncChannel := make(chan int, 1)
+	stopChannel := make(chan struct{})
+	informer, channels := getSharedInformer(client, name, namespace, addFuncChannel)
+	go informer.Run(stopChannel)
+	return &PodWatcher{
+		name,
+		namespace,
+		client,
+		make(chan string, 1),
+		withLogs,
+		core.PodPending,
+		informer,
+		channels,
+		stopChannel,
+	}
 }
 
 // podClient returns the api endpoint for pods
@@ -55,33 +144,11 @@ func eventObjectToPod(result watch.Event) *core.Pod {
 	return podObject
 }
 
-func (podWatcher *PodWatcher) watcher() watch.Interface {
-	nameSelector := podutils.LabelSelectorString(map[string]string{
-		"Name": podWatcher.podName,
-	})
-	watcher, err := podWatcher.podClient().Watch(
-		context.TODO(),
-		k8sapi.ListOptions{LabelSelector: nameSelector},
-	)
-	if err != nil {
-		panic(err)
-	}
-	return watcher
-}
-
-// waitForPodState returns when the pod has reached the given state
-func (podWatcher *PodWatcher) waitForPodState(watcher watch.Interface, state watch.EventType) {
-	for result := range watcher.ResultChan() {
-		if result.Type == state {
-			break
-		}
-	}
-	logs.InfoLogger.Printf("Pod %s has reached state %s\n", podWatcher.podName, state)
-}
-
 // waitForPodAdded returns when the pod has been added
-func (podWatcher *PodWatcher) waitForPodAdded(watcher watch.Interface) {
-	podWatcher.waitForPodState(watcher, watch.Added)
+func (podWatcher *PodWatcher) waitForPodAdded() {
+	logs.InfoLogger.Println("Waiting for pod!")
+	<-podWatcher.informerChans.add
+	logs.InfoLogger.Println("Pod added!!!!")
 }
 
 func (podWatcher *PodWatcher) getLogStreamerWithOptions(
@@ -94,7 +161,6 @@ func (podWatcher *PodWatcher) getLogStreamerWithOptions(
 // getLogsContainerNotFound
 func (podWatcher *PodWatcher) getLogsContainerNotFound() (io.ReadCloser, error) {
 	pod, err := podWatcher.podClient().Get(context.TODO(), podWatcher.podName, k8sapi.GetOptions{})
-	panic("test")
 	if err != nil {
 		panic(err)
 	}
@@ -125,28 +191,47 @@ func (podWatcher *PodWatcher) getLogger() (io.ReadCloser, error) {
 	return logStreamer, nil
 }
 
+func (podWatcher *PodWatcher) getPodFromK8s() *core.Pod {
+	pod, err := podWatcher.podClient().Get(context.TODO(), podWatcher.podName, k8sapi.GetOptions{})
+	if err != nil {
+		panic(err)
+	}
+	return pod
+}
+
+func isPodComplete(pod *core.Pod) bool {
+	return pod.Status.Phase == core.PodFailed || pod.Status.Phase == core.PodSucceeded
+}
+
 func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
-	watcher := podWatcher.watcher()
+	// if isPodComplete(podWatcher.getPodFromK8s()) {
+	// 	return
+	// }
 	for {
 		logs.InfoLogger.Println("Calling func...")
 		callFunc()
-		logs.InfoLogger.Println("Getting events from chan", watcher.ResultChan())
-		event, ok := <-watcher.ResultChan()
-		logs.InfoLogger.Println(ok)
-		if ok {
-			phase := eventObjectToPod(event).Status.Phase
-			logs.InfoLogger.Printf("Pod switched to phase %s\n", phase)
-			if phase == core.PodSucceeded || phase == core.PodFailed {
-				podWatcher.Phase = phase
-				break
-			}
-		}
+		// myChan := podWatcher.eventChan
+		// logs.InfoLogger.Println("Getting events from chan", myChan)
+		// if podWatcher.eventChan == nil {
+		// 	panic("Channel is nil!!!")
+		// }
+		event, ok := <-podWatcher.informerChans.update
+		panic(event)
+		panic(ok)
+		// logs.InfoLogger.Println("here")
+		// if ok {
+		// 	phase := eventObjectToPod(event).Status.Phase
+		// 	logs.InfoLogger.Printf("Pod switched to phase %s\n", phase)
+		// 	if phase == core.PodSucceeded || phase == core.PodFailed {
+		// 		podWatcher.Phase = phase
+		// 		break
+		// 	}
+		// }
 	}
 }
 
 func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	logger io.ReadCloser,
-	watcher watch.Interface,
 ) {
 	defer logger.Close()
 	podWatcher.callFuncUntilPodSucceedOrFail(func() {
@@ -163,11 +248,10 @@ func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 }
 
 func (podWatcher *PodWatcher) MonitorPod() {
-	watcher := podWatcher.watcher()
-	podWatcher.waitForPodAdded(watcher)
+	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()
 	if err != nil {
 		panic(err)
 	}
-	podWatcher.readLogsUntilSucceedOrFail(logger, watcher)
+	podWatcher.readLogsUntilSucceedOrFail(logger)
 }
