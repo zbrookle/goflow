@@ -23,6 +23,7 @@ type DAGConfig struct {
 	EndDateTime   string
 	Labels        map[string]string
 	Annotations   map[string]string
+	WithLogs      bool
 }
 
 // Marshal returns a json bytes representation of DAGConfig

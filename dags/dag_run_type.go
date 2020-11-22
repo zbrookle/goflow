@@ -1,18 +1,14 @@
 package dags
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"strings"
 
 	"goflow/logs"
-	"goflow/podutils"
-	"io"
+
+	"goflow/podwatch"
 
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -24,8 +20,8 @@ type DAGRun struct {
 	StartTime     k8sapi.Time
 	EndTime       k8sapi.Time
 	pod           *core.Pod
-	PodPhase      core.PodPhase
-	Logs          chan string
+	withLogs      bool
+	watcher       podwatch.PodWatcher
 }
 
 func (dagRun *DAGRun) getContainerFrame() core.Container {
@@ -269,6 +265,7 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 
 // createPod creates and registers a new pod with
 func (dagRun *DAGRun) createPod() {
+	logs.InfoLogger.Println("Creating pod...")
 	podFrame := dagRun.getPodFrame()
 	pod, err := dagRun.podClient().Create(
 		context.TODO(),
@@ -279,7 +276,6 @@ func (dagRun *DAGRun) createPod() {
 		panic(err)
 	}
 	dagRun.pod = pod
-	dagRun.PodPhase = pod.Status.Phase
 }
 
 // podClient returns the api endpoint for pods
@@ -287,106 +283,20 @@ func (dagRun *DAGRun) podClient() v1.PodInterface {
 	return dagRun.DAG.kubeClient.CoreV1().Pods(dagRun.DAG.Config.Namespace)
 }
 
-// eventObjectToPod returns a pod object from the event result object
-func eventObjectToPod(result watch.Event) *core.Pod {
-	podObject := &core.Pod{}
-	jsonObj, err := json.Marshal(result.Object)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(jsonObj, podObject)
-	if err != nil {
-		panic(err)
-	}
-	return podObject
-}
-
-func (dagRun *DAGRun) watcher() watch.Interface {
-	nameSelector := podutils.LabelSelectorString(map[string]string{
-		"Name": dagRun.Name,
-	})
-	watcher, err := dagRun.podClient().Watch(
-		context.TODO(),
-		k8sapi.ListOptions{LabelSelector: nameSelector},
-	)
-	if err != nil {
-		panic(err)
-	}
-	return watcher
-}
-
-// waitForPodState returns when the pod has reached the given state
-func (dagRun *DAGRun) waitForPodState(watcher watch.Interface, state watch.EventType) {
-	logs.InfoLogger.Printf("Wait for pod %s to reach state %s\n", dagRun.Name, state)
-	for {
-		result := <-watcher.ResultChan()
-		if result.Type == state {
-			break
-		}
-	}
-	logs.InfoLogger.Printf("Pod %s has reached state %s\n", dagRun.Name, state)
-}
-
-// waitForPodRunning returns when the pod has been added
-func (dagRun *DAGRun) waitForPodRunning(watcher watch.Interface) {
-	dagRun.waitForPodState(watcher, watch.Added)
-}
-
-// getLogger returns when logs are ready to be received
-func (dagRun *DAGRun) getLogger() io.ReadCloser {
-	var logStreamer io.ReadCloser
-	for {
-		req := dagRun.podClient().GetLogs(dagRun.pod.Name, &core.PodLogOptions{})
-		streamer, err := req.Stream(context.TODO())
-		logStreamer = streamer
-		if err == nil {
-			break
-		}
-
-		errorText := err.Error()
-		logs.InfoLogger.Println(errorText)
-		if strings.Contains(errorText, "not found") {
-			panic(err)
-		}
-	}
-	return logStreamer
-}
-
-func (dagRun *DAGRun) readLogsUntilDelete(logger io.ReadCloser, watcher watch.Interface) {
-	defer logger.Close()
-	for {
-		logBuffer := new(bytes.Buffer)
-		_, err := io.Copy(logBuffer, logger)
-		if err != nil {
-			panic(err)
-		}
-		logString := logBuffer.String()
-		if logString != "" && dagRun.Logs != nil {
-			dagRun.Logs <- logString
-		}
-		event, ok := <-watcher.ResultChan()
-		if ok {
-			phase := eventObjectToPod(event).Status.Phase
-			logs.InfoLogger.Printf("Pod switched to phase %s\n", phase)
-			if phase == core.PodSucceeded || phase == core.PodFailed {
-				dagRun.PodPhase = phase
-				break
-			}
-		}
-	}
-}
-
-func (dagRun *DAGRun) monitorPod() {
-	watcher := dagRun.watcher()
-	dagRun.waitForPodRunning(watcher)
-	logger := dagRun.getLogger()
-	dagRun.readLogsUntilDelete(logger, watcher)
-}
-
 // Start starts and monitors the pod and also tracks the logs from the pod
 func (dagRun *DAGRun) Start() {
 	dagRun.createPod()
-	dagRun.monitorPod()
+	dagRun.watcher = podwatch.NewPodWatcher(
+		dagRun.pod.Name,
+		dagRun.pod.Namespace,
+		dagRun.DAG.kubeClient,
+		dagRun.withLogs,
+	)
+	dagRun.watcher.MonitorPod()
+}
+
+func (dagRun *DAGRun) Logs() *chan string {
+	return &dagRun.watcher.Logs
 }
 
 func (dagRun *DAGRun) deletePod() {
@@ -400,6 +310,8 @@ func (dagRun *DAGRun) deletePod() {
 	}
 }
 
-func (dagRun *DAGRun) withLogs() {
-	dagRun.Logs = make(chan string, 1)
-}
+// func (dagRun *DAGRun) withLogs() {
+// 	dagRun.Logs = make(chan string, 1)
+// }
+
+// TRY COUNTING EVENT STATES -- USE this as rate limiting - if pod is pending for too long

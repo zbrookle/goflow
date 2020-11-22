@@ -170,7 +170,7 @@ func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag 
 func TestAddDagRun(t *testing.T) {
 	testDAG := getTestDAGFakeClient()
 	currentTime := getTestDate()
-	testDAG.AddDagRun(currentTime)
+	testDAG.AddDagRun(currentTime, testDAG.Config.WithLogs)
 	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
 }
 
