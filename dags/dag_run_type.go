@@ -7,6 +7,8 @@ import (
 
 	"goflow/podwatch"
 
+	"time"
+
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -22,6 +24,25 @@ type DAGRun struct {
 	pod           *core.Pod
 	withLogs      bool
 	watcher       podwatch.PodWatcher
+}
+
+// newDAGRun returns a new instance of DAGRun
+func newDAGRun(executionDate time.Time, dag *DAG, withLogs bool) *DAGRun {
+	dagName := cleanK8sName(dag.Config.Name + executionDate.String())
+	return &DAGRun{
+		Name: dagName,
+		DAG:  dag,
+		ExecutionDate: k8sapi.Time{
+			Time: executionDate,
+		},
+		StartTime: k8sapi.Time{
+			Time: time.Now(),
+		},
+		EndTime: k8sapi.Time{
+			Time: time.Time{},
+		},
+		withLogs: withLogs,
+	}
 }
 
 func (dagRun *DAGRun) getContainerFrame() core.Container {

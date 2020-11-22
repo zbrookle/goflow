@@ -14,7 +14,7 @@ import (
 
 func TestCreatePod(t *testing.T) {
 	defer podutils.CleanUpPods(KUBECLIENT)
-	dagRun := createDagRun(getTestDate(), getTestDAGFakeClient(), false)
+	dagRun := newDAGRun(getTestDate(), getTestDAGFakeClient(), false)
 	dagRun.createPod()
 	foundPod, err := dagRun.DAG.kubeClient.CoreV1().Pods(
 		dagRun.DAG.Config.Namespace,
@@ -48,7 +48,7 @@ func TestStartPod(t *testing.T) {
 		t.Logf("Test case: %s", table.name)
 		func() {
 			defer podutils.CleanUpPods(realClient)
-			dagRun := createDagRun(getTestDate(), getTestDAGRealClient(), table.withLogs)
+			dagRun := newDAGRun(getTestDate(), getTestDAGRealClient(), table.withLogs)
 			dagRun.Start()
 
 			// Test for dag completion in state of dag
@@ -83,7 +83,7 @@ func TestStartPod(t *testing.T) {
 
 func TestDeletePod(t *testing.T) {
 	defer podutils.CleanUpPods(KUBECLIENT)
-	dagRun := createDagRun(getTestDate(), getTestDAGFakeClient(), false)
+	dagRun := newDAGRun(getTestDate(), getTestDAGFakeClient(), false)
 	podFrame := dagRun.getPodFrame()
 	podsClient := KUBECLIENT.CoreV1().Pods(dagRun.DAG.Config.Namespace)
 
@@ -103,15 +103,3 @@ func TestDeletePod(t *testing.T) {
 		}
 	}
 }
-
-// func TestFindContainerCompleteEvent(t *testing.T) {
-// 	logs.InfoLogger.Println("Testing Container complete event")
-// 	defer podutils.CleanUpPods(KUBECLIENT)
-// 	dagRun := createDagRun(getTestDate(), getTestDAGFakeClient())
-// 	dagRun.createPod()
-// 	dagRun.callFuncUntilPodSucceedOrFail(func() {
-// 		logs.InfoLogger.Println("I'm waiting...")
-// 	})
-// 	// dagRun.getLogsContainerNotFound()
-// 	// panic("test")
-// }
