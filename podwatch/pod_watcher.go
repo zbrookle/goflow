@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"goflow/logs"
-	"goflow/podutils"
 	"io"
 	"strings"
 
@@ -40,20 +39,6 @@ type PodWatcher struct {
 	informerStopper chan struct{}
 }
 
-func newWatcher(podName string, podClient v1.PodInterface) watch.Interface {
-	nameSelector := podutils.LabelSelectorString(map[string]string{
-		"Name": podName,
-	})
-	watcher, err := podClient.Watch(
-		context.TODO(),
-		k8sapi.ListOptions{LabelSelector: nameSelector},
-	)
-	if err != nil {
-		panic(err)
-	}
-	return watcher
-}
-
 func getPodFromInterface(obj interface{}) *core.Pod {
 	pod, ok := obj.(*core.Pod)
 	if !ok {
@@ -76,12 +61,6 @@ func getSharedInformer(
 		fields.OneTermEqualSelector("metadata.name", name),
 	)
 	informer := cache.NewSharedInformer(listWatcher, &core.Pod{}, 0)
-	// factory := informers.NewSharedInformerFactoryWithOptions(
-	// 	client,
-	// 	0,
-	// 	informers.WithNamespace(namespace),
-	// )
-	// informer := factory.Core().V1().Pods().Informer()
 
 	channels := funcChannels{
 		make(chan *core.Pod, 1),
