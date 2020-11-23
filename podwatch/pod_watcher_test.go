@@ -78,7 +78,7 @@ func TestEventWatcherAddPod(t *testing.T) {
 	}
 }
 
-func TestFindContainerCompleteEvent(t *testing.T) {
+func TestCallFuncUntilSucceedOrFail(t *testing.T) {
 	defer podutils.CleanUpPods(KUBECLIENT)
 
 	namespace := "default"
