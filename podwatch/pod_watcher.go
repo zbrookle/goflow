@@ -169,16 +169,7 @@ func (podWatcher *PodWatcher) getLogStreamerWithOptions(
 
 // getLogsContainerNotFound
 func (podWatcher *PodWatcher) getLogsContainerNotFound() (io.ReadCloser, error) {
-	pod, err := podWatcher.podClient().Get(context.TODO(), podWatcher.podName, k8sapi.GetOptions{})
-	if err != nil {
-		panic(err)
-	}
-	switch phase := pod.Status.Phase; phase {
-	case core.PodSucceeded:
-		return podWatcher.getLogStreamerWithOptions(&core.PodLogOptions{Previous: true})
-	default:
-		return nil, fmt.Errorf("Unexpected error occurred with pod %s", podWatcher.podName)
-	}
+	return podWatcher.getLogStreamerWithOptions(&core.PodLogOptions{Previous: true})
 }
 
 // getLogger returns when logs are ready to be received
@@ -191,7 +182,6 @@ func (podWatcher *PodWatcher) getLogger() (io.ReadCloser, error) {
 			break
 		}
 		errorText := err.Error()
-		logs.InfoLogger.Println(errorText)
 		if strings.Contains(errorText, "not found") {
 			return podWatcher.getLogsContainerNotFound()
 		}
