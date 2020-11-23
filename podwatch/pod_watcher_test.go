@@ -1,11 +1,14 @@
 package podwatch
 
 import (
+	"bytes"
 	"context"
 	"goflow/k8sclient"
 	"goflow/logs"
 	"goflow/podutils"
+	"io"
 	"os/exec"
+	"strings"
 	"testing"
 
 	core "k8s.io/api/core/v1"
@@ -26,7 +29,7 @@ func displayPods() {
 	exec.Command("kubectl", "get", "pods")
 }
 
-func createTestPod(podsClient v1.PodInterface, podName string, namespace string) {
+func createTestPod(podsClient v1.PodInterface, podName string, namespace string) *core.Pod {
 	testPodFrame := core.Pod{
 		TypeMeta: k8sapi.TypeMeta{
 			Kind:       "Pod",
@@ -49,10 +52,11 @@ func createTestPod(podsClient v1.PodInterface, podName string, namespace string)
 			RestartPolicy: core.RestartPolicyNever,
 		},
 	}
-	_, err := podsClient.Create(context.TODO(), &testPodFrame, k8sapi.CreateOptions{})
+	pod, err := podsClient.Create(context.TODO(), &testPodFrame, k8sapi.CreateOptions{})
 	if err != nil {
 		panic(err)
 	}
+	return pod
 }
 
 func TestEventWatcherAddPod(t *testing.T) {
@@ -82,14 +86,59 @@ func TestCallFuncUntilSucceedOrFail(t *testing.T) {
 	defer podutils.CleanUpPods(KUBECLIENT)
 
 	namespace := "default"
-	podName := "test-pod-container-complete-event"
+	podName := "test-pod-succeed-or-fail"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
-	defer close(watcher.informerStopper)
 
 	createTestPod(podsClient, podName, namespace)
 
 	watcher.callFuncUntilPodSucceedOrFail(func() {
 		logs.InfoLogger.Println("I'm waiting...")
 	})
+
+	if watcher.Phase != core.PodFailed && watcher.Phase != core.PodSucceeded {
+		t.Errorf(
+			"Expected phase to be %s or %s, not %s",
+			core.PodFailed,
+			core.PodSucceeded,
+			watcher.Phase,
+		)
+	}
+}
+
+func TestGetLogsAfterPodDone(t *testing.T) {
+	defer podutils.CleanUpPods(KUBECLIENT)
+
+	namespace := "default"
+	podName := "test-pod-get-logs-after-pod-done"
+	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
+	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
+
+	createdPod := createTestPod(podsClient, podName, namespace)
+
+	watcher.callFuncUntilPodSucceedOrFail(func() {
+		logs.InfoLogger.Println("Waiting for pod done...")
+	})
+
+	if watcher.Phase != core.PodSucceeded {
+		panic("Pod did not succeed")
+	}
+
+	logger, err := watcher.getLogger()
+	if err != nil {
+		panic(err)
+	}
+
+	// Read in logs
+	logBuffer := new(bytes.Buffer)
+	_, err = io.Copy(logBuffer, logger)
+	if err != nil {
+		panic(err)
+	}
+	returnedLogString := logBuffer.String()
+	cleanLogString := strings.TrimSpace(returnedLogString)
+	expectedLogText := createdPod.Spec.Containers[0].Command[1]
+	if cleanLogString != expectedLogText {
+		t.Errorf("Expected logs would have text %s, but found %s", expectedLogText, cleanLogString)
+	}
 }

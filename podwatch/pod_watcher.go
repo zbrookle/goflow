@@ -214,11 +214,6 @@ func isPodComplete(pod *core.Pod) bool {
 func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
 	for {
 		callFunc()
-		// myChan := podWatcher.eventChan
-		// logs.InfoLogger.Println("Getting events from chan", myChan)
-		// if podWatcher.eventChan == nil {
-		// 	panic("Channel is nil!!!")
-		// }
 		logs.InfoLogger.Println("Waiting for update channel...")
 		pod, ok := <-podWatcher.informerChans.update
 		if ok {
