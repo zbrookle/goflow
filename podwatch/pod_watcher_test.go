@@ -18,6 +18,7 @@ var KUBECLIENT kubernetes.Interface
 
 func TestMain(m *testing.M) {
 	KUBECLIENT = k8sclient.CreateKubeClient()
+	podutils.CleanUpPods(KUBECLIENT)
 	m.Run()
 }
 
@@ -77,9 +78,10 @@ func TestFindContainerCompleteEvent(t *testing.T) {
 	namespace := "default"
 	podName := "test-pod"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
-	createTestPod(podsClient, podName, namespace)
-
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
+	defer close(watcher.informerStopper)
+
+	createTestPod(podsClient, podName, namespace)
 
 	watcher.callFuncUntilPodSucceedOrFail(func() {
 		logs.InfoLogger.Println("I'm waiting...")

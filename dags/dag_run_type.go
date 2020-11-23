@@ -23,7 +23,7 @@ type DAGRun struct {
 	EndTime       k8sapi.Time
 	pod           *core.Pod
 	withLogs      bool
-	watcher       podwatch.PodWatcher
+	watcher       *podwatch.PodWatcher
 }
 
 // newDAGRun returns a new instance of DAGRun
@@ -306,13 +306,14 @@ func (dagRun *DAGRun) podClient() v1.PodInterface {
 
 // Start starts and monitors the pod and also tracks the logs from the pod
 func (dagRun *DAGRun) Start() {
-	dagRun.createPod()
+	podFrame := dagRun.getPodFrame()
 	dagRun.watcher = podwatch.NewPodWatcher(
-		dagRun.pod.Name,
-		dagRun.pod.Namespace,
+		podFrame.Name,
+		podFrame.Namespace,
 		dagRun.DAG.kubeClient,
 		dagRun.withLogs,
 	)
+	dagRun.createPod()
 	dagRun.watcher.MonitorPod()
 }
 

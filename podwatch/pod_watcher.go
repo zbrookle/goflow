@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	// "goflow/jsonpanic"
 	"goflow/logs"
 	"goflow/podutils"
 	"io"
@@ -79,24 +78,36 @@ func getSharedInformer(
 	// )
 	// informer := cache.NewSharedInformer(listWatcher, api.Pod{}, 0)
 	// cache.po
-	factory := informers.NewSharedInformerFactory(client, 0)
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		client,
+		0,
+		informers.WithNamespace(namespace),
+	)
 	informer := factory.Core().V1().Pods().Informer()
 
 	channels := funcChannels{
 		make(chan *core.Pod, 1),
-		make(chan *core.Pod),
+		make(chan *core.Pod, 1),
 		make(chan *core.Pod),
 	}
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			logs.InfoLogger.Printf("Added pod")
+			pod := getPodFromInterface(obj)
+			logs.InfoLogger.Printf("Pod with name %s, in phase %s", pod.Name, pod.Status.Phase)
+			for _, status := range pod.Status.ContainerStatuses {
+				logs.InfoLogger.Printf("Container in phase %s", status.State.String())
+			}
 			channels.add <- getPodFromInterface(obj)
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			logs.InfoLogger.Println("Updating Pod!!!!")
+			logs.InfoLogger.Println("Pod updated...")
 			channels.update <- getPodFromInterface(new)
 		},
-		// DeleteFunc: func(obj interface{}) { channels.remove <- obj },
+		DeleteFunc: func(obj interface{}) {
+			channels.update <- getPodFromInterface(obj)
+		},
 	})
 	return informer, channels
 }
@@ -184,7 +195,6 @@ func (podWatcher *PodWatcher) getLogger() (io.ReadCloser, error) {
 		errorText := err.Error()
 		logs.InfoLogger.Println(errorText)
 		if strings.Contains(errorText, "not found") {
-			panic("test")
 			return podWatcher.getLogsContainerNotFound()
 		}
 	}
@@ -204,29 +214,23 @@ func isPodComplete(pod *core.Pod) bool {
 }
 
 func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
-	// if isPodComplete(podWatcher.getPodFromK8s()) {
-	// 	return
-	// }
 	for {
-		logs.InfoLogger.Println("Calling func...")
 		callFunc()
 		// myChan := podWatcher.eventChan
 		// logs.InfoLogger.Println("Getting events from chan", myChan)
 		// if podWatcher.eventChan == nil {
 		// 	panic("Channel is nil!!!")
 		// }
-		event, ok := <-podWatcher.informerChans.update
-		panic(event)
-		panic(ok)
-		// logs.InfoLogger.Println("here")
-		// if ok {
-		// 	phase := eventObjectToPod(event).Status.Phase
-		// 	logs.InfoLogger.Printf("Pod switched to phase %s\n", phase)
-		// 	if phase == core.PodSucceeded || phase == core.PodFailed {
-		// 		podWatcher.Phase = phase
-		// 		break
-		// 	}
-		// }
+		logs.InfoLogger.Println("Waiting for update channel...")
+		pod, ok := <-podWatcher.informerChans.update
+		if ok {
+			phase := pod.Status.Phase
+			logs.InfoLogger.Printf("Pod switched to phase %s\n", phase)
+			if phase == core.PodSucceeded || phase == core.PodFailed {
+				podWatcher.Phase = phase
+				break
+			}
+		}
 	}
 }
 
