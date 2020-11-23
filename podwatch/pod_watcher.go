@@ -14,9 +14,8 @@ import (
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	// "k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -69,21 +68,20 @@ func getSharedInformer(
 	namespace string,
 	addFuncChannel chan int,
 ) (cache.SharedInformer, funcChannels) {
-	// listWatcher := cache.NewListWatchFromClient(
-	// 	client.CoreV1().RESTClient(),
-	// 	"pods",
-	// 	namespace,
-	// 	fields.Everything(),
-	// 	// fields.OneTermEqualSelector("metadata.name", name),
-	// )
-	// informer := cache.NewSharedInformer(listWatcher, api.Pod{}, 0)
-	// cache.po
-	factory := informers.NewSharedInformerFactoryWithOptions(
-		client,
-		0,
-		informers.WithNamespace(namespace),
+	listWatcher := cache.NewListWatchFromClient(
+		client.CoreV1().RESTClient(),
+		"pods",
+		namespace,
+		// fields.Everything(),
+		fields.OneTermEqualSelector("metadata.name", name),
 	)
-	informer := factory.Core().V1().Pods().Informer()
+	informer := cache.NewSharedInformer(listWatcher, &core.Pod{}, 0)
+	// factory := informers.NewSharedInformerFactoryWithOptions(
+	// 	client,
+	// 	0,
+	// 	informers.WithNamespace(namespace),
+	// )
+	// informer := factory.Core().V1().Pods().Informer()
 
 	channels := funcChannels{
 		make(chan *core.Pod, 1),
@@ -93,16 +91,16 @@ func getSharedInformer(
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			logs.InfoLogger.Printf("Added pod")
+			logs.InfoLogger.Printf("Call add pod func")
 			pod := getPodFromInterface(obj)
 			logs.InfoLogger.Printf("Pod with name %s, in phase %s", pod.Name, pod.Status.Phase)
-			for _, status := range pod.Status.ContainerStatuses {
-				logs.InfoLogger.Printf("Container in phase %s", status.State.String())
-			}
+			// for _, status := range pod.Status.ContainerStatuses {
+			// 	logs.InfoLogger.Printf("Container in phase %s", status.State.String())
+			// }
 			channels.add <- getPodFromInterface(obj)
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			logs.InfoLogger.Println("Pod updated...")
+			logs.InfoLogger.Println("Call pod update function")
 			channels.update <- getPodFromInterface(new)
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -251,6 +249,7 @@ func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	})
 }
 
+// MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
 	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()

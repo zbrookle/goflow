@@ -59,7 +59,7 @@ func TestEventWatcherAddPod(t *testing.T) {
 	defer podutils.CleanUpPods(KUBECLIENT)
 
 	namespace := "default"
-	podName := "test-pod"
+	podName := "test-pod-watcher-add-pod"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
@@ -67,8 +67,14 @@ func TestEventWatcherAddPod(t *testing.T) {
 
 	createTestPod(podsClient, podName, namespace)
 	pod := <-watcher.informerChans.add
-	if pod.Status.Phase != core.PodRunning {
-		t.Error("Pod should be in state running")
+	if pod.Status.Phase != core.PodPending {
+		t.Errorf("Pod should be in state running, was in state %s", pod.Status.Phase)
+	}
+	if pod.Name != podName {
+		t.Errorf("Pod should have name %s, but saw name %s", podName, pod.Name)
+	}
+	if pod.Namespace != namespace {
+		t.Errorf("Pod should have namespace %s, but found namespace %s", namespace, pod.Namespace)
 	}
 }
 
@@ -76,7 +82,7 @@ func TestFindContainerCompleteEvent(t *testing.T) {
 	defer podutils.CleanUpPods(KUBECLIENT)
 
 	namespace := "default"
-	podName := "test-pod"
+	podName := "test-pod-container-complete-event"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
 	defer close(watcher.informerStopper)
