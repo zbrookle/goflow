@@ -34,6 +34,7 @@ func setUpNamespaces(client kubernetes.Interface) {
 func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(podutils.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
+	podutils.CleanUpPods(KUBECLIENT)
 	setUpNamespaces(KUBECLIENT)
 	m.Run()
 }
