@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -130,26 +129,9 @@ func cleanK8sName(name string) string {
 	return name
 }
 
-func createDagRun(executionDate time.Time, dag *DAG) *DAGRun {
-	dagName := cleanK8sName(dag.Config.Name + executionDate.String())
-	return &DAGRun{
-		Name: dagName,
-		DAG:  dag,
-		ExecutionDate: k8sapi.Time{
-			Time: executionDate,
-		},
-		StartTime: k8sapi.Time{
-			Time: time.Now(),
-		},
-		EndTime: k8sapi.Time{
-			Time: time.Time{},
-		},
-	}
-}
-
 // AddDagRun adds a DagRun for a scheduled point to the orchestrators set of dags
-func (dag *DAG) AddDagRun(executionDate time.Time) {
-	dagRun := createDagRun(executionDate, dag)
+func (dag *DAG) AddDagRun(executionDate time.Time, withLogs bool) {
+	dagRun := newDAGRun(executionDate, dag, withLogs)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	dag.ActiveRuns++
 }
@@ -160,7 +142,7 @@ func (dag *DAG) AddNextDagRunIfReady() {
 		if dag.MostRecentExecution.IsZero() {
 			dag.MostRecentExecution = dag.StartDateTime
 		}
-		dag.AddDagRun(dag.MostRecentExecution)
+		dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
 	}
 }
 
