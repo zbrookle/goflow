@@ -115,8 +115,8 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 
 // createPod creates and registers a new pod with
 func (dagRun *DAGRun) createPod() {
-	logs.InfoLogger.Println("Creating pod...")
 	podFrame := dagRun.getPodFrame()
+	logs.InfoLogger.Printf("Creating pod %s...\n", podFrame.Name)
 	pod, err := dagRun.podClient().Create(
 		context.TODO(),
 		&podFrame,
