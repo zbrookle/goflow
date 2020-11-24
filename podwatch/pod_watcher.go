@@ -58,7 +58,6 @@ func getSharedInformer(
 		client.CoreV1().RESTClient(),
 		"pods",
 		namespace,
-		// fields.Everything(),
 		fields.OneTermEqualSelector("metadata.name", name),
 	)
 	informer := cache.NewSharedInformer(listWatcher, &core.Pod{}, 0)
@@ -71,16 +70,11 @@ func getSharedInformer(
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			logs.InfoLogger.Printf("Call add pod func")
 			pod := getPodFromInterface(obj)
 			logs.InfoLogger.Printf("Pod with name %s, in phase %s", pod.Name, pod.Status.Phase)
-			// for _, status := range pod.Status.ContainerStatuses {
-			// 	logs.InfoLogger.Printf("Container in phase %s", status.State.String())
-			// }
-			channels.add <- getPodFromInterface(obj)
+			channels.add <- pod
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			logs.InfoLogger.Println("Call pod update function")
 			channels.update <- getPodFromInterface(new)
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -219,10 +213,14 @@ func (podWatcher *PodWatcher) setMonitorDone() {
 	podWatcher.monitoringDone <- struct{}{}
 }
 
+func (podWatcher *PodWatcher) stopInformer() {
+	podWatcher.stopInformerChannel <- struct{}{}
+}
+
 // MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
-	defer close(podWatcher.stopInformerChannel)
 	defer podWatcher.setMonitorDone()
+	defer podWatcher.stopInformer()
 	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()
 	if err != nil {
