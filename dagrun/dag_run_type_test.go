@@ -31,14 +31,17 @@ func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
 }
 
-func getTestDAGConfig(name string) *dagconfig.DAGConfig {
+func getTestDAGConfig(name string, command []string) *dagconfig.DAGConfig {
+	if len(command) == 0 {
+		command = []string{"echo", "\"Hello world!!!!!!!\""}
+	}
 	return &dagconfig.DAGConfig{
 		Name:          name,
 		Namespace:     "default",
 		Schedule:      "* * * * *",
 		DockerImage:   "busybox",
 		RetryPolicy:   "Never",
-		Command:       []string{"echo", "\"Hello world!!!!!!!\""},
+		Command:       command,
 		TimeLimit:     20,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
@@ -48,7 +51,12 @@ func getTestDAGConfig(name string) *dagconfig.DAGConfig {
 
 func TestCreatePod(t *testing.T) {
 	defer podutils.CleanUpPods(FAKECLIENT)
-	dagRun := NewDAGRun(getTestDate(), getTestDAGConfig("test-create-pod"), false, FAKECLIENT)
+	dagRun := NewDAGRun(
+		getTestDate(),
+		getTestDAGConfig("test-create-pod", []string{}),
+		false,
+		FAKECLIENT,
+	)
 	dagRun.createPod()
 	foundPod, err := dagRun.kubeClient.CoreV1().Pods(
 		dagRun.Config.Namespace,
@@ -82,9 +90,13 @@ func TestStartPod(t *testing.T) {
 		t.Logf("Test case: %s", table.name)
 		func() {
 			defer podutils.CleanUpPods(realClient)
+			expectedLogMessage := "Hello World!!!"
 			dagRun := NewDAGRun(
 				getTestDate(),
-				getTestDAGConfig("test-start-pod"+cleanK8sName(table.name)),
+				getTestDAGConfig(
+					"test-start-pod"+cleanK8sName(table.name),
+					[]string{"echo", expectedLogMessage},
+				),
 				table.withLogs,
 				realClient,
 			)
@@ -104,7 +116,6 @@ func TestStartPod(t *testing.T) {
 			// Test for log output if logs enabled
 			if table.withLogs {
 				logMsg := <-*dagRun.Logs()
-				expectedLogMessage := dagRun.Config.Command[1]
 				logMsg = strings.ReplaceAll(logMsg, "\n", "")
 				if logMsg != expectedLogMessage {
 					t.Errorf(
@@ -122,7 +133,12 @@ func TestStartPod(t *testing.T) {
 
 func TestDeletePod(t *testing.T) {
 	defer podutils.CleanUpPods(FAKECLIENT)
-	dagRun := NewDAGRun(getTestDate(), getTestDAGConfig("test-delete-pod"), false, FAKECLIENT)
+	dagRun := NewDAGRun(
+		getTestDate(),
+		getTestDAGConfig("test-delete-pod", []string{}),
+		false,
+		FAKECLIENT,
+	)
 	podFrame := dagRun.getPodFrame()
 	podsClient := FAKECLIENT.CoreV1().Pods(dagRun.Config.Namespace)
 
