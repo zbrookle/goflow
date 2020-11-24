@@ -67,6 +67,7 @@ func TestEventWatcherAddPod(t *testing.T) {
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
+	watcher.startInformer()
 
 	createTestPod(podsClient, podName, namespace)
 	pod := <-watcher.informerChans.add
@@ -88,6 +89,7 @@ func TestCallFuncUntilSucceedOrFail(t *testing.T) {
 	podName := "test-pod-succeed-or-fail"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
+	watcher.startInformer()
 
 	createTestPod(podsClient, podName, namespace)
 
@@ -112,6 +114,7 @@ func TestGetLogsAfterPodDone(t *testing.T) {
 	podName := "test-pod-get-logs-after-pod-done"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
+	watcher.startInformer()
 
 	createdPod := createTestPod(podsClient, podName, namespace)
 

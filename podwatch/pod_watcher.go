@@ -94,7 +94,6 @@ func NewPodWatcher(
 	addFuncChannel := make(chan int, 1)
 	stopInformerChannel := make(chan struct{})
 	informer, channels := getSharedInformer(client, name, namespace, addFuncChannel)
-	go informer.Run(stopInformerChannel)
 	return &PodWatcher{
 		name,
 		namespace,
@@ -130,9 +129,9 @@ func eventObjectToPod(result watch.Event) *core.Pod {
 
 // waitForPodAdded returns when the pod has been added
 func (podWatcher *PodWatcher) waitForPodAdded() {
-	logs.InfoLogger.Println("Waiting for pod!")
+	logs.InfoLogger.Printf("Waiting for pod %s to be added...\n", podWatcher.podName)
 	<-podWatcher.informerChans.add
-	logs.InfoLogger.Println("Pod added!!!!")
+	logs.InfoLogger.Printf("Pod %s added\n", podWatcher.podName)
 }
 
 func (podWatcher *PodWatcher) getLogStreamerWithOptions(
@@ -217,10 +216,15 @@ func (podWatcher *PodWatcher) stopInformer() {
 	podWatcher.stopInformerChannel <- struct{}{}
 }
 
+func (podWatcher *PodWatcher) startInformer() {
+	go podWatcher.informer.Run(podWatcher.stopInformerChannel)
+}
+
 // MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
 	defer podWatcher.setMonitorDone()
 	defer podWatcher.stopInformer()
+	podWatcher.startInformer()
 	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()
 	if err != nil {
