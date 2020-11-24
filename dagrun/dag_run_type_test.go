@@ -31,9 +31,9 @@ func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
 }
 
-func getTestDAGConfig() *dagconfig.DAGConfig {
+func getTestDAGConfig(name string) *dagconfig.DAGConfig {
 	return &dagconfig.DAGConfig{
-		Name:          "test",
+		Name:          name,
 		Namespace:     "default",
 		Schedule:      "* * * * *",
 		DockerImage:   "busybox",
@@ -47,8 +47,8 @@ func getTestDAGConfig() *dagconfig.DAGConfig {
 }
 
 func TestCreatePod(t *testing.T) {
-	defer podutils.CleanUpPods(KUBECLIENT)
-	dagRun := NewDAGRun(getTestDate(), getTestDAGConfig(), false, KUBECLIENT)
+	defer podutils.CleanUpPods(FAKECLIENT)
+	dagRun := NewDAGRun(getTestDate(), getTestDAGConfig("test-create-pod"), false, FAKECLIENT)
 	dagRun.createPod()
 	foundPod, err := dagRun.kubeClient.CoreV1().Pods(
 		dagRun.Config.Namespace,
@@ -82,7 +82,12 @@ func TestStartPod(t *testing.T) {
 		t.Logf("Test case: %s", table.name)
 		func() {
 			defer podutils.CleanUpPods(realClient)
-			dagRun := NewDAGRun(getTestDate(), getTestDAGConfig(), table.withLogs, realClient)
+			dagRun := NewDAGRun(
+				getTestDate(),
+				getTestDAGConfig("test-start-pod"+cleanK8sName(table.name)),
+				table.withLogs,
+				realClient,
+			)
 			dagRun.Start()
 
 			// Test for dag completion in state of dag
@@ -116,10 +121,10 @@ func TestStartPod(t *testing.T) {
 }
 
 func TestDeletePod(t *testing.T) {
-	defer podutils.CleanUpPods(KUBECLIENT)
-	dagRun := NewDAGRun(getTestDate(), getTestDAGConfig(), false, FAKECLIENT)
+	defer podutils.CleanUpPods(FAKECLIENT)
+	dagRun := NewDAGRun(getTestDate(), getTestDAGConfig("test-delete-pod"), false, FAKECLIENT)
 	podFrame := dagRun.getPodFrame()
-	podsClient := KUBECLIENT.CoreV1().Pods(dagRun.Config.Namespace)
+	podsClient := FAKECLIENT.CoreV1().Pods(dagRun.Config.Namespace)
 
 	createdPod, err := podsClient.Create(context.TODO(), &podFrame, v1.CreateOptions{})
 	dagRun.pod = createdPod
