@@ -223,8 +223,10 @@ func (podWatcher *PodWatcher) startInformer() {
 // MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
 	defer podWatcher.setMonitorDone()
-	defer podWatcher.stopInformer()
+
 	podWatcher.startInformer()
+	defer podWatcher.stopInformer()
+
 	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()
 	if err != nil {
