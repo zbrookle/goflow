@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"goflow/config"
-	"goflow/dags"
+	"goflow/dagconfig"
 
 	"goflow/k8sclient"
 	"goflow/orchestrator"
@@ -75,7 +75,7 @@ func createDirIfNotExist(directory string) string {
 func createFakeDagFile(dagFolder string, dagNum int) {
 	fakeDagName := fmt.Sprintf("dag_file_%d.json", dagNum)
 	filePath := filepath.Join(dagFolder, fakeDagName)
-	fakeDagConfig := &dags.DAGConfig{Name: fakeDagName,
+	fakeDagConfig := &dagconfig.DAGConfig{Name: fakeDagName,
 		Namespace:     "default",
 		Schedule:      "* * * * *",
 		Command:       strings.Split(fmt.Sprintf("echo %d", dagNum), " "),

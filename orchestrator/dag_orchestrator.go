@@ -1,6 +1,7 @@
 package orchestrator
 
 import (
+	"goflow/dagrun"
 	"goflow/dags"
 	"goflow/logs"
 	"time"
@@ -79,8 +80,8 @@ func (orchestrator Orchestrator) GetDag(dagName string) *dags.DAG {
 }
 
 // DagRuns returns all the dag runs across all dags
-func (orchestrator Orchestrator) DagRuns() []dags.DAGRun {
-	runs := make([]dags.DAGRun, 0)
+func (orchestrator Orchestrator) DagRuns() []dagrun.DAGRun {
+	runs := make([]dagrun.DAGRun, 0)
 	for _, dag := range orchestrator.DAGs() {
 		for _, run := range dag.DAGRuns {
 			runs = append(runs, *run)
@@ -96,9 +97,6 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 		dagPresent := orchestrator.isDagPresent(*dag)
 		if !dagPresent {
 			orchestrator.AddDAG(dag)
-			// go dag.Start()
-			// stringJson, _ := json.MarshalIndent(orchestrator.dagMap, "", "\t")
-			// fmt.Println(dag.Name, ":", string(stringJson))
 		} else if dagPresent && orchestrator.isStoredDagDifferent(*dag) {
 			logs.InfoLogger.Printf("Updating DAG %s which will run in namespace %s", dag.Config.Name, dag.Config.Namespace)
 			logs.InfoLogger.Printf("Old DAG code: %s\n", orchestrator.GetDag(dag.Config.Name).Code)

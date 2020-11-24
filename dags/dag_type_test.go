@@ -2,6 +2,8 @@ package dags
 
 import (
 	"context"
+	"goflow/dagconfig"
+	"goflow/dagrun"
 	"goflow/k8sclient"
 	"goflow/podutils"
 	"path/filepath"
@@ -63,7 +65,7 @@ func (stringMap StringMap) Bytes() []byte {
 }
 
 func TestDAGFromJSONBytes(t *testing.T) {
-	config := DAGConfig{
+	config := dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
 		Schedule:      "* * * * *",
@@ -85,7 +87,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		Code:                string(config.Marshal()),
 		StartDateTime:       time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC),
 		EndDateTime:         time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-		DAGRuns:             make([]*DAGRun, 0),
+		DAGRuns:             make([]*dagrun.DAGRun, 0),
 		kubeClient:          nil,
 		ActiveRuns:          0,
 		MostRecentExecution: time.Time{},
@@ -130,7 +132,7 @@ func TestReadFiles(t *testing.T) {
 }
 
 func getTestDAG(client kubernetes.Interface) *DAG {
-	dag := CreateDAG(&DAGConfig{
+	dag := CreateDAG(&dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
 		Schedule:      "* * * * *",

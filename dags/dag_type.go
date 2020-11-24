@@ -2,6 +2,8 @@ package dags
 
 import (
 	"encoding/json"
+	"goflow/dagconfig"
+	"goflow/dagrun"
 	"goflow/logs"
 	"io/ioutil"
 	"os"
@@ -16,11 +18,11 @@ import (
 
 // DAG is directed acyclic graph for hold job information
 type DAG struct {
-	Config              *DAGConfig
+	Config              *dagconfig.DAGConfig
 	Code                string
 	StartDateTime       time.Time
 	EndDateTime         time.Time
-	DAGRuns             []*DAGRun
+	DAGRuns             []*dagrun.DAGRun
 	kubeClient          kubernetes.Interface
 	ActiveRuns          int
 	MostRecentExecution time.Time
@@ -43,14 +45,14 @@ func getDateFromString(dateStr string) time.Time {
 }
 
 // CreateDAG returns a dag using the configuration passed and stores the code string
-func CreateDAG(config *DAGConfig, code string, client kubernetes.Interface) DAG {
+func CreateDAG(config *dagconfig.DAGConfig, code string, client kubernetes.Interface) DAG {
 	if config.Annotations == nil {
 		config.Annotations = make(map[string]string)
 	}
 	if config.Labels == nil {
 		config.Labels = make(map[string]string)
 	}
-	dag := DAG{Config: config, Code: code, DAGRuns: make([]*DAGRun, 0), kubeClient: client}
+	dag := DAG{Config: config, Code: code, DAGRuns: make([]*dagrun.DAGRun, 0), kubeClient: client}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
 		dag.EndDateTime = getDateFromString(dag.Config.EndDateTime)
@@ -62,7 +64,7 @@ func CreateDAG(config *DAGConfig, code string, client kubernetes.Interface) DAG 
 }
 
 func createDAGFromJSONBytes(dagBytes []byte, client kubernetes.Interface) (DAG, error) {
-	dagConfigStruct := DAGConfig{}
+	dagConfigStruct := dagconfig.DAGConfig{}
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
 	if err != nil {
 		return DAG{}, err
@@ -121,19 +123,12 @@ func GetDAGSFromFolder(folder string) []*DAG {
 	return dags
 }
 
-func cleanK8sName(name string) string {
-	name = strings.ReplaceAll(name, ":", "-")
-	name = strings.ReplaceAll(name, " ", "")
-	name = strings.ReplaceAll(name, "+", "plus")
-	name = strings.ToLower(name)
-	return name
-}
-
 // AddDagRun adds a DagRun for a scheduled point to the orchestrators set of dags
-func (dag *DAG) AddDagRun(executionDate time.Time, withLogs bool) {
-	dagRun := newDAGRun(executionDate, dag, withLogs)
+func (dag *DAG) AddDagRun(executionDate time.Time, withLogs bool) *dagrun.DAGRun {
+	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	dag.ActiveRuns++
+	return dagRun
 }
 
 // AddNextDagRunIfReady adds the next dag run if ready for it
@@ -142,14 +137,16 @@ func (dag *DAG) AddNextDagRunIfReady() {
 		if dag.MostRecentExecution.IsZero() {
 			dag.MostRecentExecution = dag.StartDateTime
 		}
-		dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
+		// !!!! Bug still occurring here need to figure out why !!!!!
+		_ = dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
+		// go dagRun.Start()
 	}
 }
 
 // TerminateAndDeleteRuns removes all active DAG runs and their associated pods
 func (dag *DAG) TerminateAndDeleteRuns() {
 	for _, run := range dag.DAGRuns {
-		run.deletePod()
+		run.DeletePod()
 	}
 }
 

@@ -1,4 +1,4 @@
-package dags
+package dagconfig
 
 import (
 	"encoding/json"
