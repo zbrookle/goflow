@@ -142,8 +142,8 @@ func (dagRun *DAGRun) Start() {
 		dagRun.kubeClient,
 		dagRun.withLogs,
 	)
+	go dagRun.watcher.MonitorPod() // Start monitoring before the pod is actually running
 	dagRun.createPod()
-	dagRun.watcher.MonitorPod()
 }
 
 // Logs returns the channel holding the watcher's logs
