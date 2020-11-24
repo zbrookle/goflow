@@ -115,11 +115,20 @@ func (orchestrator *Orchestrator) RunDags() {
 	}
 }
 
-// Start begins the orchestrator event loop
-func (orchestrator *Orchestrator) Start(cycleDuration time.Duration, quit *bool) {
-	for !*quit {
-		orchestrator.CollectDAGs()
-		orchestrator.RunDags()
-		time.Sleep(cycleDuration)
+func cycleUntilChannelClose(callable func(), close chan struct{}, cycleDuration time.Duration) {
+	for {
+		select {
+		case <-close:
+			return
+		default:
+			callable()
+			time.Sleep(cycleDuration)
+		}
 	}
+}
+
+// Start begins the orchestrator event loop
+func (orchestrator *Orchestrator) Start(cycleDuration time.Duration, close chan struct{}) {
+	go cycleUntilChannelClose(orchestrator.CollectDAGs, close, cycleDuration)
+	go cycleUntilChannelClose(orchestrator.RunDags, close, cycleDuration)
 }
