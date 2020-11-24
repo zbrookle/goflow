@@ -67,7 +67,7 @@ func TestEventWatcherAddPod(t *testing.T) {
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
-	defer close(watcher.informerStopper)
+	defer close(watcher.stopInformerChannel)
 
 	createTestPod(podsClient, podName, namespace)
 	pod := <-watcher.informerChans.add

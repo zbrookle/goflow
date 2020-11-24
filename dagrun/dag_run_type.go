@@ -144,6 +144,7 @@ func (dagRun *DAGRun) Start() {
 	)
 	go dagRun.watcher.MonitorPod() // Start monitoring before the pod is actually running
 	dagRun.createPod()
+	dagRun.watcher.WaitForMonitorDone()
 }
 
 // Logs returns the channel holding the watcher's logs

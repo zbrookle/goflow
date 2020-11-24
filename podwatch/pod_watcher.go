@@ -28,15 +28,16 @@ type funcChannels struct {
 
 // PodWatcher watches events and streams logs from pods while they are running
 type PodWatcher struct {
-	podName         string
-	namespace       string
-	kubeClient      kubernetes.Interface
-	Logs            chan string
-	withLogs        bool
-	Phase           core.PodPhase
-	informer        cache.SharedInformer
-	informerChans   funcChannels
-	informerStopper chan struct{}
+	podName             string
+	namespace           string
+	kubeClient          kubernetes.Interface
+	Logs                chan string
+	withLogs            bool
+	Phase               core.PodPhase
+	informer            cache.SharedInformer
+	informerChans       funcChannels
+	stopInformerChannel chan struct{}
+	monitoringDone      chan struct{}
 }
 
 func getPodFromInterface(obj interface{}) *core.Pod {
@@ -97,9 +98,9 @@ func NewPodWatcher(
 	withLogs bool,
 ) *PodWatcher {
 	addFuncChannel := make(chan int, 1)
-	stopChannel := make(chan struct{})
+	stopInformerChannel := make(chan struct{})
 	informer, channels := getSharedInformer(client, name, namespace, addFuncChannel)
-	go informer.Run(stopChannel)
+	go informer.Run(stopInformerChannel)
 	return &PodWatcher{
 		name,
 		namespace,
@@ -109,7 +110,8 @@ func NewPodWatcher(
 		core.PodPending,
 		informer,
 		channels,
-		stopChannel,
+		stopInformerChannel,
+		make(chan struct{}, 1),
 	}
 }
 
@@ -213,12 +215,23 @@ func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	})
 }
 
+func (podWatcher *PodWatcher) setMonitorDone() {
+	podWatcher.monitoringDone <- struct{}{}
+}
+
 // MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
+	defer close(podWatcher.stopInformerChannel)
+	defer podWatcher.setMonitorDone()
 	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()
 	if err != nil {
 		panic(err)
 	}
 	podWatcher.readLogsUntilSucceedOrFail(logger)
+}
+
+// WaitForMonitorDone returns when the watcher is done monitoring
+func (podWatcher *PodWatcher) WaitForMonitorDone() {
+	<-podWatcher.monitoringDone
 }
