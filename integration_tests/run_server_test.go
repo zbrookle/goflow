@@ -73,8 +73,8 @@ func createDirIfNotExist(directory string) string {
 }
 
 func createFakeDagFile(dagFolder string, dagNum int) {
-	fakeDagName := fmt.Sprintf("dag_file_%d.json", dagNum)
-	filePath := filepath.Join(dagFolder, fakeDagName)
+	fakeDagName := fmt.Sprintf("dag_file_%d", dagNum)
+	filePath := filepath.Join(dagFolder, fakeDagName+".json")
 	fakeDagConfig := &dagconfig.DAGConfig{Name: fakeDagName,
 		Namespace:     "default",
 		Schedule:      "* * * * *",
