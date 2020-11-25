@@ -21,7 +21,7 @@ import (
 )
 
 type funcChannels struct {
-	add    chan *core.Pod
+	ready  chan *core.Pod
 	update chan *core.Pod
 	remove chan *core.Pod
 }
@@ -48,6 +48,11 @@ func getPodFromInterface(obj interface{}) *core.Pod {
 	return pod
 }
 
+func podReadyToLog(pod *core.Pod) bool {
+	return (pod.Status.Phase == core.PodRunning) || (pod.Status.Phase == core.PodSucceeded) ||
+		(pod.Status.Phase == core.PodFailed)
+}
+
 func getSharedInformer(
 	client kubernetes.Interface,
 	name string,
@@ -71,11 +76,26 @@ func getSharedInformer(
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := getPodFromInterface(obj)
-			logs.InfoLogger.Printf("Pod with name %s, in phase %s", pod.Name, pod.Status.Phase)
-			channels.add <- pod
+			logs.InfoLogger.Printf("Pod with name %s added in phase %s", pod.Name, pod.Status.Phase)
+			if podReadyToLog(pod) {
+				channels.ready <- pod
+			}
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			channels.update <- getPodFromInterface(new)
+			oldPod := getPodFromInterface(old)
+			newPod := getPodFromInterface(new)
+			logs.InfoLogger.Printf(
+				"Pod %s switched from phase %s to phase %s",
+				newPod.Name,
+				oldPod.Status.Phase,
+				newPod.Status.Phase,
+			)
+			if podReadyToLog(newPod) {
+				channels.ready <- newPod
+			}
+			if oldPod.Status.Phase != newPod.Status.Phase {
+				channels.update <- newPod
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			channels.update <- getPodFromInterface(obj)
@@ -129,9 +149,8 @@ func eventObjectToPod(result watch.Event) *core.Pod {
 
 // waitForPodAdded returns when the pod has been added
 func (podWatcher *PodWatcher) waitForPodAdded() {
-	logs.InfoLogger.Printf("Waiting for pod %s to be added...\n", podWatcher.podName)
-	<-podWatcher.informerChans.add
-	logs.InfoLogger.Printf("Pod %s added\n", podWatcher.podName)
+	pod := <-podWatcher.informerChans.ready
+	podWatcher.Phase = pod.Status.Phase
 }
 
 func (podWatcher *PodWatcher) getLogStreamerWithOptions(
@@ -176,9 +195,13 @@ func isPodComplete(pod *core.Pod) bool {
 }
 
 func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
+	if podWatcher.Phase == core.PodFailed || podWatcher.Phase == core.PodSucceeded {
+		callFunc()
+		return
+	}
 	for {
 		callFunc()
-		logs.InfoLogger.Println("Waiting for update channel...")
+		logs.InfoLogger.Println("Waiting for ready channel...")
 		pod, ok := <-podWatcher.informerChans.update
 		if ok {
 			phase := pod.Status.Phase
