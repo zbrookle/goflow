@@ -2,17 +2,18 @@ package main
 
 import (
 	"flag"
-	"goflow/k8sclient"
+	"goflow/dag/orchestrator"
+	k8sclient "goflow/k8s/client"
+	podutils "goflow/k8s/pod/utils"
 	"goflow/logs"
-	"goflow/orchestrator"
-	"goflow/podutils"
+	"goflow/testutils"
 	"time"
 )
 
 func main() {
 	configPath := flag.String(
 		"path",
-		podutils.GetConfigPath(),
+		testutils.GetConfigPath(),
 		"The path to the configuration file",
 	)
 	flag.Parse()

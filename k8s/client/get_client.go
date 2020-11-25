@@ -1,4 +1,4 @@
-package k8sclient
+package client
 
 import (
 	"path/filepath"

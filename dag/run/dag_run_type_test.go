@@ -1,11 +1,11 @@
-package dagrun
+package run
 
 import (
 	"context"
-	"goflow/dagconfig"
+	dagconfig "goflow/dag/config"
 	"goflow/jsonpanic"
-	"goflow/k8sclient"
-	"goflow/podutils"
+	k8sclient "goflow/k8s/client"
+	podutils "goflow/k8s/pod/utils"
 	"strings"
 	"testing"
 
@@ -79,6 +79,7 @@ func TestCreatePod(t *testing.T) {
 func TestStartPod(t *testing.T) {
 	// Test with logs and without logs
 	realClient := k8sclient.CreateKubeClient()
+	defer podutils.CleanUpPods(realClient)
 	tables := []struct {
 		name     string
 		withLogs bool
@@ -89,7 +90,6 @@ func TestStartPod(t *testing.T) {
 	for _, table := range tables {
 		t.Logf("Test case: %s", table.name)
 		func() {
-			defer podutils.CleanUpPods(realClient)
 			expectedLogMessage := "Hello World!!!"
 			dagRun := NewDAGRun(
 				getTestDate(),

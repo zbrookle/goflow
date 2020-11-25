@@ -1,12 +1,12 @@
-package dagrun
+package run
 
 import (
 	"context"
 
 	"goflow/logs"
 
-	"goflow/dagconfig"
-	"goflow/podwatch"
+	dagconfig "goflow/dag/config"
+	podwatch "goflow/k8s/pod/watch"
 
 	"time"
 

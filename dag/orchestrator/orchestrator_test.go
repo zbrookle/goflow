@@ -1,12 +1,12 @@
 package orchestrator
 
 import (
-	"goflow/dagconfig"
-	"goflow/podutils"
+	dagconfig "goflow/dag/config"
+	"goflow/testutils"
 	"testing"
 
 	"goflow/config"
-	"goflow/dags"
+	"goflow/dag/dagtype"
 
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -21,8 +21,8 @@ func createFakeKubeClient() *fake.Clientset {
 
 func TestMain(m *testing.M) {
 	kubeClient = createFakeKubeClient()
-	configPath = podutils.GetConfigPath()
-	dagPath = podutils.GetDagsFolder()
+	configPath = testutils.GetConfigPath()
+	dagPath = testutils.GetDagsFolder()
 	m.Run()
 }
 
@@ -34,7 +34,7 @@ func testOrchestrator() *Orchestrator {
 
 func TestRegisterDAG(t *testing.T) {
 	orch := testOrchestrator()
-	dag := dags.CreateDAG(&dagconfig.DAGConfig{
+	dag := dagtype.CreateDAG(&dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
 		Schedule:      "* * * * *",

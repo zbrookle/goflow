@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"goflow/config"
-	"goflow/dagconfig"
+	dagconfig "goflow/dag/config"
 
-	"goflow/k8sclient"
-	"goflow/orchestrator"
-	"goflow/podutils"
+	"goflow/dag/orchestrator"
+	k8sclient "goflow/k8s/client"
+	podutils "goflow/k8s/pod/utils"
+	"goflow/testutils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -33,7 +34,7 @@ func adjustConfigDagPath(configPath string, dagPath string) string {
 	}
 	json.Unmarshal(configBytes, fixedConfig)
 	fixedConfig.DAGPath = dagPath
-	newConfigPath := filepath.Join(podutils.GetTestFolder(), "tmp_config.json")
+	newConfigPath := filepath.Join(testutils.GetTestFolder(), "tmp_config.json")
 	fixedConfig.SaveConfig(newConfigPath)
 	return newConfigPath
 }
@@ -101,9 +102,9 @@ func createFakeDags(testFolder string) string {
 
 func TestMain(m *testing.M) {
 	expectedDagCount = 2
-	fakeDagsPath := createFakeDags(podutils.GetTestFolder())
+	fakeDagsPath := createFakeDags(testutils.GetTestFolder())
 	defer os.RemoveAll(fakeDagsPath)
-	configPath = adjustConfigDagPath(podutils.GetConfigPath(), fakeDagsPath)
+	configPath = adjustConfigDagPath(testutils.GetConfigPath(), fakeDagsPath)
 	defer os.Remove(configPath)
 	m.Run()
 }
@@ -116,7 +117,7 @@ func TestStartServer(t *testing.T) {
 	orch.Start(1, loopBreaker)
 
 	time.Sleep(4 * time.Second)
-	loopBreaker <- struct{}{}
+	close(loopBreaker)
 
 	if len(orch.DAGs()) != expectedDagCount {
 		t.Errorf("Expected %d DAGs but only found %d", expectedDagCount, len(orch.DAGs()))
