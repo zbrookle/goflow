@@ -1,12 +1,12 @@
 package orchestrator
 
 import (
-	"goflow/dagconfig"
+	dagconfig "goflow/dag/config"
 	"goflow/podutils"
 	"testing"
 
 	"goflow/config"
-	"goflow/dags"
+	"goflow/dag/dagtype"
 
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -34,7 +34,7 @@ func testOrchestrator() *Orchestrator {
 
 func TestRegisterDAG(t *testing.T) {
 	orch := testOrchestrator()
-	dag := dags.CreateDAG(&dagconfig.DAGConfig{
+	dag := dagtype.CreateDAG(&dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
 		Schedule:      "* * * * *",

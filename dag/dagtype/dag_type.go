@@ -1,9 +1,9 @@
-package dags
+package dagtype
 
 import (
 	"encoding/json"
-	"goflow/dagconfig"
-	"goflow/dagrun"
+	dagconfig "goflow/dag/config"
+	dagrun "goflow/dag/run"
 	"goflow/logs"
 	"io/ioutil"
 	"os"

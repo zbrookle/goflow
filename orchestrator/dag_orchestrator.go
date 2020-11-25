@@ -1,8 +1,8 @@
 package orchestrator
 
 import (
-	"goflow/dagrun"
-	"goflow/dags"
+	dagtype "goflow/dag/dagtype"
+	dagrun "goflow/dag/run"
 	"goflow/logs"
 	"time"
 
@@ -14,7 +14,7 @@ import (
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
-	dagMap     map[string]*dags.DAG
+	dagMap     map[string]*dagtype.DAG
 	kubeClient kubernetes.Interface
 	config     *config.GoFlowConfig
 }
@@ -23,7 +23,7 @@ func newOrchestratorFromClientAndConfig(
 	client kubernetes.Interface,
 	config *config.GoFlowConfig,
 ) *Orchestrator {
-	return &Orchestrator{make(map[string]*dags.DAG), client, config}
+	return &Orchestrator{make(map[string]*dagtype.DAG), client, config}
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
@@ -35,7 +35,7 @@ func NewOrchestrator(configPath string) *Orchestrator {
 }
 
 // AddDAG adds a DAG to the Orchestrator
-func (orchestrator *Orchestrator) AddDAG(dag *dags.DAG) {
+func (orchestrator *Orchestrator) AddDAG(dag *dagtype.DAG) {
 	logs.InfoLogger.Printf(
 		"Added DAG %s which will run in namespace %s, with code %s",
 		dag.Config.Name,
@@ -53,8 +53,8 @@ func (orchestrator *Orchestrator) DeleteDAG(dagName string, namespace string) {
 }
 
 // DAGs returns []DAGs with all DAGs present in the map
-func (orchestrator Orchestrator) DAGs() []*dags.DAG {
-	dagSlice := make([]*dags.DAG, 0, len(orchestrator.dagMap))
+func (orchestrator Orchestrator) DAGs() []*dagtype.DAG {
+	dagSlice := make([]*dagtype.DAG, 0, len(orchestrator.dagMap))
 	for dagName := range orchestrator.dagMap {
 		dagSlice = append(dagSlice, orchestrator.dagMap[dagName])
 	}
@@ -62,19 +62,19 @@ func (orchestrator Orchestrator) DAGs() []*dags.DAG {
 }
 
 // isDagPresent returns true if the given dag is present
-func (orchestrator Orchestrator) isDagPresent(dag dags.DAG) bool {
+func (orchestrator Orchestrator) isDagPresent(dag dagtype.DAG) bool {
 	_, ok := orchestrator.dagMap[dag.Config.Name]
 	return ok
 }
 
 // isStoredDagDifferent returns true if the given dag source code is different
-func (orchestrator Orchestrator) isStoredDagDifferent(dag dags.DAG) bool {
+func (orchestrator Orchestrator) isStoredDagDifferent(dag dagtype.DAG) bool {
 	currentDag, _ := orchestrator.dagMap[dag.Config.Name]
 	return currentDag.Code != dag.Code
 }
 
 // GetDag returns the DAG with the given name
-func (orchestrator Orchestrator) GetDag(dagName string) *dags.DAG {
+func (orchestrator Orchestrator) GetDag(dagName string) *dagtype.DAG {
 	dag, _ := orchestrator.dagMap[dagName]
 	return dag
 }
@@ -92,7 +92,7 @@ func (orchestrator Orchestrator) DagRuns() []dagrun.DAGRun {
 
 // CollectDAGs fills up the dag map with existing dags
 func (orchestrator *Orchestrator) CollectDAGs() {
-	dagSlice := dags.GetDAGSFromFolder(orchestrator.config.DAGPath)
+	dagSlice := dagtype.GetDAGSFromFolder(orchestrator.config.DAGPath)
 	for _, dag := range dagSlice {
 		dagPresent := orchestrator.isDagPresent(*dag)
 		if !dagPresent {

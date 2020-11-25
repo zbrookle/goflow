@@ -1,9 +1,9 @@
-package dags
+package dagtype
 
 import (
 	"context"
-	"goflow/dagconfig"
-	"goflow/dagrun"
+	dagconfig "goflow/dag/config"
+	dagrun "goflow/dag/run"
 	"goflow/k8sclient"
 	"goflow/podutils"
 	"path/filepath"

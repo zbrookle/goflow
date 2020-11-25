@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"goflow/config"
-	"goflow/dagconfig"
+	dagconfig "goflow/dag/config"
 
 	"goflow/k8sclient"
 	"goflow/orchestrator"
