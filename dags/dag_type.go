@@ -138,8 +138,9 @@ func (dag *DAG) AddNextDagRunIfReady() {
 			dag.MostRecentExecution = dag.StartDateTime
 		}
 		// !!!! Bug still occurring here need to figure out why !!!!!
-		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
-		go dagRun.Start()
+		// dagRun :=
+		dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
+		// go dagRun.Start()
 	}
 }
 
