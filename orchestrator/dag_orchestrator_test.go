@@ -1,6 +1,7 @@
 package orchestrator
 
 import (
+	"goflow/dagconfig"
 	"goflow/podutils"
 	"testing"
 
@@ -33,7 +34,7 @@ func testOrchestrator() *Orchestrator {
 
 func TestRegisterDAG(t *testing.T) {
 	orch := testOrchestrator()
-	dag := dags.CreateDAG(&dags.DAGConfig{
+	dag := dags.CreateDAG(&dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
 		Schedule:      "* * * * *",

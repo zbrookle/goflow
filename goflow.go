@@ -21,11 +21,11 @@ func main() {
 
 	defer podutils.CleanUpPods(kubeClient)
 	orch := *orchestrator.NewOrchestrator(*configPath)
-	loopBreaker := false
-	go orch.Start(1, &loopBreaker)
+	loopBreaker := make(chan struct{}, 1)
+	go orch.Start(1, loopBreaker)
 
 	time.Sleep(4 * time.Second)
-	loopBreaker = true
+	loopBreaker <- struct{}{}
 
 	logs.InfoLogger.Println("Dags length", len(orch.DAGs()))
 }

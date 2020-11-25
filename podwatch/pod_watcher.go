@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"goflow/logs"
-	"goflow/podutils"
 	"io"
 	"strings"
 
@@ -22,36 +21,23 @@ import (
 )
 
 type funcChannels struct {
-	add    chan *core.Pod
+	ready  chan *core.Pod
 	update chan *core.Pod
 	remove chan *core.Pod
 }
 
 // PodWatcher watches events and streams logs from pods while they are running
 type PodWatcher struct {
-	podName         string
-	namespace       string
-	kubeClient      kubernetes.Interface
-	Logs            chan string
-	withLogs        bool
-	Phase           core.PodPhase
-	informer        cache.SharedInformer
-	informerChans   funcChannels
-	informerStopper chan struct{}
-}
-
-func newWatcher(podName string, podClient v1.PodInterface) watch.Interface {
-	nameSelector := podutils.LabelSelectorString(map[string]string{
-		"Name": podName,
-	})
-	watcher, err := podClient.Watch(
-		context.TODO(),
-		k8sapi.ListOptions{LabelSelector: nameSelector},
-	)
-	if err != nil {
-		panic(err)
-	}
-	return watcher
+	podName             string
+	namespace           string
+	kubeClient          kubernetes.Interface
+	Logs                chan string
+	withLogs            bool
+	Phase               core.PodPhase
+	informer            cache.SharedInformer
+	informerChans       funcChannels
+	stopInformerChannel chan struct{}
+	monitoringDone      chan struct{}
 }
 
 func getPodFromInterface(obj interface{}) *core.Pod {
@@ -60,6 +46,11 @@ func getPodFromInterface(obj interface{}) *core.Pod {
 		panic(fmt.Sprintf("Expected %T, but go %T", &core.Pod{}, obj))
 	}
 	return pod
+}
+
+func podReadyToLog(pod *core.Pod) bool {
+	return (pod.Status.Phase == core.PodRunning) || (pod.Status.Phase == core.PodSucceeded) ||
+		(pod.Status.Phase == core.PodFailed)
 }
 
 func getSharedInformer(
@@ -72,16 +63,9 @@ func getSharedInformer(
 		client.CoreV1().RESTClient(),
 		"pods",
 		namespace,
-		// fields.Everything(),
 		fields.OneTermEqualSelector("metadata.name", name),
 	)
 	informer := cache.NewSharedInformer(listWatcher, &core.Pod{}, 0)
-	// factory := informers.NewSharedInformerFactoryWithOptions(
-	// 	client,
-	// 	0,
-	// 	informers.WithNamespace(namespace),
-	// )
-	// informer := factory.Core().V1().Pods().Informer()
 
 	channels := funcChannels{
 		make(chan *core.Pod, 1),
@@ -91,17 +75,27 @@ func getSharedInformer(
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			logs.InfoLogger.Printf("Call add pod func")
 			pod := getPodFromInterface(obj)
-			logs.InfoLogger.Printf("Pod with name %s, in phase %s", pod.Name, pod.Status.Phase)
-			// for _, status := range pod.Status.ContainerStatuses {
-			// 	logs.InfoLogger.Printf("Container in phase %s", status.State.String())
-			// }
-			channels.add <- getPodFromInterface(obj)
+			logs.InfoLogger.Printf("Pod with name %s added in phase %s", pod.Name, pod.Status.Phase)
+			if podReadyToLog(pod) {
+				channels.ready <- pod
+			}
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			logs.InfoLogger.Println("Call pod update function")
-			channels.update <- getPodFromInterface(new)
+			oldPod := getPodFromInterface(old)
+			newPod := getPodFromInterface(new)
+			logs.InfoLogger.Printf(
+				"Pod %s switched from phase %s to phase %s",
+				newPod.Name,
+				oldPod.Status.Phase,
+				newPod.Status.Phase,
+			)
+			if podReadyToLog(newPod) {
+				channels.ready <- newPod
+			}
+			if oldPod.Status.Phase != newPod.Status.Phase {
+				channels.update <- newPod
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			channels.update <- getPodFromInterface(obj)
@@ -118,9 +112,8 @@ func NewPodWatcher(
 	withLogs bool,
 ) *PodWatcher {
 	addFuncChannel := make(chan int, 1)
-	stopChannel := make(chan struct{})
+	stopInformerChannel := make(chan struct{})
 	informer, channels := getSharedInformer(client, name, namespace, addFuncChannel)
-	go informer.Run(stopChannel)
 	return &PodWatcher{
 		name,
 		namespace,
@@ -130,7 +123,8 @@ func NewPodWatcher(
 		core.PodPending,
 		informer,
 		channels,
-		stopChannel,
+		stopInformerChannel,
+		make(chan struct{}, 1),
 	}
 }
 
@@ -155,9 +149,8 @@ func eventObjectToPod(result watch.Event) *core.Pod {
 
 // waitForPodAdded returns when the pod has been added
 func (podWatcher *PodWatcher) waitForPodAdded() {
-	logs.InfoLogger.Println("Waiting for pod!")
-	<-podWatcher.informerChans.add
-	logs.InfoLogger.Println("Pod added!!!!")
+	pod := <-podWatcher.informerChans.ready
+	podWatcher.Phase = pod.Status.Phase
 }
 
 func (podWatcher *PodWatcher) getLogStreamerWithOptions(
@@ -202,9 +195,13 @@ func isPodComplete(pod *core.Pod) bool {
 }
 
 func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
+	if podWatcher.Phase == core.PodFailed || podWatcher.Phase == core.PodSucceeded {
+		callFunc()
+		return
+	}
 	for {
 		callFunc()
-		logs.InfoLogger.Println("Waiting for update channel...")
+		logs.InfoLogger.Println("Waiting for ready channel...")
 		pod, ok := <-podWatcher.informerChans.update
 		if ok {
 			phase := pod.Status.Phase
@@ -234,12 +231,34 @@ func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	})
 }
 
+func (podWatcher *PodWatcher) setMonitorDone() {
+	podWatcher.monitoringDone <- struct{}{}
+}
+
+func (podWatcher *PodWatcher) stopInformer() {
+	podWatcher.stopInformerChannel <- struct{}{}
+}
+
+func (podWatcher *PodWatcher) startInformer() {
+	go podWatcher.informer.Run(podWatcher.stopInformerChannel)
+}
+
 // MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
+	defer podWatcher.setMonitorDone()
+
+	podWatcher.startInformer()
+	defer podWatcher.stopInformer()
+
 	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()
 	if err != nil {
 		panic(err)
 	}
 	podWatcher.readLogsUntilSucceedOrFail(logger)
+}
+
+// WaitForMonitorDone returns when the watcher is done monitoring
+func (podWatcher *PodWatcher) WaitForMonitorDone() {
+	<-podWatcher.monitoringDone
 }

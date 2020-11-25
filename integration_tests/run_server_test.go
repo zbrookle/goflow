@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"goflow/config"
-	"goflow/dags"
+	"goflow/dagconfig"
+
 	"goflow/k8sclient"
-	"goflow/logs"
 	"goflow/orchestrator"
 	"goflow/podutils"
 	"io/ioutil"
@@ -23,7 +23,7 @@ import (
 )
 
 var configPath string
-var dagCount int
+var expectedDagCount int
 
 func adjustConfigDagPath(configPath string, dagPath string) string {
 	fixedConfig := &config.GoFlowConfig{}
@@ -73,9 +73,9 @@ func createDirIfNotExist(directory string) string {
 }
 
 func createFakeDagFile(dagFolder string, dagNum int) {
-	fakeDagName := fmt.Sprintf("dag_file_%d.json", dagNum)
-	filePath := filepath.Join(dagFolder, fakeDagName)
-	fakeDagConfig := &dags.DAGConfig{Name: fakeDagName,
+	fakeDagName := fmt.Sprintf("dag_file_%d", dagNum)
+	filePath := filepath.Join(dagFolder, fakeDagName+".json")
+	fakeDagConfig := &dagconfig.DAGConfig{Name: fakeDagName,
 		Namespace:     "default",
 		Schedule:      "* * * * *",
 		Command:       strings.Split(fmt.Sprintf("echo %d", dagNum), " "),
@@ -93,14 +93,14 @@ func createFakeDagFile(dagFolder string, dagNum int) {
 // createFakeDags creates fake dag files, and returns their location
 func createFakeDags(testFolder string) string {
 	dagDir := createDirIfNotExist(filepath.Join(testFolder, "tmp_dags"))
-	for i := 0; i < dagCount; i++ {
+	for i := 0; i < expectedDagCount; i++ {
 		createFakeDagFile(dagDir, i)
 	}
 	return dagDir
 }
 
 func TestMain(m *testing.M) {
-	dagCount = 2
+	expectedDagCount = 2
 	fakeDagsPath := createFakeDags(podutils.GetTestFolder())
 	defer os.RemoveAll(fakeDagsPath)
 	configPath = adjustConfigDagPath(podutils.GetConfigPath(), fakeDagsPath)
@@ -112,16 +112,14 @@ func TestStartServer(t *testing.T) {
 	kubeClient := k8sclient.CreateKubeClient()
 	defer podutils.CleanUpPods(kubeClient)
 	orch := *orchestrator.NewOrchestrator(configPath)
-	loopBreaker := false
-	go orch.Start(1, &loopBreaker)
+	loopBreaker := make(chan struct{}, 1)
+	orch.Start(1, loopBreaker)
 
 	time.Sleep(4 * time.Second)
-	loopBreaker = true
+	loopBreaker <- struct{}{}
 
-	logs.InfoLogger.Println("Dags length", len(orch.DAGs()))
-
-	if len(orch.DAGs()) != dagCount {
-		t.Errorf("DAG list does not have expected length")
+	if len(orch.DAGs()) != expectedDagCount {
+		t.Errorf("Expected %d DAGs but only found %d", expectedDagCount, len(orch.DAGs()))
 	}
 
 	if len(orch.DagRuns()) == 0 {

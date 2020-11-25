@@ -59,7 +59,7 @@ func createTestPod(podsClient v1.PodInterface, podName string, namespace string)
 	return pod
 }
 
-func TestEventWatcherAddPod(t *testing.T) {
+func TestPodReadyForLogging(t *testing.T) {
 	defer podutils.CleanUpPods(KUBECLIENT)
 
 	namespace := "default"
@@ -67,12 +67,12 @@ func TestEventWatcherAddPod(t *testing.T) {
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
-	defer close(watcher.informerStopper)
+	watcher.startInformer()
 
 	createTestPod(podsClient, podName, namespace)
-	pod := <-watcher.informerChans.add
-	if pod.Status.Phase != core.PodPending {
-		t.Errorf("Pod should be in state running, was in state %s", pod.Status.Phase)
+	pod := <-watcher.informerChans.ready
+	if !podReadyToLog(pod) {
+		t.Errorf("Pod is not ready to log!")
 	}
 	if pod.Name != podName {
 		t.Errorf("Pod should have name %s, but saw name %s", podName, pod.Name)
@@ -89,6 +89,7 @@ func TestCallFuncUntilSucceedOrFail(t *testing.T) {
 	podName := "test-pod-succeed-or-fail"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
+	watcher.startInformer()
 
 	createTestPod(podsClient, podName, namespace)
 
@@ -113,6 +114,7 @@ func TestGetLogsAfterPodDone(t *testing.T) {
 	podName := "test-pod-get-logs-after-pod-done"
 	podsClient := KUBECLIENT.CoreV1().Pods(namespace)
 	watcher := NewPodWatcher(podName, namespace, KUBECLIENT, true)
+	watcher.startInformer()
 
 	createdPod := createTestPod(podsClient, podName, namespace)
 
