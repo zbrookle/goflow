@@ -1,11 +1,11 @@
-package podwatch
+package watch
 
 import (
 	"bytes"
 	"context"
-	"goflow/k8sclient"
+	k8sclient "goflow/k8s/client"
+	podutils "goflow/k8s/pod/utils"
 	"goflow/logs"
-	"goflow/podutils"
 	"io"
 	"os/exec"
 	"strings"

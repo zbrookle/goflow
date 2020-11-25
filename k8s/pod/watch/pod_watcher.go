@@ -1,4 +1,4 @@
-package podwatch
+package watch
 
 import (
 	"bytes"

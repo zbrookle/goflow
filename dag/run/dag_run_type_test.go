@@ -4,8 +4,8 @@ import (
 	"context"
 	dagconfig "goflow/dag/config"
 	"goflow/jsonpanic"
-	"goflow/k8sclient"
-	"goflow/podutils"
+	k8sclient "goflow/k8s/client"
+	podutils "goflow/k8s/pod/utils"
 	"strings"
 	"testing"
 

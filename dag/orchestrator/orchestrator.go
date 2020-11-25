@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"goflow/config"
-	"goflow/k8sclient"
+	k8sclient "goflow/k8s/client"
 
 	"k8s.io/client-go/kubernetes"
 )
