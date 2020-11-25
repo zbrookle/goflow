@@ -117,7 +117,7 @@ func TestStartServer(t *testing.T) {
 	orch.Start(1, loopBreaker)
 
 	time.Sleep(4 * time.Second)
-	loopBreaker <- struct{}{}
+	close(loopBreaker)
 
 	if len(orch.DAGs()) != expectedDagCount {
 		t.Errorf("Expected %d DAGs but only found %d", expectedDagCount, len(orch.DAGs()))

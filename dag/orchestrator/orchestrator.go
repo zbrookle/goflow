@@ -113,11 +113,19 @@ func (orchestrator *Orchestrator) RunDags() {
 	}
 }
 
-func cycleUntilChannelClose(callable func(), close chan struct{}, cycleDuration time.Duration) {
+func cycleUntilChannelClose(
+	callable func(),
+	close chan struct{},
+	cycleDuration time.Duration,
+	loopName string,
+) {
 	for {
 		select {
-		case <-close:
-			return
+		case _, ok := <-close:
+			if !ok {
+				logs.InfoLogger.Printf("Closing %s\n", loopName)
+				return
+			}
 		default:
 			callable()
 			time.Sleep(cycleDuration)
@@ -126,7 +134,12 @@ func cycleUntilChannelClose(callable func(), close chan struct{}, cycleDuration 
 }
 
 // Start begins the orchestrator event loop
-func (orchestrator *Orchestrator) Start(cycleDuration time.Duration, close chan struct{}) {
-	go cycleUntilChannelClose(orchestrator.CollectDAGs, close, cycleDuration)
-	go cycleUntilChannelClose(orchestrator.RunDags, close, cycleDuration)
+func (orchestrator *Orchestrator) Start(cycleDuration time.Duration, closingChannel chan struct{}) {
+	go cycleUntilChannelClose(
+		orchestrator.CollectDAGs,
+		closingChannel,
+		cycleDuration,
+		"Collect DAGs",
+	)
+	go cycleUntilChannelClose(orchestrator.RunDags, closingChannel, cycleDuration, "Run DAGs")
 }
