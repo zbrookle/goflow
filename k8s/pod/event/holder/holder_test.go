@@ -42,3 +42,15 @@ func TestGetGroupFromHolder(t *testing.T) {
 		t.Errorf("Channel groups do not match for pod with name %s", testName)
 	}
 }
+
+func TestNameInHolder(t *testing.T) {
+	holder := New()
+	if holder.Contains(testName) {
+		t.Errorf("Should be 'false' for pod %s", testName)
+	}
+
+	holder.channelMap[testName] = channel.New()
+	if !holder.Contains(testName) {
+		t.Errorf("Should be 'true' for pod %s", testName)
+	}
+}

@@ -35,3 +35,9 @@ func (holder *ChannelHolder) GetChannelGroup(name string) *channel.FuncChannelGr
 	}
 	return group
 }
+
+// Contains returns true if the given name is in the channel holder
+func (holder *ChannelHolder) Contains(name string) bool {
+	_, ok := holder.channelMap[name]
+	return ok
+}
