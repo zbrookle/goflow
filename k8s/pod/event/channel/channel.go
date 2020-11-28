@@ -6,9 +6,9 @@ import (
 
 // FuncChannelGroup holds the various states of a pod's events'
 type FuncChannelGroup struct {
-	ready  chan *core.Pod
-	update chan *core.Pod
-	remove chan *core.Pod
+	Ready  chan *core.Pod
+	Update chan *core.Pod
+	Remove chan *core.Pod
 }
 
 // New returns a new FuncChannel struct
