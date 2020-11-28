@@ -1,6 +1,7 @@
 package holder
 
 import (
+	"fmt"
 	"goflow/k8s/pod/event/channel"
 )
 
@@ -24,4 +25,13 @@ func (holder *ChannelHolder) AddChannelGroup(name string) {
 // DeleteChannelGroup deletes a channel gropu with the given name
 func (holder *ChannelHolder) DeleteChannelGroup(name string) {
 	delete(holder.channelMap, name)
+}
+
+// GetChannelGroup returns the channel group for the given pod name
+func (holder *ChannelHolder) GetChannelGroup(name string) *channel.FuncChannelGroup {
+	group, ok := holder.channelMap[name]
+	if !ok {
+		panic(fmt.Sprintf("Group for pod %s not found!", name))
+	}
+	return group
 }

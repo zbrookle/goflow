@@ -31,3 +31,14 @@ func TestDeleteFromHolder(t *testing.T) {
 		t.Errorf("%s should not be in channel map", testName)
 	}
 }
+
+func TestGetGroupFromHolder(t *testing.T) {
+	holder := New()
+	channelGroup := channel.New()
+	holder.channelMap[testName] = channelGroup
+
+	retrievedGroup := holder.GetChannelGroup(testName)
+	if retrievedGroup != channelGroup {
+		t.Errorf("Channel groups do not match for pod with name %s", testName)
+	}
+}
