@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"goflow/k8s/pod/event/holder"
 	"goflow/logs"
@@ -31,19 +30,6 @@ type PodWatcher struct {
 	Phase          core.PodPhase
 	informerChans  *holder.ChannelHolder
 	monitoringDone chan struct{}
-}
-
-func getPodFromInterface(obj interface{}) *core.Pod {
-	pod, ok := obj.(*core.Pod)
-	if !ok {
-		panic(fmt.Sprintf("Expected %T, but go %T", &core.Pod{}, obj))
-	}
-	return pod
-}
-
-func podReadyToLog(pod *core.Pod) bool {
-	return (pod.Status.Phase == core.PodRunning) || (pod.Status.Phase == core.PodSucceeded) ||
-		(pod.Status.Phase == core.PodFailed)
 }
 
 // NewPodWatcher returns a new pod watcher
@@ -93,7 +79,7 @@ func (podWatcher *PodWatcher) getLogStreamerWithOptions(
 	options *core.PodLogOptions,
 ) (io.ReadCloser, error) {
 	req := podWatcher.podClient().GetLogs(podWatcher.podName, options)
-	return req.Stream(context.TODO())
+	return req.Stream(context.Background())
 }
 
 // getLogsContainerNotFound
@@ -103,6 +89,7 @@ func (podWatcher *PodWatcher) getLogsContainerNotFound() (io.ReadCloser, error) 
 
 // getLogger returns when logs are ready to be received
 func (podWatcher *PodWatcher) getLogger() (io.ReadCloser, error) {
+	logs.InfoLogger.Printf("Retrieving logger for pod %s...\n", podWatcher.podName)
 	var logStreamer io.ReadCloser
 	for {
 		streamer, err := podWatcher.getLogStreamerWithOptions(&core.PodLogOptions{})
@@ -112,6 +99,10 @@ func (podWatcher *PodWatcher) getLogger() (io.ReadCloser, error) {
 		}
 		errorText := err.Error()
 		if strings.Contains(errorText, "not found") {
+			logs.InfoLogger.Printf(
+				"Container not found for pod %s, handling...\n",
+				podWatcher.podName,
+			)
 			return podWatcher.getLogsContainerNotFound()
 		}
 	}

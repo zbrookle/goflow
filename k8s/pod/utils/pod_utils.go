@@ -59,7 +59,7 @@ func LabelSelectorString(labelMap map[string]string) string {
 // CreateTestPod creates and returns a busybox pod using the given PodInterface and names. It performs the command
 // echo "123 test"
 func CreateTestPod(
-	podsClient v1.PodInterface,
+	podsClient *v1.PodInterface,
 	podName string,
 	namespace string,
 	phase core.PodPhase,
@@ -87,7 +87,7 @@ func CreateTestPod(
 		},
 		Status: core.PodStatus{Phase: phase},
 	}
-	pod, err := podsClient.Create(context.TODO(), &testPodFrame, k8sapi.CreateOptions{})
+	pod, err := (*podsClient).Create(context.TODO(), &testPodFrame, k8sapi.CreateOptions{})
 	if err != nil {
 		panic(err)
 	}

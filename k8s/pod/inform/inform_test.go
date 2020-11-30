@@ -36,7 +36,7 @@ func TestPodReadyForLogging(t *testing.T) {
 			channelHolder.AddChannelGroup(podName)
 			podsClient, watcher := testutils.GetPodClientWithTestWatcher(KUBECLIENT, namespace)
 
-			createdPod := podutils.CreateTestPod(*podsClient, podName, namespace, core.PodPending)
+			createdPod := podutils.CreateTestPod(podsClient, podName, namespace, core.PodPending)
 			watcher.Add(createdPod)
 			createdPod.Status.Phase = phaseStruct.phase
 
