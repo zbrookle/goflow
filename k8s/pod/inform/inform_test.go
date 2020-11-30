@@ -1,18 +1,15 @@
 package inform
 
 import (
-	// "context"
 	"goflow/k8s/pod/event/holder"
 	podutils "goflow/k8s/pod/utils"
+	"goflow/testutils"
 
 	"testing"
 
 	core "k8s.io/api/core/v1"
-	// k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+
 	"k8s.io/client-go/kubernetes/fake"
-	fakecore "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	testcore "k8s.io/client-go/testing"
 )
 
 const testPodName = "test"
@@ -37,16 +34,9 @@ func TestPodReadyForLogging(t *testing.T) {
 			defer taskInformer.Stop()
 
 			channelHolder.AddChannelGroup(podName)
+			podsClient, watcher := testutils.GetPodClientWithTestWatcher(KUBECLIENT, namespace)
 
-			podsClient := KUBECLIENT.CoreV1().Pods(namespace)
-			fakePodClient := podsClient.(*fakecore.FakePods)
-			watcher := watch.NewFake()
-			fakePodClient.Fake.PrependWatchReactor(
-				"pods",
-				testcore.DefaultWatchReactor(watcher, nil),
-			)
-
-			createdPod := podutils.CreateTestPod(podsClient, podName, namespace, core.PodPending)
+			createdPod := podutils.CreateTestPod(*podsClient, podName, namespace, core.PodPending)
 			watcher.Add(createdPod)
 			createdPod.Status.Phase = phaseStruct.phase
 
