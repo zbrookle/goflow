@@ -29,12 +29,12 @@ type DAG struct {
 	MostRecentExecution time.Time
 }
 
-func readDAGFile(dagFilePath string) []byte {
+func readDAGFile(dagFilePath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(dagFilePath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return dat
+	return dat, nil
 }
 
 func getDateFromString(dateStr string) time.Time {
@@ -76,7 +76,10 @@ func createDAGFromJSONBytes(dagBytes []byte, client kubernetes.Interface) (DAG, 
 
 // getDAGFromJSON creates a new dag struct from a dag file
 func getDAGFromJSON(dagFilePath string, client kubernetes.Interface) (DAG, error) {
-	dagBytes := readDAGFile(dagFilePath)
+	dagBytes, err := readDAGFile(dagFilePath)
+	if err != nil {
+		return DAG{}, err
+	}
 	dagJSON, err := createDAGFromJSONBytes(dagBytes, client)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
@@ -100,8 +103,12 @@ func getDirSliceRecur(directory string) []string {
 		return nil
 	}
 	err := filepath.Walk(directory, appendToFiles)
+	if os.IsNotExist(err) {
+		logs.WarningLogger.Printf("Directory %s not found", directory)
+		return files
+	}
 	if err != nil {
-		logs.ErrorLogger.Println(directory, "not found")
+		logs.ErrorLogger.Println(err)
 		panic(err)
 	}
 	return files
@@ -116,6 +123,9 @@ func GetDAGSFromFolder(folder string) []*DAG {
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
 			dag, err := getDAGFromJSON(file, fake.NewSimpleClientset())
+			if os.ErrNotExist == err {
+				logs.ErrorLogger.Printf("File %s no longer exists", file)
+			}
 			if err == nil {
 				dags = append(dags, &dag)
 			}
@@ -140,8 +150,8 @@ func (dag *DAG) AddNextDagRunIfReady() {
 		}
 		// !!!! Bug still occurring here need to figure out why !!!!!
 		// dagRun :=
-		dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
-		// go dagRun.Start()
+		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
+		go dagRun.Start()
 	}
 }
 
