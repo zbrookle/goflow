@@ -88,7 +88,7 @@ func (dagRun *DAGRun) getContainerFrame() core.Container {
 		Env:             nil,
 		VolumeMounts:    nil,
 		VolumeDevices:   nil,
-		ImagePullPolicy: "IfNotPresent",
+		ImagePullPolicy: core.PullIfNotPresent,
 	}
 }
 
