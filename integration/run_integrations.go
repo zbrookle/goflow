@@ -124,36 +124,36 @@ func startServer() {
 		panic("Expected runs to present but none were found")
 	}
 
-	podsOnServer := getPods(kubeClient)
-	for _, run := range orch.DagRuns() {
-		mostRecent := run.MostRecentPod()
+	// podsOnServer := getPods(kubeClient)
+	// for _, run := range orch.DagRuns() {
+	// 	mostRecent := run.MostRecentPod()
 
-		namespaceDict, ok := podsOnServer[mostRecent.Namespace]
-		if !ok {
-			panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
-		}
-		_, ok = namespaceDict[mostRecent.Name]
-		if !ok {
-			panic(
-				fmt.Sprintf(
-					"Pod %s not found in namespace %s",
-					mostRecent.Name,
-					mostRecent.Namespace,
-				),
-			)
-		}
+	// 	namespaceDict, ok := podsOnServer[mostRecent.Namespace]
+	// 	if !ok {
+	// 		panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
+	// 	}
+	// 	_, ok = namespaceDict[mostRecent.Name]
+	// 	if !ok {
+	// 		panic(
+	// 			fmt.Sprintf(
+	// 				"Pod %s not found in namespace %s",
+	// 				mostRecent.Name,
+	// 				mostRecent.Namespace,
+	// 			),
+	// 		)
+	// 	}
 
-		// select {
-		// case logString, ok := <-*run.Logs():
-		// 	if ok {
-		// 		logs.InfoLogger.Println(logString)
-		// 	} else {
-		// 		panic("Channel CLosed!")
-		// 	}
-		// default:
-		// 	panic("No logs found in channel!")
-		// }
-	}
+	// 	// select {
+	// 	// case logString, ok := <-*run.Logs():
+	// 	// 	if ok {
+	// 	// 		logs.InfoLogger.Println(logString)
+	// 	// 	} else {
+	// 	// 		panic("Channel CLosed!")
+	// 	// 	}
+	// 	// default:
+	// 	// 	panic("No logs found in channel!")
+	// 	// }
+	// }
 
 	close(loopBreaker)
 }
