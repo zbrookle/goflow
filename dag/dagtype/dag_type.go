@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 // DAG is directed acyclic graph for hold job information
@@ -117,12 +116,12 @@ func getDirSliceRecur(directory string) []string {
 // GetDAGSFromFolder returns a slice of DAG structs, one for each DAG file
 // Each file must have the "dag" suffix
 // E.g., my_dag.py, some_dag.json
-func GetDAGSFromFolder(folder string) []*DAG {
+func GetDAGSFromFolder(folder string, client kubernetes.Interface) []*DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file, fake.NewSimpleClientset())
+			dag, err := getDAGFromJSON(file, client)
 			if os.ErrNotExist == err {
 				logs.ErrorLogger.Printf("File %s no longer exists", file)
 			}
