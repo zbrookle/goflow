@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"fmt"
 
 	"goflow/logs"
 
@@ -177,8 +178,11 @@ func (dagRun *DAGRun) DeletePod() {
 }
 
 // MostRecentPod returns the pod run for this dag run
-func (dagRun *DAGRun) MostRecentPod() core.Pod {
-	return *dagRun.pod
+func (dagRun *DAGRun) MostRecentPod() (core.Pod, error) {
+	if dagRun.pod == nil {
+		return core.Pod{}, fmt.Errorf("pod %s has not been created yet", dagRun.Name)
+	}
+	return *dagRun.pod, nil
 }
 
 // TRY COUNTING EVENT STATES -- USE this as rate limiting - if pod is pending for too long
