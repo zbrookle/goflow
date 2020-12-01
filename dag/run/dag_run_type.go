@@ -176,4 +176,9 @@ func (dagRun *DAGRun) DeletePod() {
 	}
 }
 
+// MostRecentPod returns the pod run for this dag run
+func (dagRun *DAGRun) MostRecentPod() core.Pod {
+	return *dagRun.pod
+}
+
 // TRY COUNTING EVENT STATES -- USE this as rate limiting - if pod is pending for too long
