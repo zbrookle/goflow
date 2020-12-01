@@ -37,7 +37,7 @@ func NewOrchestrator(configPath string) *Orchestrator {
 // AddDAG adds a DAG to the Orchestrator
 func (orchestrator *Orchestrator) AddDAG(dag *dagtype.DAG) {
 	logs.InfoLogger.Printf(
-		"Added DAG %s which will run in namespace %s, with code %s",
+		"Added DAG '%s' which will run in namespace '%s', with code: %s",
 		dag.Config.Name,
 		dag.Config.Namespace,
 		dag.Code,
