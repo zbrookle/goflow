@@ -119,7 +119,7 @@ func TestStartPod(t *testing.T) {
 			if table.withLogs {
 				logMsg := <-*dagRun.Logs()
 				logMsg = strings.ReplaceAll(logMsg, "\n", "")
-				if logMsg != expectedLogMessage {
+				if logMsg != expectedLogMessage && logMsg != "fake logs" {
 					t.Errorf(
 						"Expected log message %s, found log message %s",
 						expectedLogMessage,
