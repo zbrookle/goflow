@@ -34,7 +34,7 @@ func TestCallFuncUntilSucceedOrFail(t *testing.T) {
 			namespace := "default"
 			podName := "test-pod-succeed-or-fail"
 			holder := holder.New()
-			podWatcher := NewPodWatcher(podName, namespace, client, true, &holder)
+			podWatcher := NewPodWatcher(podName, namespace, client, true, holder)
 			podsClient, _ := testutils.GetPodClientWithTestWatcher(client, namespace)
 			testPod := podutils.CreateTestPod(podsClient, podName, namespace, "")
 			t.Log("Test pod created")
@@ -74,8 +74,7 @@ func TestGetLogsAfterPodDone(t *testing.T) {
 			namespace := "default"
 			podName := "test-pod-get-logs-after-pod-done"
 			podsClient, _ := testutils.GetPodClientWithTestWatcher(client, namespace)
-			channelHolder := holder.New()
-			watcher := NewPodWatcher(podName, namespace, client, true, &channelHolder)
+			watcher := NewPodWatcher(podName, namespace, client, true, holder.New())
 			watcher.informerChans.AddChannelGroup(podName)
 
 			createdPod := podutils.CreateTestPod(podsClient, podName, namespace, "")

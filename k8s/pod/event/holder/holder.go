@@ -11,8 +11,8 @@ type ChannelHolder struct {
 }
 
 // New creates a new channel holder
-func New() ChannelHolder {
-	return ChannelHolder{
+func New() *ChannelHolder {
+	return &ChannelHolder{
 		make(map[string]*channel.FuncChannelGroup),
 	}
 }

@@ -8,7 +8,7 @@ import (
 const testName string = "test"
 
 func makeTestHolder() ChannelHolder {
-	return New()
+	return *New()
 }
 
 func TestAddToHolder(t *testing.T) {

@@ -71,6 +71,10 @@ func eventObjectToPod(result watch.Event) *core.Pod {
 
 // waitForPodAdded returns when the pod has been added
 func (podWatcher *PodWatcher) waitForPodAdded() {
+	logs.InfoLogger.Printf("Waiting for pod %s to be added...\n", podWatcher.podName)
+	if !podWatcher.informerChans.Contains(podWatcher.podName) {
+		logs.ErrorLogger.Printf("Channels not found for pod %s\n", podWatcher.podName)
+	}
 	pod := <-podWatcher.informerChans.GetChannelGroup(podWatcher.podName).Ready
 	podWatcher.Phase = pod.Status.Phase
 }
@@ -164,6 +168,7 @@ func (podWatcher *PodWatcher) setMonitorDone() {
 
 // MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
+	logs.InfoLogger.Printf("Beginning to monitor pod %s\n", podWatcher.podName)
 	defer podWatcher.setMonitorDone()
 
 	podWatcher.waitForPodAdded()

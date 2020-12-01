@@ -16,14 +16,14 @@ import (
 // TaskInformer is a custom informer that updates the pod states while in the channel holder
 type TaskInformer struct {
 	podInformer         cache.SharedInformer
-	channelHolder       holder.ChannelHolder
+	channelHolder       *holder.ChannelHolder
 	stopInformerChannel chan struct{}
 }
 
 // New returns a new informer to be used in updating the channels in the holder
 func New(
 	client kubernetes.Interface,
-	channelHolder holder.ChannelHolder,
+	channelHolder *holder.ChannelHolder,
 ) TaskInformer {
 	factory := informers.NewSharedInformerFactory(client, 1)
 	sharedInformer := factory.Core().V1().Pods().Informer()

@@ -4,7 +4,9 @@ import (
 	"context"
 	dagconfig "goflow/dag/config"
 	"goflow/jsonpanic"
-	k8sclient "goflow/k8s/client"
+
+	// k8sclient "goflow/k8s/client"
+	"goflow/k8s/pod/event/holder"
 	podutils "goflow/k8s/pod/utils"
 	"strings"
 	"testing"
@@ -13,19 +15,18 @@ import (
 
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+
+	// "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-var KUBECLIENT kubernetes.Interface
-var FAKECLIENT kubernetes.Interface
+// var client kubernetes.Interface
 
-func TestMain(m *testing.M) {
-	KUBECLIENT = k8sclient.CreateKubeClient()
-	FAKECLIENT = fake.NewSimpleClientset()
-	podutils.CleanUpPods(KUBECLIENT)
-	m.Run()
-}
+// func TestMain(m *testing.M) {
+// 	FAKECLIENT = fake.NewSimpleClientset()
+// 	// podutils.CleanUpPods(KUBECLIENT)
+// 	m.Run()
+// }
 
 func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
@@ -50,12 +51,14 @@ func getTestDAGConfig(name string, command []string) *dagconfig.DAGConfig {
 }
 
 func TestCreatePod(t *testing.T) {
-	defer podutils.CleanUpPods(FAKECLIENT)
+	client := fake.NewSimpleClientset()
+	defer podutils.CleanUpPods(client)
 	dagRun := NewDAGRun(
 		getTestDate(),
 		getTestDAGConfig("test-create-pod", []string{}),
 		false,
-		FAKECLIENT,
+		client,
+		holder.New(),
 	)
 	dagRun.createPod()
 	foundPod, err := dagRun.kubeClient.CoreV1().Pods(
@@ -78,8 +81,8 @@ func TestCreatePod(t *testing.T) {
 
 func TestStartPod(t *testing.T) {
 	// Test with logs and without logs
-	realClient := k8sclient.CreateKubeClient()
-	defer podutils.CleanUpPods(realClient)
+	client := fake.NewSimpleClientset()
+	defer podutils.CleanUpPods(client)
 	tables := []struct {
 		name     string
 		withLogs bool
@@ -98,7 +101,8 @@ func TestStartPod(t *testing.T) {
 					[]string{"echo", expectedLogMessage},
 				),
 				table.withLogs,
-				realClient,
+				client,
+				holder.New(),
 			)
 			dagRun.Start()
 
@@ -132,15 +136,17 @@ func TestStartPod(t *testing.T) {
 }
 
 func TestDeletePod(t *testing.T) {
-	defer podutils.CleanUpPods(FAKECLIENT)
+	client := fake.NewSimpleClientset()
+	defer podutils.CleanUpPods(client)
 	dagRun := NewDAGRun(
 		getTestDate(),
 		getTestDAGConfig("test-delete-pod", []string{}),
 		false,
-		FAKECLIENT,
+		client,
+		holder.New(),
 	)
 	podFrame := dagRun.getPodFrame()
-	podsClient := FAKECLIENT.CoreV1().Pods(dagRun.Config.Namespace)
+	podsClient := client.CoreV1().Pods(dagRun.Config.Namespace)
 
 	createdPod, err := podsClient.Create(context.TODO(), &podFrame, v1.CreateOptions{})
 	dagRun.pod = createdPod
