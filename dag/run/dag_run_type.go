@@ -35,6 +35,7 @@ type DAGRun struct {
 }
 
 func cleanK8sName(name string) string {
+	name = strings.ReplaceAll(name, "_", "-")
 	name = strings.ReplaceAll(name, ":", "-")
 	name = strings.ReplaceAll(name, " ", "")
 	name = strings.ReplaceAll(name, "+", "plus")
@@ -138,6 +139,11 @@ func (dagRun *DAGRun) createPod() {
 	if err != nil {
 		panic(err)
 	}
+	logs.InfoLogger.Printf(
+		"Pod '%s' created in namespace '%s'\n",
+		podFrame.Name,
+		podFrame.Namespace,
+	)
 	dagRun.pod = pod
 }
 
@@ -167,6 +173,11 @@ func (dagRun *DAGRun) Logs() *chan string {
 
 // DeletePod deletes the dag run's associated pod
 func (dagRun *DAGRun) DeletePod() {
+	logs.InfoLogger.Printf(
+		"Deleting pod %s, in namespace %s",
+		dagRun.pod.Name,
+		dagRun.pod.Namespace,
+	)
 	err := dagRun.podClient().Delete(
 		context.TODO(),
 		dagRun.Name,
