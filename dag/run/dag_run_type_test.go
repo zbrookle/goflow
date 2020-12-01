@@ -4,7 +4,8 @@ import (
 	"context"
 	dagconfig "goflow/dag/config"
 	"goflow/jsonpanic"
-	k8sclient "goflow/k8s/client"
+
+	"goflow/k8s/pod/event/holder"
 	podutils "goflow/k8s/pod/utils"
 	"strings"
 	"testing"
@@ -13,19 +14,9 @@ import (
 
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+
 	"k8s.io/client-go/kubernetes/fake"
 )
-
-var KUBECLIENT kubernetes.Interface
-var FAKECLIENT kubernetes.Interface
-
-func TestMain(m *testing.M) {
-	KUBECLIENT = k8sclient.CreateKubeClient()
-	FAKECLIENT = fake.NewSimpleClientset()
-	podutils.CleanUpPods(KUBECLIENT)
-	m.Run()
-}
 
 func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
@@ -50,12 +41,14 @@ func getTestDAGConfig(name string, command []string) *dagconfig.DAGConfig {
 }
 
 func TestCreatePod(t *testing.T) {
-	defer podutils.CleanUpPods(FAKECLIENT)
+	client := fake.NewSimpleClientset()
+	defer podutils.CleanUpPods(client)
 	dagRun := NewDAGRun(
 		getTestDate(),
 		getTestDAGConfig("test-create-pod", []string{}),
 		false,
-		FAKECLIENT,
+		client,
+		holder.New(),
 	)
 	dagRun.createPod()
 	foundPod, err := dagRun.kubeClient.CoreV1().Pods(
@@ -78,8 +71,8 @@ func TestCreatePod(t *testing.T) {
 
 func TestStartPod(t *testing.T) {
 	// Test with logs and without logs
-	realClient := k8sclient.CreateKubeClient()
-	defer podutils.CleanUpPods(realClient)
+	client := fake.NewSimpleClientset()
+	defer podutils.CleanUpPods(client)
 	tables := []struct {
 		name     string
 		withLogs bool
@@ -98,9 +91,18 @@ func TestStartPod(t *testing.T) {
 					[]string{"echo", expectedLogMessage},
 				),
 				table.withLogs,
-				realClient,
+				client,
+				holder.New(),
 			)
-			dagRun.Start()
+			dagRun.Run()
+
+			dagRun.holder.GetChannelGroup(dagRun.pod.Name).Ready <- dagRun.pod
+
+			podCopy := dagRun.pod.DeepCopy()
+			podCopy.Status.Phase = core.PodSucceeded
+			dagRun.holder.GetChannelGroup(dagRun.pod.Name).Update <- podCopy
+
+			dagRun.watcher.WaitForMonitorDone()
 
 			// Test for dag completion in state of dag
 			if (dagRun.watcher.Phase != core.PodSucceeded) &&
@@ -117,7 +119,7 @@ func TestStartPod(t *testing.T) {
 			if table.withLogs {
 				logMsg := <-*dagRun.Logs()
 				logMsg = strings.ReplaceAll(logMsg, "\n", "")
-				if logMsg != expectedLogMessage {
+				if logMsg != expectedLogMessage && logMsg != "fake logs" {
 					t.Errorf(
 						"Expected log message %s, found log message %s",
 						expectedLogMessage,
@@ -132,15 +134,17 @@ func TestStartPod(t *testing.T) {
 }
 
 func TestDeletePod(t *testing.T) {
-	defer podutils.CleanUpPods(FAKECLIENT)
+	client := fake.NewSimpleClientset()
+	defer podutils.CleanUpPods(client)
 	dagRun := NewDAGRun(
 		getTestDate(),
 		getTestDAGConfig("test-delete-pod", []string{}),
 		false,
-		FAKECLIENT,
+		client,
+		holder.New(),
 	)
 	podFrame := dagRun.getPodFrame()
-	podsClient := FAKECLIENT.CoreV1().Pods(dagRun.Config.Namespace)
+	podsClient := client.CoreV1().Pods(dagRun.Config.Namespace)
 
 	createdPod, err := podsClient.Create(context.TODO(), &podFrame, v1.CreateOptions{})
 	dagRun.pod = createdPod
@@ -158,49 +162,3 @@ func TestDeletePod(t *testing.T) {
 		}
 	}
 }
-
-// func TestRunMultiplePodsAtOnce(t *testing.T) {
-// 	// Test with logs and without logs
-// 	realClient := k8sclient.CreateKubeClient()
-// 	tables := []struct {
-// 		name     string
-// 		withLogs bool
-// 	}{
-// 		{"Without Logs", false},
-// 		{"With Logs", true},
-// 	}
-// 	for _, table := range tables {
-// 		t.Logf("Test case: %s", table.name)
-// 		func() {
-// 			defer podutils.CleanUpPods(realClient)
-// 			dagRun := newDAGRun(getTestDate(), getTestDAGRealClient(), table.withLogs)
-// 			dagRun.Start()
-
-// 			// Test for dag completion in state of dag
-// 			if (dagRun.watcher.Phase != core.PodSucceeded) &&
-// 				(dagRun.watcher.Phase != core.PodFailed) {
-// 				t.Errorf(
-// 					"A finished dagRun should be in phase %s or state %s, but found in state %s",
-// 					core.PodSucceeded,
-// 					core.PodFailed,
-// 					dagRun.watcher.Phase,
-// 				)
-// 			}
-
-// 			// Test for log output if logs enabled
-// 			if table.withLogs {
-// 				logMsg := <-*dagRun.Logs()
-// 				expectedLogMessage := dagRun.DAG.Config.Command[1]
-// 				logMsg = strings.ReplaceAll(logMsg, "\n", "")
-// 				if logMsg != expectedLogMessage {
-// 					t.Errorf(
-// 						"Expected log message %s, found log message %s",
-// 						expectedLogMessage,
-// 						logMsg,
-// 					)
-// 				}
-// 			}
-// 		}()
-
-// 	}
-// }

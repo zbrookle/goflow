@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
+	"goflow/k8s/pod/event/holder"
 	"goflow/logs"
 	"io/ioutil"
 	"os"
@@ -125,7 +126,7 @@ func GetDAGSFromFolder(folder string) []*DAG {
 
 // AddDagRun adds a DagRun for a scheduled point to the orchestrators set of dags
 func (dag *DAG) AddDagRun(executionDate time.Time, withLogs bool) *dagrun.DAGRun {
-	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient)
+	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient, holder.New())
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	dag.ActiveRuns++
 	return dagRun

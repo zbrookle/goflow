@@ -6,6 +6,7 @@ import (
 	"goflow/logs"
 
 	dagconfig "goflow/dag/config"
+	"goflow/k8s/pod/event/holder"
 	podwatch "goflow/k8s/pod/watch"
 
 	"time"
@@ -29,6 +30,7 @@ type DAGRun struct {
 	withLogs      bool
 	kubeClient    kubernetes.Interface
 	watcher       *podwatch.PodWatcher
+	holder        *holder.ChannelHolder
 }
 
 func cleanK8sName(name string) string {
@@ -45,9 +47,11 @@ func NewDAGRun(
 	dagConfig *dagconfig.DAGConfig,
 	withLogs bool,
 	kubeClient kubernetes.Interface,
+	channelHolder *holder.ChannelHolder,
 ) *DAGRun {
+	podName := cleanK8sName(dagConfig.Name + executionDate.String())
 	return &DAGRun{
-		Name:   cleanK8sName(dagConfig.Name + executionDate.String()),
+		Name:   podName,
 		Config: dagConfig,
 		ExecutionDate: k8sapi.Time{
 			Time: executionDate,
@@ -60,6 +64,14 @@ func NewDAGRun(
 		},
 		withLogs:   withLogs,
 		kubeClient: kubeClient,
+		watcher: podwatch.NewPodWatcher(
+			podName,
+			dagConfig.Namespace,
+			kubeClient,
+			withLogs,
+			channelHolder,
+		),
+		holder: channelHolder,
 	}
 }
 
@@ -133,17 +145,17 @@ func (dagRun *DAGRun) podClient() v1.PodInterface {
 	return dagRun.kubeClient.CoreV1().Pods(dagRun.Config.Namespace)
 }
 
-// Start starts and monitors the pod and also tracks the logs from the pod
-func (dagRun *DAGRun) Start() {
+// Run runs the pods and monitoring methods
+func (dagRun *DAGRun) Run() {
 	podFrame := dagRun.getPodFrame()
-	dagRun.watcher = podwatch.NewPodWatcher(
-		podFrame.Name,
-		podFrame.Namespace,
-		dagRun.kubeClient,
-		dagRun.withLogs,
-	)
+	dagRun.holder.AddChannelGroup(podFrame.Name)
 	go dagRun.watcher.MonitorPod() // Start monitoring before the pod is actually running
 	dagRun.createPod()
+}
+
+// Start runs the dagrun and waits for the monitoring to finish
+func (dagRun *DAGRun) Start() {
+	go dagRun.Run()
 	dagRun.watcher.WaitForMonitorDone()
 }
 
@@ -164,8 +176,9 @@ func (dagRun *DAGRun) DeletePod() {
 	}
 }
 
-// func (dagRun *DAGRun) withLogs() {
-// 	dagRun.Logs = make(chan string, 1)
-// }
+// MostRecentPod returns the pod run for this dag run
+func (dagRun *DAGRun) MostRecentPod() core.Pod {
+	return *dagRun.pod
+}
 
 // TRY COUNTING EVENT STATES -- USE this as rate limiting - if pod is pending for too long
