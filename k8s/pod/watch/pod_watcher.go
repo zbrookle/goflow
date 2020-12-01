@@ -41,12 +41,13 @@ func NewPodWatcher(
 	channelGroupHolder *holder.ChannelHolder,
 ) *PodWatcher {
 	return &PodWatcher{
-		podName:       name,
-		namespace:     namespace,
-		kubeClient:    client,
-		Logs:          make(chan string, 1),
-		withLogs:      withLogs,
-		informerChans: channelGroupHolder,
+		podName:        name,
+		namespace:      namespace,
+		kubeClient:     client,
+		Logs:           make(chan string, 1),
+		withLogs:       withLogs,
+		informerChans:  channelGroupHolder,
+		monitoringDone: make(chan struct{}, 1),
 	}
 }
 
@@ -132,7 +133,7 @@ func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
 	}
 	for {
 		callFunc()
-		logs.InfoLogger.Println("Waiting for ready channel...")
+		logs.InfoLogger.Println("Waiting for pod update...")
 		pod, ok := <-podWatcher.informerChans.GetChannelGroup(podWatcher.podName).Update
 		if ok {
 			phase := pod.Status.Phase
@@ -163,6 +164,7 @@ func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 }
 
 func (podWatcher *PodWatcher) setMonitorDone() {
+	logs.InfoLogger.Printf("Monitoring for pod %s done", podWatcher.podName)
 	podWatcher.monitoringDone <- struct{}{}
 }
 
@@ -181,5 +183,6 @@ func (podWatcher *PodWatcher) MonitorPod() {
 
 // WaitForMonitorDone returns when the watcher is done monitoring
 func (podWatcher *PodWatcher) WaitForMonitorDone() {
+	logs.InfoLogger.Printf("Waiting for pod %s to be done\n", podWatcher.podName)
 	<-podWatcher.monitoringDone
 }

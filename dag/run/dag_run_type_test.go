@@ -5,7 +5,6 @@ import (
 	dagconfig "goflow/dag/config"
 	"goflow/jsonpanic"
 
-	// k8sclient "goflow/k8s/client"
 	"goflow/k8s/pod/event/holder"
 	podutils "goflow/k8s/pod/utils"
 	"strings"
@@ -16,17 +15,8 @@ import (
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	// "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
-
-// var client kubernetes.Interface
-
-// func TestMain(m *testing.M) {
-// 	FAKECLIENT = fake.NewSimpleClientset()
-// 	// podutils.CleanUpPods(KUBECLIENT)
-// 	m.Run()
-// }
 
 func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
@@ -104,7 +94,15 @@ func TestStartPod(t *testing.T) {
 				client,
 				holder.New(),
 			)
-			dagRun.Start()
+			dagRun.Run()
+
+			dagRun.holder.GetChannelGroup(dagRun.pod.Name).Ready <- dagRun.pod
+
+			podCopy := dagRun.pod.DeepCopy()
+			podCopy.Status.Phase = core.PodSucceeded
+			dagRun.holder.GetChannelGroup(dagRun.pod.Name).Update <- podCopy
+
+			dagRun.watcher.WaitForMonitorDone()
 
 			// Test for dag completion in state of dag
 			if (dagRun.watcher.Phase != core.PodSucceeded) &&

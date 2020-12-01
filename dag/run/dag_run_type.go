@@ -145,20 +145,18 @@ func (dagRun *DAGRun) podClient() v1.PodInterface {
 	return dagRun.kubeClient.CoreV1().Pods(dagRun.Config.Namespace)
 }
 
-// Start starts and monitors the pod and also tracks the logs from the pod
-func (dagRun *DAGRun) Start() {
+// Run runs the pods and monitoring methods
+func (dagRun *DAGRun) Run() {
 	podFrame := dagRun.getPodFrame()
 	dagRun.holder.AddChannelGroup(podFrame.Name)
-	// dagRun.watcher = podwatch.NewPodWatcher(
-	// 	podFrame.Name,
-	// 	podFrame.Namespace,
-	// 	dagRun.kubeClient,
-	// 	dagRun.withLogs,
-	// 	&channelHolder,
-	// )
 	go dagRun.watcher.MonitorPod() // Start monitoring before the pod is actually running
 	dagRun.createPod()
-	// dagRun.watcher.WaitForMonitorDone()
+}
+
+// Start runs the dagrun and waits for the monitoring to finish
+func (dagRun *DAGRun) Start() {
+	go dagRun.Run()
+	dagRun.watcher.WaitForMonitorDone()
 }
 
 // Logs returns the channel holding the watcher's logs
