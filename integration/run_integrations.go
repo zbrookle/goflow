@@ -10,11 +10,13 @@ import (
 
 	"goflow/dag/orchestrator"
 	k8sclient "goflow/k8s/client"
+
 	podutils "goflow/k8s/pod/utils"
 	"goflow/testutils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
 	"strings"
 	"time"
 
@@ -79,15 +81,22 @@ func createDirIfNotExist(directory string) string {
 	return directory
 }
 
+func getLogMessage(num int) string {
+	return fmt.Sprintf("Hello world %d", num)
+}
+
 func createFakeDagFile(dagFolder string, dagNum int) {
 	fakeDagName := fmt.Sprintf("dag_file_%d", dagNum)
 	filePath := filepath.Join(dagFolder, fakeDagName+".json")
+	echoString := fmt.Sprintf("echo \"%s\"", getLogMessage(dagNum))
 	fakeDagConfig := &dagconfig.DAGConfig{Name: fakeDagName,
 		Namespace:     "default",
 		Schedule:      "* * * * *",
-		Command:       strings.Split(fmt.Sprintf("echo %d", dagNum), " "),
+		DockerImage:   "busybox",
+		RetryPolicy:   core.RestartPolicyNever,
+		Command:       []string{"sh", "-c", echoString},
 		Parallelism:   0,
-		TimeLimit:     0,
+		TimeLimit:     10000,
 		Retries:       2,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
@@ -114,7 +123,7 @@ func startServer() {
 	loopBreaker := make(chan struct{}, 1)
 	go orch.Start(1, loopBreaker)
 
-	time.Sleep(4 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	if len(orch.DAGs()) != expectedDagCount {
 		panic(fmt.Sprintf("Expected %d DAGs but only found %d", expectedDagCount, len(orch.DAGs())))
@@ -124,36 +133,48 @@ func startServer() {
 		panic("Expected runs to present but none were found")
 	}
 
-	// podsOnServer := getPods(kubeClient)
-	// for _, run := range orch.DagRuns() {
-	// 	mostRecent := run.MostRecentPod()
+	time.Sleep(4 * time.Second)
 
-	// 	namespaceDict, ok := podsOnServer[mostRecent.Namespace]
-	// 	if !ok {
-	// 		panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
-	// 	}
-	// 	_, ok = namespaceDict[mostRecent.Name]
-	// 	if !ok {
-	// 		panic(
-	// 			fmt.Sprintf(
-	// 				"Pod %s not found in namespace %s",
-	// 				mostRecent.Name,
-	// 				mostRecent.Namespace,
-	// 			),
-	// 		)
-	// 	}
+	podsOnServer := getPods(kubeClient)
+	for runNum, run := range orch.DagRuns() {
+		mostRecent, err := run.MostRecentPod()
+		if err != nil {
+			panic(err)
+		}
 
-	// 	// select {
-	// 	// case logString, ok := <-*run.Logs():
-	// 	// 	if ok {
-	// 	// 		logs.InfoLogger.Println(logString)
-	// 	// 	} else {
-	// 	// 		panic("Channel CLosed!")
-	// 	// 	}
-	// 	// default:
-	// 	// 	panic("No logs found in channel!")
-	// 	// }
-	// }
+		namespaceDict, ok := podsOnServer[mostRecent.Namespace]
+		if !ok {
+			panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
+		}
+		_, ok = namespaceDict[mostRecent.Name]
+		if !ok {
+			panic(
+				fmt.Sprintf(
+					"Pod %s not found in namespace %s",
+					mostRecent.Name,
+					mostRecent.Namespace,
+				),
+			)
+		}
+
+		select {
+		case logText := <-*run.Logs():
+			withoutNewlines := strings.TrimSpace(logText)
+			expectedLogMessage := getLogMessage(runNum)
+			if withoutNewlines != expectedLogMessage {
+				panic(
+					fmt.Sprintf(
+						"Expected log message %s, but go message %s",
+						expectedLogMessage,
+						withoutNewlines,
+					),
+				)
+			}
+		default:
+			logs.InfoLogger.Println(run.Logs())
+			panic("No logs available!!!")
+		}
+	}
 
 	close(loopBreaker)
 }
@@ -170,49 +191,3 @@ func main() {
 	defer os.Remove(configPath)
 	startServer()
 }
-
-// func TestRunMultiplePodsAtOnce(t *testing.T) {
-// 	// Test with logs and without logs
-// 	realClient := k8sclient.CreateKubeClient()
-// 	tables := []struct {
-// 		name     string
-// 		withLogs bool
-// 	}{
-// 		{"Without Logs", false},
-// 		{"With Logs", true},
-// 	}
-// 	for _, table := range tables {
-// 		t.Logf("Test case: %s", table.name)
-// 		func() {
-// 			defer podutils.CleanUpPods(realClient)
-// 			dagRun := newDAGRun(getTestDate(), getTestDAGRealClient(), table.withLogs)
-// 			dagRun.Start()
-
-// 			// Test for dag completion in state of dag
-// 			if (dagRun.watcher.Phase != core.PodSucceeded) &&
-// 				(dagRun.watcher.Phase != core.PodFailed) {
-// 				t.Errorf(
-// 					"A finished dagRun should be in phase %s or state %s, but found in state %s",
-// 					core.PodSucceeded,
-// 					core.PodFailed,
-// 					dagRun.watcher.Phase,
-// 				)
-// 			}
-
-// 			// Test for log output if logs enabled
-// 			if table.withLogs {
-// 				logMsg := <-*dagRun.Logs()
-// 				expectedLogMessage := dagRun.DAG.Config.Command[1]
-// 				logMsg = strings.ReplaceAll(logMsg, "\n", "")
-// 				if logMsg != expectedLogMessage {
-// 					t.Errorf(
-// 						"Expected log message %s, found log message %s",
-// 						expectedLogMessage,
-// 						logMsg,
-// 					)
-// 				}
-// 			}
-// 		}()
-
-// 	}
-// }
