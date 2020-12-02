@@ -135,7 +135,7 @@ func startServer() {
 	loopBreaker := make(chan struct{}, 1)
 	go orch.Start(1, loopBreaker)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	if len(orch.DAGs()) != expectedDagCount {
 		panic(fmt.Sprintf("Expected %d DAGs but only found %d", expectedDagCount, len(orch.DAGs())))
