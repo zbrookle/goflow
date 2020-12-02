@@ -78,6 +78,7 @@ func (podWatcher *PodWatcher) waitForPodAdded() {
 	}
 	pod := <-podWatcher.informerChans.GetChannelGroup(podWatcher.podName).Ready
 	podWatcher.Phase = pod.Status.Phase
+	logs.InfoLogger.Printf("Pod %s added\n", podWatcher.podName)
 }
 
 func (podWatcher *PodWatcher) getLogStreamerWithOptions(
@@ -149,6 +150,7 @@ func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
 func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	logger io.ReadCloser,
 ) {
+	logs.InfoLogger.Println("HERE!!!!")
 	defer logger.Close()
 	podWatcher.callFuncUntilPodSucceedOrFail(func() {
 		logBuffer := new(bytes.Buffer)
@@ -157,6 +159,7 @@ func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 			panic(err)
 		}
 		logString := logBuffer.String()
+		logs.InfoLogger.Println(logString)
 		if logString != "" && podWatcher.Logs != nil {
 			podWatcher.Logs <- logString
 		}
