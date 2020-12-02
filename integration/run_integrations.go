@@ -17,6 +17,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -116,6 +118,16 @@ func createFakeDags(testFolder string) string {
 	return dagDir
 }
 
+func getDagID(config dagconfig.DAGConfig) int {
+	re := regexp.MustCompile("dag_file_(\\d)")
+	matchGroups := re.FindStringSubmatch(config.Name)
+	id, err := strconv.Atoi(matchGroups[1])
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 func startServer() {
 	kubeClient := k8sclient.CreateKubeClient()
 	defer podutils.CleanUpPods(kubeClient)
@@ -136,7 +148,7 @@ func startServer() {
 	time.Sleep(4 * time.Second)
 
 	podsOnServer := getPods(kubeClient)
-	for runNum, run := range orch.DagRuns() {
+	for _, run := range orch.DagRuns() {
 		mostRecent, err := run.MostRecentPod()
 		if err != nil {
 			panic(err)
@@ -160,11 +172,11 @@ func startServer() {
 		select {
 		case logText := <-*run.Logs():
 			withoutNewlines := strings.TrimSpace(logText)
-			expectedLogMessage := getLogMessage(runNum)
+			expectedLogMessage := getLogMessage(getDagID(*run.Config))
 			if withoutNewlines != expectedLogMessage {
 				panic(
 					fmt.Sprintf(
-						"Expected log message %s, but go message %s",
+						"Expected log message %s, but got message %s",
 						expectedLogMessage,
 						withoutNewlines,
 					),
