@@ -40,6 +40,9 @@ func New(
 		UpdateFunc: func(old interface{}, new interface{}) {
 			oldPod := getPodFromInterface(old)
 			newPod := getPodFromInterface(new)
+			if !taskInformer.channelHolder.Contains(newPod.Name) {
+				return
+			}
 			logs.InfoLogger.Printf(
 				"Pod %s switched from phase %s to phase %s",
 				newPod.Name,
