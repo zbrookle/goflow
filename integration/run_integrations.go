@@ -145,7 +145,7 @@ func startServer() {
 		panic("Expected runs to present but none were found")
 	}
 
-	time.Sleep(4 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	podsOnServer := getPods(kubeClient)
 	for _, run := range orch.DagRuns() {
