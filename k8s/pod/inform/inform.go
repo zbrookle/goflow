@@ -32,25 +32,37 @@ func New(
 	sharedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := getPodFromInterface(obj)
-			logs.InfoLogger.Printf("Pod with name %s added in phase %s", pod.Name, pod.Status.Phase)
 			if taskInformer.channelHolder.Contains(pod.Name) && podReadyToLog(pod) {
+				logs.InfoLogger.Printf(
+					"Pod with name %s added and ready in phase %s\n",
+					pod.Name,
+					pod.Status.Phase,
+				)
 				taskInformer.getChannelGroup(pod.Name).Ready <- pod
 			}
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
 			oldPod := getPodFromInterface(old)
 			newPod := getPodFromInterface(new)
-			logs.InfoLogger.Printf(
-				"Pod %s switched from phase %s to phase %s",
-				newPod.Name,
-				oldPod.Status.Phase,
-				newPod.Status.Phase,
-			)
+			if !taskInformer.channelHolder.Contains(newPod.Name) {
+				return
+			}
 			if podReadyToLog(newPod) {
 				taskInformer.getChannelGroup(newPod.Name).Ready <- newPod
+				logs.InfoLogger.Printf(
+					"Pod %s updated to ready in phase %s",
+					newPod.Name,
+					newPod.Status.Phase,
+				)
 			}
 			if oldPod.Status.Phase != newPod.Status.Phase {
 				taskInformer.getChannelGroup(newPod.Name).Update <- newPod
+				logs.InfoLogger.Printf(
+					"Pod %s updated from phase %s to phase %s",
+					newPod.Name,
+					oldPod.Status.Phase,
+					newPod.Status.Phase,
+				)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {

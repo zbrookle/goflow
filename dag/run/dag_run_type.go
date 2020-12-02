@@ -2,22 +2,24 @@ package run
 
 import (
 	"context"
+	"fmt"
 
 	"goflow/logs"
 
 	dagconfig "goflow/dag/config"
 	"goflow/k8s/pod/event/holder"
+	"goflow/k8s/pod/utils"
 	podwatch "goflow/k8s/pod/watch"
 
 	"time"
-
-	"strings"
 
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
+
+const serviceAccount = "goflow"
 
 // DAGRun is a single run of a given dag - corresponds with a kubernetes pod
 type DAGRun struct {
@@ -33,14 +35,6 @@ type DAGRun struct {
 	holder        *holder.ChannelHolder
 }
 
-func cleanK8sName(name string) string {
-	name = strings.ReplaceAll(name, ":", "-")
-	name = strings.ReplaceAll(name, " ", "")
-	name = strings.ReplaceAll(name, "+", "plus")
-	name = strings.ToLower(name)
-	return name
-}
-
 // NewDAGRun returns a new instance of DAGRun
 func NewDAGRun(
 	executionDate time.Time,
@@ -49,7 +43,7 @@ func NewDAGRun(
 	kubeClient kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
 ) *DAGRun {
-	podName := cleanK8sName(dagConfig.Name + executionDate.String())
+	podName := utils.CleanK8sName(dagConfig.Name + executionDate.String())
 	return &DAGRun{
 		Name:   podName,
 		Config: dagConfig,
@@ -86,7 +80,7 @@ func (dagRun *DAGRun) getContainerFrame() core.Container {
 		Env:             nil,
 		VolumeMounts:    nil,
 		VolumeDevices:   nil,
-		ImagePullPolicy: "IfNotPresent",
+		ImagePullPolicy: core.PullIfNotPresent,
 	}
 }
 
@@ -121,6 +115,7 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 			RestartPolicy:                 dagRun.Config.RetryPolicy,
 			TerminationGracePeriodSeconds: nil,
 			ActiveDeadlineSeconds:         &dagRun.Config.TimeLimit,
+			ServiceAccountName:            serviceAccount,
 		},
 	}
 }
@@ -137,6 +132,11 @@ func (dagRun *DAGRun) createPod() {
 	if err != nil {
 		panic(err)
 	}
+	logs.InfoLogger.Printf(
+		"Pod '%s' created in namespace '%s'\n",
+		podFrame.Name,
+		podFrame.Namespace,
+	)
 	dagRun.pod = pod
 }
 
@@ -166,6 +166,11 @@ func (dagRun *DAGRun) Logs() *chan string {
 
 // DeletePod deletes the dag run's associated pod
 func (dagRun *DAGRun) DeletePod() {
+	logs.InfoLogger.Printf(
+		"Deleting pod %s, in namespace %s",
+		dagRun.pod.Name,
+		dagRun.pod.Namespace,
+	)
 	err := dagRun.podClient().Delete(
 		context.TODO(),
 		dagRun.Name,
@@ -177,8 +182,11 @@ func (dagRun *DAGRun) DeletePod() {
 }
 
 // MostRecentPod returns the pod run for this dag run
-func (dagRun *DAGRun) MostRecentPod() core.Pod {
-	return *dagRun.pod
+func (dagRun *DAGRun) MostRecentPod() (core.Pod, error) {
+	if dagRun.pod == nil {
+		return core.Pod{}, fmt.Errorf("pod %s has not been created yet", dagRun.Name)
+	}
+	return *dagRun.pod, nil
 }
 
 // TRY COUNTING EVENT STATES -- USE this as rate limiting - if pod is pending for too long

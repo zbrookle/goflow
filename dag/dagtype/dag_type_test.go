@@ -5,6 +5,7 @@ import (
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
 	k8sclient "goflow/k8s/client"
+	"goflow/k8s/pod/event/holder"
 	podutils "goflow/k8s/pod/utils"
 	"goflow/testutils"
 	"path/filepath"
@@ -37,7 +38,7 @@ func setUpNamespaces(client kubernetes.Interface) {
 func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(testutils.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
-	podutils.CleanUpPods(KUBECLIENT)
+	podutils.CleanUpEnvironment(KUBECLIENT)
 	setUpNamespaces(KUBECLIENT)
 	m.Run()
 }
@@ -174,13 +175,14 @@ func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag 
 func TestAddDagRun(t *testing.T) {
 	testDAG := getTestDAGFakeClient()
 	currentTime := getTestDate()
-	testDAG.AddDagRun(currentTime, testDAG.Config.WithLogs)
+	testDAG.AddDagRun(currentTime, testDAG.Config.WithLogs, holder.New())
 	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
 }
 
 func TestAddDagRunIfReady(t *testing.T) {
 	testDAG := getTestDAGFakeClient()
-	testDAG.AddNextDagRunIfReady()
-	testDAG.AddNextDagRunIfReady()
+	channelHolder := holder.New()
+	testDAG.AddNextDagRunIfReady(channelHolder)
+	testDAG.AddNextDagRunIfReady(channelHolder)
 	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
 }

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 // DAG is directed acyclic graph for hold job information
@@ -29,12 +28,12 @@ type DAG struct {
 	MostRecentExecution time.Time
 }
 
-func readDAGFile(dagFilePath string) []byte {
+func readDAGFile(dagFilePath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(dagFilePath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return dat
+	return dat, nil
 }
 
 func getDateFromString(dateStr string) time.Time {
@@ -76,7 +75,10 @@ func createDAGFromJSONBytes(dagBytes []byte, client kubernetes.Interface) (DAG, 
 
 // getDAGFromJSON creates a new dag struct from a dag file
 func getDAGFromJSON(dagFilePath string, client kubernetes.Interface) (DAG, error) {
-	dagBytes := readDAGFile(dagFilePath)
+	dagBytes, err := readDAGFile(dagFilePath)
+	if err != nil {
+		return DAG{}, err
+	}
 	dagJSON, err := createDAGFromJSONBytes(dagBytes, client)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
@@ -100,8 +102,12 @@ func getDirSliceRecur(directory string) []string {
 		return nil
 	}
 	err := filepath.Walk(directory, appendToFiles)
+	if os.IsNotExist(err) {
+		logs.WarningLogger.Printf("Directory %s not found", directory)
+		return files
+	}
 	if err != nil {
-		logs.ErrorLogger.Println(directory, "not found")
+		logs.ErrorLogger.Println(err)
 		panic(err)
 	}
 	return files
@@ -110,12 +116,15 @@ func getDirSliceRecur(directory string) []string {
 // GetDAGSFromFolder returns a slice of DAG structs, one for each DAG file
 // Each file must have the "dag" suffix
 // E.g., my_dag.py, some_dag.json
-func GetDAGSFromFolder(folder string) []*DAG {
+func GetDAGSFromFolder(folder string, client kubernetes.Interface) []*DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file, fake.NewSimpleClientset())
+			dag, err := getDAGFromJSON(file, client)
+			if os.ErrNotExist == err {
+				logs.ErrorLogger.Printf("File %s no longer exists", file)
+			}
 			if err == nil {
 				dags = append(dags, &dag)
 			}
@@ -125,23 +134,25 @@ func GetDAGSFromFolder(folder string) []*DAG {
 }
 
 // AddDagRun adds a DagRun for a scheduled point to the orchestrators set of dags
-func (dag *DAG) AddDagRun(executionDate time.Time, withLogs bool) *dagrun.DAGRun {
-	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient, holder.New())
+func (dag *DAG) AddDagRun(
+	executionDate time.Time,
+	withLogs bool,
+	holder *holder.ChannelHolder,
+) *dagrun.DAGRun {
+	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient, holder)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	dag.ActiveRuns++
 	return dagRun
 }
 
 // AddNextDagRunIfReady adds the next dag run if ready for it
-func (dag *DAG) AddNextDagRunIfReady() {
+func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 	if dag.Ready() {
 		if dag.MostRecentExecution.IsZero() {
 			dag.MostRecentExecution = dag.StartDateTime
 		}
-		// !!!! Bug still occurring here need to figure out why !!!!!
-		// dagRun :=
-		dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
-		// go dagRun.Start()
+		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs, holder)
+		go dagRun.Start()
 	}
 }
 
