@@ -8,22 +8,24 @@ import (
 
 	"goflow/config"
 	k8sclient "goflow/k8s/client"
+	"goflow/k8s/pod/event/holder"
 
 	"k8s.io/client-go/kubernetes"
 )
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
-	dagMap     map[string]*dagtype.DAG
-	kubeClient kubernetes.Interface
-	config     *config.GoFlowConfig
+	dagMap        map[string]*dagtype.DAG
+	kubeClient    kubernetes.Interface
+	config        *config.GoFlowConfig
+	channelHolder *holder.ChannelHolder
 }
 
 func newOrchestratorFromClientAndConfig(
 	client kubernetes.Interface,
 	config *config.GoFlowConfig,
 ) *Orchestrator {
-	return &Orchestrator{make(map[string]*dagtype.DAG), client, config}
+	return &Orchestrator{make(map[string]*dagtype.DAG), client, config, holder.New()}
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
@@ -109,7 +111,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 // RunDags schedules pods for all dags that are ready
 func (orchestrator *Orchestrator) RunDags() {
 	for _, dag := range orchestrator.DAGs() {
-		dag.AddNextDagRunIfReady()
+		dag.AddNextDagRunIfReady(orchestrator.channelHolder)
 	}
 }
 

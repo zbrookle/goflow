@@ -134,22 +134,24 @@ func GetDAGSFromFolder(folder string, client kubernetes.Interface) []*DAG {
 }
 
 // AddDagRun adds a DagRun for a scheduled point to the orchestrators set of dags
-func (dag *DAG) AddDagRun(executionDate time.Time, withLogs bool) *dagrun.DAGRun {
-	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient, holder.New())
+func (dag *DAG) AddDagRun(
+	executionDate time.Time,
+	withLogs bool,
+	holder *holder.ChannelHolder,
+) *dagrun.DAGRun {
+	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient, holder)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	dag.ActiveRuns++
 	return dagRun
 }
 
 // AddNextDagRunIfReady adds the next dag run if ready for it
-func (dag *DAG) AddNextDagRunIfReady() {
+func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 	if dag.Ready() {
 		if dag.MostRecentExecution.IsZero() {
 			dag.MostRecentExecution = dag.StartDateTime
 		}
-		// !!!! Bug still occurring here need to figure out why !!!!!
-		// dagRun :=
-		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs)
+		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs, holder)
 		go dagRun.Start()
 	}
 }
