@@ -150,7 +150,6 @@ func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
 func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	logger io.ReadCloser,
 ) {
-	logs.InfoLogger.Println("HERE!!!!")
 	defer logger.Close()
 	podWatcher.callFuncUntilPodSucceedOrFail(func() {
 		logBuffer := new(bytes.Buffer)
