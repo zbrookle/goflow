@@ -27,11 +27,13 @@ func getNamespaces(client kubernetes.Interface) []string {
 	if err != nil {
 		panic(err)
 	}
-	namespaceNames := make([]string, len(namespaceList.Items))
+	namespaceNames := make([]string, 0)
 	for _, item := range namespaceList.Items {
-		namespaceNames = append(namespaceNames, item.Name)
+		name := strings.TrimSpace(item.Name)
+		if name != "" {
+			namespaceNames = append(namespaceNames, name)
+		}
 	}
-	logs.InfoLogger.Println(namespaceNames)
 	return namespaceNames
 }
 
@@ -49,9 +51,9 @@ func CleanUpPods(client kubernetes.Interface) {
 		}
 		for _, pod := range podList.Items {
 			logs.InfoLogger.Printf(
-				"Deleting pod %s in namespace %s\n",
-				pod.ObjectMeta.Name,
-				namespace,
+				"Deleting pod \"%s\" in namespace \"%s\"\n",
+				pod.Name,
+				pod.Namespace,
 			)
 			podsClient.Delete(context.TODO(), pod.ObjectMeta.Name, k8sapi.DeleteOptions{})
 		}
@@ -72,7 +74,7 @@ func CleanUpServiceAccounts(client kubernetes.Interface) {
 		}
 		for _, account := range serviceAccountList.Items {
 			logs.InfoLogger.Printf(
-				"Deleting service account %s in namespace %s\n",
+				"Deleting service account \"%s\" in namespace \"%s\"\n",
 				account.Name,
 				namespace,
 			)
@@ -137,6 +139,7 @@ func CreateTestPod(
 	return pod
 }
 
+// CleanK8sName returns a string with k8s incompatible characters removed
 func CleanK8sName(name string) string {
 	name = strings.ReplaceAll(name, "_", "-")
 	name = strings.ReplaceAll(name, ":", "-")
