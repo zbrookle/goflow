@@ -172,7 +172,7 @@ func startServer() {
 			}
 		default:
 			logs.InfoLogger.Println(run.Logs())
-			panic("No logs available!!!")
+			panic(fmt.Sprintf("No logs available for pod %s!!!", run.Name))
 		}
 	}
 
