@@ -4,6 +4,7 @@ import (
 	"goflow/k8s/pod/event/channel"
 	"goflow/k8s/pod/event/holder"
 	"goflow/logs"
+	"time"
 
 	"fmt"
 
@@ -25,7 +26,7 @@ func New(
 	client kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
 ) TaskInformer {
-	factory := informers.NewSharedInformerFactory(client, 1)
+	factory := informers.NewSharedInformerFactory(client, 1*time.Second)
 	sharedInformer := factory.Core().V1().Pods().Informer()
 	taskInformer := TaskInformer{sharedInformer, channelHolder, make(chan struct{})}
 
