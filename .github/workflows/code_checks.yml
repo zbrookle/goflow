@@ -28,13 +28,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Setup Minikube
-      uses: manusa/actions-setup-minikube@v2.0.1
-      with:
-        minikube version: 'v1.12.3'
-        kubernetes version: 'v1.18.3'
-        driver: docker
-
     - name: Install packages
       run: |
         go get -u golang.org/x/lint/golint
@@ -58,3 +51,13 @@ jobs:
 
     - name: Run tests
       run: go test ./... -v
+
+    - name: Setup Minikube
+      uses: manusa/actions-setup-minikube@v2.0.1
+      with:
+        minikube version: 'v1.15.1'
+        kubernetes version: 'v1.19.0'
+        driver: docker
+
+    - name: Integration test
+      run: go run integration/run_integration.go
