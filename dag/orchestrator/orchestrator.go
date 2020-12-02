@@ -19,7 +19,7 @@ import (
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
-	dagMapLock    sync.RWMutex
+	dagMapLock    *sync.RWMutex
 	dagMap        map[string]*dagtype.DAG
 	kubeClient    kubernetes.Interface
 	config        *config.GoFlowConfig
@@ -31,7 +31,7 @@ func newOrchestratorFromClientAndConfig(
 	config *config.GoFlowConfig,
 ) *Orchestrator {
 	return &Orchestrator{
-		sync.RWMutex{},
+		&sync.RWMutex{},
 		make(map[string]*dagtype.DAG),
 		client,
 		config,
