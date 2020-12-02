@@ -130,7 +130,7 @@ func getDagID(config dagconfig.DAGConfig) int {
 
 func startServer() {
 	kubeClient := k8sclient.CreateKubeClient()
-	defer podutils.CleanUpPods(kubeClient)
+	defer podutils.CleanUpEnvironment(kubeClient)
 	orch := *orchestrator.NewOrchestrator(configPath)
 	loopBreaker := make(chan struct{}, 1)
 	go orch.Start(1, loopBreaker)
@@ -142,7 +142,7 @@ func startServer() {
 	}
 
 	if len(orch.DagRuns()) == 0 {
-		panic("Expected runs to present but none were found")
+		panic("Expected runs to be present but none were found")
 	}
 
 	time.Sleep(10 * time.Second)

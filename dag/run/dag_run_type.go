@@ -8,17 +8,18 @@ import (
 
 	dagconfig "goflow/dag/config"
 	"goflow/k8s/pod/event/holder"
+	"goflow/k8s/pod/utils"
 	podwatch "goflow/k8s/pod/watch"
 
 	"time"
-
-	"strings"
 
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
+
+const serviceAccount = "goflow"
 
 // DAGRun is a single run of a given dag - corresponds with a kubernetes pod
 type DAGRun struct {
@@ -34,15 +35,6 @@ type DAGRun struct {
 	holder        *holder.ChannelHolder
 }
 
-func cleanK8sName(name string) string {
-	name = strings.ReplaceAll(name, "_", "-")
-	name = strings.ReplaceAll(name, ":", "-")
-	name = strings.ReplaceAll(name, " ", "")
-	name = strings.ReplaceAll(name, "+", "plus")
-	name = strings.ToLower(name)
-	return name
-}
-
 // NewDAGRun returns a new instance of DAGRun
 func NewDAGRun(
 	executionDate time.Time,
@@ -51,7 +43,7 @@ func NewDAGRun(
 	kubeClient kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
 ) *DAGRun {
-	podName := cleanK8sName(dagConfig.Name + executionDate.String())
+	podName := utils.CleanK8sName(dagConfig.Name + executionDate.String())
 	return &DAGRun{
 		Name:   podName,
 		Config: dagConfig,
@@ -123,6 +115,7 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 			RestartPolicy:                 dagRun.Config.RetryPolicy,
 			TerminationGracePeriodSeconds: nil,
 			ActiveDeadlineSeconds:         &dagRun.Config.TimeLimit,
+			ServiceAccountName:            serviceAccount,
 		},
 	}
 }

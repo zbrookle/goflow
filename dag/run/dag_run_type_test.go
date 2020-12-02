@@ -42,7 +42,7 @@ func getTestDAGConfig(name string, command []string) *dagconfig.DAGConfig {
 
 func TestCreatePod(t *testing.T) {
 	client := fake.NewSimpleClientset()
-	defer podutils.CleanUpPods(client)
+	defer podutils.CleanUpEnvironment(client)
 	dagRun := NewDAGRun(
 		getTestDate(),
 		getTestDAGConfig("test-create-pod", []string{}),
@@ -72,7 +72,7 @@ func TestCreatePod(t *testing.T) {
 func TestStartPod(t *testing.T) {
 	// Test with logs and without logs
 	client := fake.NewSimpleClientset()
-	defer podutils.CleanUpPods(client)
+	defer podutils.CleanUpEnvironment(client)
 	tables := []struct {
 		name     string
 		withLogs bool
@@ -87,7 +87,7 @@ func TestStartPod(t *testing.T) {
 			dagRun := NewDAGRun(
 				getTestDate(),
 				getTestDAGConfig(
-					"test-start-pod"+cleanK8sName(table.name),
+					"test-start-pod"+podutils.CleanK8sName(table.name),
 					[]string{"echo", expectedLogMessage},
 				),
 				table.withLogs,
@@ -135,7 +135,7 @@ func TestStartPod(t *testing.T) {
 
 func TestDeletePod(t *testing.T) {
 	client := fake.NewSimpleClientset()
-	defer podutils.CleanUpPods(client)
+	defer podutils.CleanUpEnvironment(client)
 	dagRun := NewDAGRun(
 		getTestDate(),
 		getTestDAGConfig("test-delete-pod", []string{}),

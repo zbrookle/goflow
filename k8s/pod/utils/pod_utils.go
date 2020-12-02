@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"goflow/logs"
+	"strings"
 
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,20 +17,32 @@ const AppSelectorKey = "App"
 // AppName is the name of the application
 const AppName = "goflow"
 
-// CleanUpPods deletes all pods currently present in the k8s cluster in all namespaces that are accessible
-func CleanUpPods(client kubernetes.Interface) {
-	logs.InfoLogger.Println("Cleaning up...")
+func getAppLabelSelectorString() string {
+	return LabelSelectorString(map[string]string{AppSelectorKey: AppName})
+}
+
+func getNamespaces(client kubernetes.Interface) []string {
 	namespaceClient := client.CoreV1().Namespaces()
 	namespaceList, err := namespaceClient.List(context.TODO(), k8sapi.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
-	labelSelector := LabelSelectorString(map[string]string{AppSelectorKey: AppName})
-	for _, namespace := range namespaceList.Items {
-		podsClient := client.CoreV1().Pods(namespace.Name)
+	namespaceNames := make([]string, len(namespaceList.Items))
+	for _, item := range namespaceList.Items {
+		namespaceNames = append(namespaceNames, item.Name)
+	}
+	logs.InfoLogger.Println(namespaceNames)
+	return namespaceNames
+}
+
+// CleanUpPods deletes all pods currently present in the k8s cluster in all namespaces that are accessible
+func CleanUpPods(client kubernetes.Interface) {
+	namespaces := getNamespaces(client)
+	for _, namespace := range namespaces {
+		podsClient := client.CoreV1().Pods(namespace)
 		podList, err := podsClient.List(
 			context.TODO(),
-			k8sapi.ListOptions{LabelSelector: labelSelector},
+			k8sapi.ListOptions{LabelSelector: getAppLabelSelectorString()},
 		)
 		if err != nil {
 			panic(err)
@@ -38,11 +51,41 @@ func CleanUpPods(client kubernetes.Interface) {
 			logs.InfoLogger.Printf(
 				"Deleting pod %s in namespace %s\n",
 				pod.ObjectMeta.Name,
-				namespace.Name,
+				namespace,
 			)
 			podsClient.Delete(context.TODO(), pod.ObjectMeta.Name, k8sapi.DeleteOptions{})
 		}
 	}
+}
+
+// CleanUpServiceAccounts delete all associated application service accounts
+func CleanUpServiceAccounts(client kubernetes.Interface) {
+	namespaces := getNamespaces(client)
+	for _, namespace := range namespaces {
+		serviceAccountClient := client.CoreV1().ServiceAccounts(namespace)
+		serviceAccountList, err := serviceAccountClient.List(
+			context.TODO(),
+			k8sapi.ListOptions{LabelSelector: getAppLabelSelectorString()},
+		)
+		if err != nil {
+			panic(err)
+		}
+		for _, account := range serviceAccountList.Items {
+			logs.InfoLogger.Printf(
+				"Deleting service account %s in namespace %s\n",
+				account.Name,
+				namespace,
+			)
+			serviceAccountClient.Delete(context.TODO(), account.Name, k8sapi.DeleteOptions{})
+		}
+	}
+}
+
+// CleanUpEnvironment deletes all associated application resources
+func CleanUpEnvironment(client kubernetes.Interface) {
+	logs.InfoLogger.Println("Cleaning up...")
+	CleanUpPods(client)
+	CleanUpServiceAccounts(client)
 }
 
 // LabelSelectorString returns a label selector for pods based on a given string map
@@ -92,4 +135,13 @@ func CreateTestPod(
 		panic(err)
 	}
 	return pod
+}
+
+func CleanK8sName(name string) string {
+	name = strings.ReplaceAll(name, "_", "-")
+	name = strings.ReplaceAll(name, ":", "-")
+	name = strings.ReplaceAll(name, " ", "")
+	name = strings.ReplaceAll(name, "+", "plus")
+	name = strings.ToLower(name)
+	return name
 }
