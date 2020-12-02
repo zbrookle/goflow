@@ -9,6 +9,7 @@ import (
 	"goflow/config"
 	k8sclient "goflow/k8s/client"
 	"goflow/k8s/pod/event/holder"
+	"goflow/k8s/pod/inform"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -135,8 +136,14 @@ func cycleUntilChannelClose(
 	}
 }
 
+func (orchestrator *Orchestrator) getTaskInformer() inform.TaskInformer {
+	return inform.New(orchestrator.kubeClient, orchestrator.channelHolder)
+}
+
 // Start begins the orchestrator event loop
 func (orchestrator *Orchestrator) Start(cycleDuration time.Duration, closingChannel chan struct{}) {
+	taskInformer := orchestrator.getTaskInformer()
+	taskInformer.Start()
 	go cycleUntilChannelClose(
 		orchestrator.CollectDAGs,
 		closingChannel,
