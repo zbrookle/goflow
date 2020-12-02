@@ -4,18 +4,22 @@ import (
 	dagtype "goflow/dag/dagtype"
 	dagrun "goflow/dag/run"
 	"goflow/logs"
+	"sync"
 	"time"
 
 	"goflow/config"
 	k8sclient "goflow/k8s/client"
 	"goflow/k8s/pod/event/holder"
 	"goflow/k8s/pod/inform"
+	"goflow/k8s/pod/utils"
+	"goflow/k8s/serviceaccount"
 
 	"k8s.io/client-go/kubernetes"
 )
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
+	dagMapLock    sync.RWMutex
 	dagMap        map[string]*dagtype.DAG
 	kubeClient    kubernetes.Interface
 	config        *config.GoFlowConfig
@@ -26,7 +30,13 @@ func newOrchestratorFromClientAndConfig(
 	client kubernetes.Interface,
 	config *config.GoFlowConfig,
 ) *Orchestrator {
-	return &Orchestrator{make(map[string]*dagtype.DAG), client, config, holder.New()}
+	return &Orchestrator{
+		sync.RWMutex{},
+		make(map[string]*dagtype.DAG),
+		client,
+		config,
+		holder.New(),
+	}
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
@@ -45,7 +55,21 @@ func (orchestrator *Orchestrator) AddDAG(dag *dagtype.DAG) {
 		dag.Config.Namespace,
 		dag.Code,
 	)
+	orchestrator.dagMapLock.Lock()
 	orchestrator.dagMap[dag.Config.Name] = dag
+	orchestrator.dagMapLock.Unlock()
+}
+
+func (orchestrator *Orchestrator) addDAGServiceAccount(dag *dagtype.DAG) {
+	serviceAccountHandler := serviceaccount.New(
+		utils.AppName,
+		dag.Config.Namespace,
+		orchestrator.kubeClient,
+	)
+	if serviceAccountHandler.Exists() {
+		return
+	}
+	serviceAccountHandler.Create()
 }
 
 // DeleteDAG removes a DAG from the orchestrator
@@ -58,9 +82,11 @@ func (orchestrator *Orchestrator) DeleteDAG(dagName string, namespace string) {
 // DAGs returns []DAGs with all DAGs present in the map
 func (orchestrator Orchestrator) DAGs() []*dagtype.DAG {
 	dagSlice := make([]*dagtype.DAG, 0, len(orchestrator.dagMap))
+	orchestrator.dagMapLock.RLock()
 	for dagName := range orchestrator.dagMap {
 		dagSlice = append(dagSlice, orchestrator.dagMap[dagName])
 	}
+	orchestrator.dagMapLock.RUnlock()
 	return dagSlice
 }
 
@@ -99,6 +125,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 	for _, dag := range dagSlice {
 		dagPresent := orchestrator.isDagPresent(*dag)
 		if !dagPresent {
+			orchestrator.addDAGServiceAccount(dag)
 			orchestrator.AddDAG(dag)
 		} else if dagPresent && orchestrator.isStoredDagDifferent(*dag) {
 			logs.InfoLogger.Printf("Updating DAG %s which will run in namespace %s", dag.Config.Name, dag.Config.Namespace)
