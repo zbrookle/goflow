@@ -26,7 +26,7 @@ func New(
 	client kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
 ) TaskInformer {
-	factory := informers.NewSharedInformerFactory(client, 5*time.Second)
+	factory := informers.NewSharedInformerFactory(client, 2*time.Second)
 	sharedInformer := factory.Core().V1().Pods().Informer()
 	taskInformer := TaskInformer{sharedInformer, channelHolder, make(chan struct{})}
 
