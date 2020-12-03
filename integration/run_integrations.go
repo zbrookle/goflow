@@ -133,7 +133,7 @@ func startServer() {
 	defer podutils.CleanUpEnvironment(kubeClient)
 	orch := *orchestrator.NewOrchestrator(configPath)
 	loopBreaker := make(chan struct{}, 1)
-	go orch.Start(1, loopBreaker)
+	go orch.Start(1*time.Second, loopBreaker)
 
 	time.Sleep(3 * time.Second)
 
@@ -193,7 +193,7 @@ func startServer() {
 
 func init() {
 	logs.InfoLogger.Println("Starting goflow simulation program...")
-	expectedDagCount = 2
+	expectedDagCount = 6
 }
 
 func main() {
