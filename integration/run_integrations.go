@@ -128,6 +128,39 @@ func getDagID(config dagconfig.DAGConfig) int {
 	return id
 }
 
+func waitUntilPodsGoneOrTimePassed(seconds time.Duration, client kubernetes.Interface) {
+	endWait := make(chan struct{})
+
+	secondsTime := seconds * time.Second
+	go func() {
+		time.Sleep(secondsTime)
+		panic(fmt.Sprintf("%d seconds have passed, pods still not deleted\n", seconds))
+	}()
+
+	// Wait for pods deleted
+	go func() {
+		for {
+			podDict := getPods(client)
+			defaultNameSpaceDict := podDict["default"]
+			select {
+			case _, _ = <-endWait:
+				break
+			default:
+				if len(defaultNameSpaceDict) == 0 {
+					logs.InfoLogger.Println("Pods gone")
+					close(endWait)
+					return
+				}
+				time.Sleep(time.Second)
+			}
+		}
+
+	}()
+
+	_, _ = <-endWait
+	logs.InfoLogger.Println("Wait done")
+}
+
 func startServer() {
 	kubeClient := k8sclient.CreateKubeClient()
 	defer podutils.CleanUpEnvironment(kubeClient)
@@ -145,14 +178,9 @@ func startServer() {
 		panic("Expected runs to be present but none were found")
 	}
 
-	time.Sleep(10 * time.Second)
+	waitUntilPodsGoneOrTimePassed(30, kubeClient)
 
 	for _, run := range orch.DagRuns() {
-		mostRecent, err := run.MostRecentPod()
-		if err != nil {
-			panic(err)
-		}
-
 		select {
 		case logText := <-run.Logs():
 			withoutNewlines := strings.TrimSpace(logText)
@@ -169,22 +197,6 @@ func startServer() {
 		default:
 			logs.InfoLogger.Println(run.Logs())
 			panic(fmt.Sprintf("No logs available for pod %s!!!", run.Name))
-		}
-
-		podsOnServer := getPods(kubeClient)
-		namespaceDict, ok := podsOnServer[mostRecent.Namespace]
-		if !ok {
-			panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
-		}
-		_, ok = namespaceDict[mostRecent.Name]
-		if ok {
-			panic(
-				fmt.Sprintf(
-					"Pod %s should have been deleted from namespace %s",
-					mostRecent.Name,
-					mostRecent.Namespace,
-				),
-			)
 		}
 	}
 
