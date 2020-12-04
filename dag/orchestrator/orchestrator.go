@@ -3,6 +3,7 @@ package orchestrator
 import (
 	dagtype "goflow/dag/dagtype"
 	dagrun "goflow/dag/run"
+	"goflow/jsonpanic"
 	"goflow/logs"
 	"sync"
 	"time"
@@ -50,10 +51,10 @@ func NewOrchestrator(configPath string) *Orchestrator {
 // AddDAG adds a DAG to the Orchestrator
 func (orchestrator *Orchestrator) AddDAG(dag *dagtype.DAG) {
 	logs.InfoLogger.Printf(
-		"Added DAG '%s' which will run in namespace '%s', with code: %s",
+		"Added DAG '%s' which will run in namespace '%s', with configuration: %s",
 		dag.Config.Name,
 		dag.Config.Namespace,
-		dag.Code,
+		jsonpanic.JSONPanicFormat(dag.Config),
 	)
 	orchestrator.dagMapLock.Lock()
 	orchestrator.dagMap[dag.Config.Name] = dag
