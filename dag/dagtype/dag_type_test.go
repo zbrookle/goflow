@@ -72,7 +72,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		Namespace:     "default",
 		Schedule:      "* * * * *",
 		DockerImage:   "busybox",
-		RetryPolicy:   "Never",
+		RetryPolicy:   core.RestartPolicyNever,
 		Command:       []string{"echo", "yes"},
 		Parallelism:   1,
 		TimeLimit:     int64(300),
