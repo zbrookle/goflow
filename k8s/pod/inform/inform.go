@@ -34,12 +34,20 @@ func New(
 		AddFunc: func(obj interface{}) {
 			pod := getPodFromInterface(obj)
 			if taskInformer.channelHolder.Contains(pod.Name) && podReadyToLog(pod) {
-				logs.InfoLogger.Printf(
-					"Pod with name %s added and ready in phase %s\n",
-					pod.Name,
-					pod.Status.Phase,
-				)
-				taskInformer.getChannelGroup(pod.Name).Ready <- pod
+				select {
+				case taskInformer.getChannelGroup(pod.Name).Ready <- pod:
+					logs.InfoLogger.Printf(
+						"Pod with name %s added and ready in phase %s\n",
+						pod.Name,
+						pod.Status.Phase,
+					)
+				default:
+					logs.InfoLogger.Printf(
+						"Pod with name %s already added from update",
+						pod.Name,
+					)
+				}
+
 			}
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
@@ -49,12 +57,20 @@ func New(
 				return
 			}
 			if podReadyToLog(newPod) {
-				taskInformer.getChannelGroup(newPod.Name).Ready <- newPod
-				logs.InfoLogger.Printf(
-					"Pod %s updated to ready in phase %s",
-					newPod.Name,
-					newPod.Status.Phase,
-				)
+				select {
+				case taskInformer.getChannelGroup(newPod.Name).Ready <- newPod:
+					logs.InfoLogger.Printf(
+						"Pod %s updated to ready in phase %s",
+						newPod.Name,
+						newPod.Status.Phase,
+					)
+				default:
+					logs.InfoLogger.Printf(
+						"Pod with name %s already added from update\n",
+						newPod.Name,
+					)
+				}
+
 			}
 			if oldPod.Status.Phase != newPod.Status.Phase {
 				taskInformer.getChannelGroup(newPod.Name).Update <- newPod
