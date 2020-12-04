@@ -43,7 +43,7 @@ func NewDAGRun(
 	kubeClient kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
 ) *DAGRun {
-	podName := utils.CleanK8sName(dagConfig.Name + executionDate.String())
+	podName := utils.CleanK8sName(dagConfig.Name + "-" + executionDate.String())
 	return &DAGRun{
 		Name:   podName,
 		Config: dagConfig,
@@ -109,13 +109,12 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 			Annotations: dagRun.Config.Annotations,
 		},
 		Spec: core.PodSpec{
-			Volumes:                       nil,
-			Containers:                    []core.Container{dagRun.getContainerFrame()},
-			EphemeralContainers:           nil,
-			RestartPolicy:                 dagRun.Config.RetryPolicy,
-			TerminationGracePeriodSeconds: nil,
-			ActiveDeadlineSeconds:         dagRun.Config.TimeLimit,
-			ServiceAccountName:            serviceAccount,
+			Volumes:               nil,
+			Containers:            []core.Container{dagRun.getContainerFrame()},
+			EphemeralContainers:   nil,
+			RestartPolicy:         dagRun.Config.RetryPolicy,
+			ActiveDeadlineSeconds: dagRun.Config.TimeLimit,
+			ServiceAccountName:    serviceAccount,
 		},
 	}
 }
@@ -189,5 +188,3 @@ func (dagRun *DAGRun) MostRecentPod() (core.Pod, error) {
 	}
 	return *dagRun.pod, nil
 }
-
-// TRY COUNTING EVENT STATES -- USE this as rate limiting - if pod is pending for too long
