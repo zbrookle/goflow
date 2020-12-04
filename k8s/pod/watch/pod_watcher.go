@@ -172,7 +172,6 @@ func getStringFromLogger(
 func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	logger io.ReadCloser,
 ) {
-	logs.InfoLogger.Println(podWatcher.podName)
 	defer logger.Close()
 	addedLogs := false
 	podWatcher.callFuncUntilPodSucceedOrFail(func() {
