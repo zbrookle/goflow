@@ -68,7 +68,7 @@ func New(
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := getPodFromInterface(obj)
-			taskInformer.getChannelGroup(pod.Name).Update <- getPodFromInterface(obj)
+			logs.InfoLogger.Printf("Pod %s was successfully deleted\n", pod.Name)
 		},
 	})
 	return taskInformer
