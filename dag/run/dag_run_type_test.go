@@ -203,7 +203,7 @@ func TestStart(t *testing.T) {
 			podCopy.Status.Phase = core.PodSucceeded
 			dagRun.holder.GetChannelGroup(dagRun.Name).Update <- podCopy
 
-			time.Sleep(1 * time.Millisecond)
+			time.Sleep(3 * time.Millisecond)
 
 			podList, err := client.CoreV1().Pods(
 				dagRun.Config.Namespace,
