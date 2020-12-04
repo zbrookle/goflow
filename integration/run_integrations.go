@@ -95,10 +95,10 @@ func createFakeDagFile(dagFolder string, dagNum int) {
 		Namespace:     "default",
 		Schedule:      "* * * * *",
 		DockerImage:   "busybox",
-		RetryPolicy:   core.RestartPolicyNever,
+		RetryPolicy:   core.RestartPolicyOnFailure,
 		Command:       []string{"sh", "-c", echoString},
 		Parallelism:   0,
-		TimeLimit:     10000,
+		TimeLimit:     nil,
 		Retries:       2,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
@@ -147,30 +147,14 @@ func startServer() {
 
 	time.Sleep(10 * time.Second)
 
-	podsOnServer := getPods(kubeClient)
 	for _, run := range orch.DagRuns() {
 		mostRecent, err := run.MostRecentPod()
 		if err != nil {
 			panic(err)
 		}
 
-		namespaceDict, ok := podsOnServer[mostRecent.Namespace]
-		if !ok {
-			panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
-		}
-		_, ok = namespaceDict[mostRecent.Name]
-		if !ok {
-			panic(
-				fmt.Sprintf(
-					"Pod %s not found in namespace %s",
-					mostRecent.Name,
-					mostRecent.Namespace,
-				),
-			)
-		}
-
 		select {
-		case logText := <-*run.Logs():
+		case logText := <-run.Logs():
 			withoutNewlines := strings.TrimSpace(logText)
 			expectedLogMessage := getLogMessage(getDagID(*run.Config))
 			if withoutNewlines != expectedLogMessage {
@@ -185,6 +169,22 @@ func startServer() {
 		default:
 			logs.InfoLogger.Println(run.Logs())
 			panic(fmt.Sprintf("No logs available for pod %s!!!", run.Name))
+		}
+
+		podsOnServer := getPods(kubeClient)
+		namespaceDict, ok := podsOnServer[mostRecent.Namespace]
+		if !ok {
+			panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
+		}
+		_, ok = namespaceDict[mostRecent.Name]
+		if ok {
+			panic(
+				fmt.Sprintf(
+					"Pod %s should have been deleted from namespace %s",
+					mostRecent.Name,
+					mostRecent.Namespace,
+				),
+			)
 		}
 	}
 
