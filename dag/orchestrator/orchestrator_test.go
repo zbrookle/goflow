@@ -41,7 +41,7 @@ func TestRegisterDAG(t *testing.T) {
 		DockerImage:   "busybox",
 		RetryPolicy:   "Never",
 		Command:       []string{"echo", "yes"},
-		TimeLimit:     20,
+		TimeLimit:     nil,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",

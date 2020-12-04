@@ -95,10 +95,10 @@ func createFakeDagFile(dagFolder string, dagNum int) {
 		Namespace:     "default",
 		Schedule:      "* * * * *",
 		DockerImage:   "busybox",
-		RetryPolicy:   core.RestartPolicyNever,
+		RetryPolicy:   core.RestartPolicyOnFailure,
 		Command:       []string{"sh", "-c", echoString},
 		Parallelism:   0,
-		TimeLimit:     10000,
+		TimeLimit:     nil,
 		Retries:       2,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
@@ -128,6 +128,39 @@ func getDagID(config dagconfig.DAGConfig) int {
 	return id
 }
 
+func waitUntilPodsGoneOrTimePassed(seconds time.Duration, client kubernetes.Interface) {
+	endWait := make(chan struct{})
+
+	secondsTime := seconds * time.Second
+	go func() {
+		time.Sleep(secondsTime)
+		panic(fmt.Sprintf("%d seconds have passed, pods still not deleted\n", seconds))
+	}()
+
+	// Wait for pods deleted
+	go func() {
+		for {
+			podDict := getPods(client)
+			defaultNameSpaceDict := podDict["default"]
+			select {
+			case _, _ = <-endWait:
+				break
+			default:
+				if len(defaultNameSpaceDict) == 0 {
+					logs.InfoLogger.Println("Pods gone")
+					close(endWait)
+					return
+				}
+				time.Sleep(time.Second)
+			}
+		}
+
+	}()
+
+	_, _ = <-endWait
+	logs.InfoLogger.Println("Wait done")
+}
+
 func startServer() {
 	kubeClient := k8sclient.CreateKubeClient()
 	defer podutils.CleanUpEnvironment(kubeClient)
@@ -145,32 +178,11 @@ func startServer() {
 		panic("Expected runs to be present but none were found")
 	}
 
-	time.Sleep(10 * time.Second)
+	waitUntilPodsGoneOrTimePassed(30, kubeClient)
 
-	podsOnServer := getPods(kubeClient)
 	for _, run := range orch.DagRuns() {
-		mostRecent, err := run.MostRecentPod()
-		if err != nil {
-			panic(err)
-		}
-
-		namespaceDict, ok := podsOnServer[mostRecent.Namespace]
-		if !ok {
-			panic(fmt.Sprintf("Namespace %s not found in map", mostRecent.Namespace))
-		}
-		_, ok = namespaceDict[mostRecent.Name]
-		if !ok {
-			panic(
-				fmt.Sprintf(
-					"Pod %s not found in namespace %s",
-					mostRecent.Name,
-					mostRecent.Namespace,
-				),
-			)
-		}
-
 		select {
-		case logText := <-*run.Logs():
+		case logText := <-run.Logs():
 			withoutNewlines := strings.TrimSpace(logText)
 			expectedLogMessage := getLogMessage(getDagID(*run.Config))
 			if withoutNewlines != expectedLogMessage {

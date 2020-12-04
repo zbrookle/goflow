@@ -2,5 +2,10 @@
     "DefaultNamespace": "default",
     "DefaultDockerImage": "busybox",
     "DAGPath": "path",
-    "DateFormat": "2019-01-01"
+    "DateFormat": "2019-01-01",
+    "DefaultRestartPolicy": "Never",
+    "Parallelism": 1,
+    "TimeLimit": 1,
+    "Retries": 1,
+    "MaxActiveRuns": 1
 }

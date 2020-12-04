@@ -2,5 +2,6 @@
     "Name": "test-dag",
     "Command": ["echo", "1"],
     "StartDateTime": "2019-01-01",
-    "MaxActiveRuns": 1
+    "EndDateTime": "2020-01-01",
+    "Scedule": "* * * * *"
 }

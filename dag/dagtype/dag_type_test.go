@@ -2,6 +2,7 @@ package dagtype
 
 import (
 	"context"
+	goflowconfig "goflow/config"
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
 	k8sclient "goflow/k8s/client"
@@ -75,7 +76,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		RetryPolicy:   core.RestartPolicyNever,
 		Command:       []string{"echo", "yes"},
 		Parallelism:   1,
-		TimeLimit:     int64(300),
+		TimeLimit:     nil,
 		Retries:       int32(2),
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "2020-01-01",
@@ -95,7 +96,11 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		MostRecentExecution: time.Time{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
-	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString), fake.NewSimpleClientset())
+	dag, err := createDAGFromJSONBytes(
+		[]byte(formattedJSONString),
+		fake.NewSimpleClientset(),
+		goflowconfig.GoFlowConfig{},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -141,7 +146,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		DockerImage:   "busybox",
 		RetryPolicy:   "Never",
 		Command:       []string{"echo", "\"Hello world!!!!!!!\""},
-		TimeLimit:     20,
+		TimeLimit:     nil,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
