@@ -30,6 +30,12 @@ func readConfig(filePath string) []byte {
 	return dat
 }
 
+func verifyConfig(config GoFlowConfig) {
+	if config.DefaultRestartPolicy == "" {
+		panic("Restart policy must be specified!")
+	}
+}
+
 // CreateConfig creates a configuration object based on the file at the given path
 func CreateConfig(filePath string) *GoFlowConfig {
 	configBytes := readConfig(filePath)
@@ -40,6 +46,7 @@ func CreateConfig(filePath string) *GoFlowConfig {
 	}
 	logs.InfoLogger.Println("Starting GoFlow with the following configs:")
 	logs.InfoLogger.Println(jsonpanic.JSONPanicFormat(configStruct))
+	verifyConfig(*configStruct)
 	return configStruct
 }
 
