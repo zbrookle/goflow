@@ -25,7 +25,7 @@ func TestSetConfigDefaults(t *testing.T) {
 		Namespace:   goflowConfig.DefaultNamespace,
 		Schedule:    "* * * * *",
 		DockerImage: goflowConfig.DefaultDockerImage,
-		RetryPolicy: core.RestartPolicyNever,
+		RetryPolicy: goflowConfig.DefaultRestartPolicy,
 		Command: []string{
 			"echo",
 			"test",
@@ -37,11 +37,10 @@ func TestSetConfigDefaults(t *testing.T) {
 	}
 	dagConfigCases := []DAGConfig{
 		{
-			Name:        expectedDagConfig.Name,
-			Schedule:    expectedDagConfig.Schedule,
-			RetryPolicy: core.RestartPolicyNever,
-			Command:     []string{"echo", "test"},
-			WithLogs:    false,
+			Name:     expectedDagConfig.Name,
+			Schedule: expectedDagConfig.Schedule,
+			Command:  []string{"echo", "test"},
+			WithLogs: false,
 		},
 		expectedDagConfig.Copy(),
 	}

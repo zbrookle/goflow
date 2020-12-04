@@ -70,6 +70,9 @@ func (config *DAGConfig) SetDefaults(goflowConfig config.GoFlowConfig) {
 	if config.Namespace == "" {
 		config.Namespace = goflowConfig.DefaultNamespace
 	}
+	if config.RetryPolicy == "" {
+		config.RetryPolicy = goflowConfig.DefaultRestartPolicy
+	}
 	if config.Parallelism == 0 {
 		config.Parallelism = goflowConfig.Parallelism
 	}
