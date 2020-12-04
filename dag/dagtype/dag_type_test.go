@@ -2,6 +2,7 @@ package dagtype
 
 import (
 	"context"
+	goflowconfig "goflow/config"
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
 	k8sclient "goflow/k8s/client"
@@ -95,7 +96,11 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		MostRecentExecution: time.Time{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
-	dag, err := createDAGFromJSONBytes([]byte(formattedJSONString), fake.NewSimpleClientset())
+	dag, err := createDAGFromJSONBytes(
+		[]byte(formattedJSONString),
+		fake.NewSimpleClientset(),
+		goflowconfig.GoFlowConfig{},
+	)
 	if err != nil {
 		panic(err)
 	}

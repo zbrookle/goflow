@@ -2,6 +2,7 @@ package dagtype
 
 import (
 	"encoding/json"
+	goflowconfig "goflow/config"
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
 	"goflow/k8s/pod/event/holder"
@@ -63,9 +64,14 @@ func CreateDAG(config *dagconfig.DAGConfig, code string, client kubernetes.Inter
 	return dag
 }
 
-func createDAGFromJSONBytes(dagBytes []byte, client kubernetes.Interface) (DAG, error) {
+func createDAGFromJSONBytes(
+	dagBytes []byte,
+	client kubernetes.Interface,
+	goflowConfig goflowconfig.GoFlowConfig,
+) (DAG, error) {
 	dagConfigStruct := dagconfig.DAGConfig{}
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
+	dagConfigStruct.SetDefaults(goflowConfig)
 	if err != nil {
 		return DAG{}, err
 	}
@@ -74,12 +80,16 @@ func createDAGFromJSONBytes(dagBytes []byte, client kubernetes.Interface) (DAG, 
 }
 
 // getDAGFromJSON creates a new dag struct from a dag file
-func getDAGFromJSON(dagFilePath string, client kubernetes.Interface) (DAG, error) {
+func getDAGFromJSON(
+	dagFilePath string,
+	client kubernetes.Interface,
+	goflowConfig goflowconfig.GoFlowConfig,
+) (DAG, error) {
 	dagBytes, err := readDAGFile(dagFilePath)
 	if err != nil {
 		return DAG{}, err
 	}
-	dagJSON, err := createDAGFromJSONBytes(dagBytes, client)
+	dagJSON, err := createDAGFromJSONBytes(dagBytes, client, goflowConfig)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
 		return DAG{}, err
@@ -116,12 +126,16 @@ func getDirSliceRecur(directory string) []string {
 // GetDAGSFromFolder returns a slice of DAG structs, one for each DAG file
 // Each file must have the "dag" suffix
 // E.g., my_dag.py, some_dag.json
-func GetDAGSFromFolder(folder string, client kubernetes.Interface) []*DAG {
+func GetDAGSFromFolder(
+	folder string,
+	client kubernetes.Interface,
+	goflowConfig goflowconfig.GoFlowConfig,
+) []*DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file, client)
+			dag, err := getDAGFromJSON(file, client, goflowConfig)
 			if os.ErrNotExist == err {
 				logs.ErrorLogger.Printf("File %s no longer exists", file)
 			}
