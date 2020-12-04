@@ -155,6 +155,7 @@ func (dagRun *DAGRun) Run() {
 
 // Start runs the dagrun and waits for the monitoring to finish
 func (dagRun *DAGRun) Start() {
+	defer dagRun.DeletePod()
 	go dagRun.Run()
 	dagRun.watcher.WaitForMonitorDone()
 }

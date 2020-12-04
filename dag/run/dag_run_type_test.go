@@ -13,7 +13,7 @@ import (
 	"time"
 
 	core "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -56,7 +56,7 @@ func TestCreatePod(t *testing.T) {
 	).Get(
 		context.TODO(),
 		dagRun.pod.Name,
-		v1.GetOptions{},
+		k8sapi.GetOptions{},
 	)
 	if err != nil {
 		panic(err)
@@ -69,7 +69,7 @@ func TestCreatePod(t *testing.T) {
 	}
 }
 
-func TestStartPod(t *testing.T) {
+func TestRunPod(t *testing.T) {
 	// Test with logs and without logs
 	client := fake.NewSimpleClientset()
 	defer podutils.CleanUpEnvironment(client)
@@ -146,13 +146,13 @@ func TestDeletePod(t *testing.T) {
 	podFrame := dagRun.getPodFrame()
 	podsClient := client.CoreV1().Pods(dagRun.Config.Namespace)
 
-	createdPod, err := podsClient.Create(context.TODO(), &podFrame, v1.CreateOptions{})
+	createdPod, err := podsClient.Create(context.TODO(), &podFrame, k8sapi.CreateOptions{})
 	dagRun.pod = createdPod
 	if err != nil {
 		panic(err)
 	}
 	dagRun.DeletePod()
-	list, err := podsClient.List(context.TODO(), v1.ListOptions{})
+	list, err := podsClient.List(context.TODO(), k8sapi.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
@@ -161,4 +161,67 @@ func TestDeletePod(t *testing.T) {
 			t.Errorf("Pod %s should have been deleted", createdPod.Name)
 		}
 	}
+}
+
+func TestStart(t *testing.T) {
+	// Test with logs and without logs
+	client := fake.NewSimpleClientset()
+	defer podutils.CleanUpEnvironment(client)
+	tables := []struct {
+		name     string
+		withLogs bool
+	}{
+		{"Without Logs", false},
+		{"With Logs", true},
+	}
+	for _, table := range tables {
+		t.Logf("Test case: %s", table.name)
+		func() {
+			expectedLogMessage := "Hello World!!!"
+			dagRun := NewDAGRun(
+				getTestDate(),
+				getTestDAGConfig(
+					"test-start-pod"+podutils.CleanK8sName(table.name),
+					[]string{"echo", expectedLogMessage},
+				),
+				table.withLogs,
+				client,
+				holder.New(),
+			)
+			go dagRun.Start()
+
+			for {
+				if dagRun.holder.Contains(dagRun.Name) {
+					break
+				}
+				time.Sleep(1 * time.Millisecond)
+			}
+
+			dagRun.holder.GetChannelGroup(dagRun.Name).Ready <- dagRun.pod
+
+			podCopy := dagRun.pod.DeepCopy()
+			podCopy.Status.Phase = core.PodSucceeded
+			dagRun.holder.GetChannelGroup(dagRun.Name).Update <- podCopy
+
+			time.Sleep(1 * time.Millisecond)
+
+			podList, err := client.CoreV1().Pods(
+				dagRun.Config.Namespace,
+			).List(
+				context.TODO(),
+				k8sapi.ListOptions{},
+			)
+			if err != nil {
+				panic(err)
+			}
+			for _, item := range podList.Items {
+				t.Log(item.Name)
+				if item.Name == dagRun.Name {
+					t.Errorf("Pod with name %s should have been deleted", dagRun.Name)
+				}
+			}
+		}()
+
+	}
+
 }
