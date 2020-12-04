@@ -114,7 +114,7 @@ func (dagRun *DAGRun) getPodFrame() core.Pod {
 			EphemeralContainers:           nil,
 			RestartPolicy:                 dagRun.Config.RetryPolicy,
 			TerminationGracePeriodSeconds: nil,
-			ActiveDeadlineSeconds:         &dagRun.Config.TimeLimit,
+			ActiveDeadlineSeconds:         dagRun.Config.TimeLimit,
 			ServiceAccountName:            serviceAccount,
 		},
 	}

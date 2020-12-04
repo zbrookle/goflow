@@ -17,7 +17,7 @@ type DAGConfig struct {
 	RetryPolicy   core.RestartPolicy
 	Command       []string
 	Parallelism   int32
-	TimeLimit     int64
+	TimeLimit     *int64
 	Retries       int32
 	MaxActiveRuns int
 	StartDateTime string
@@ -72,9 +72,6 @@ func (config *DAGConfig) SetDefaults(goflowConfig config.GoFlowConfig) {
 	}
 	if config.Parallelism == 0 {
 		config.Parallelism = goflowConfig.Parallelism
-	}
-	if config.TimeLimit == 0 {
-		config.TimeLimit = goflowConfig.TimeLimit
 	}
 	if config.Retries == 0 {
 		config.Retries = goflowConfig.Retries

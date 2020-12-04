@@ -31,7 +31,6 @@ func TestSetConfigDefaults(t *testing.T) {
 			"test",
 		},
 		Parallelism:   1,
-		TimeLimit:     1,
 		Retries:       1,
 		MaxActiveRuns: 1,
 		WithLogs:      false,

@@ -33,7 +33,7 @@ func getTestDAGConfig(name string, command []string) *dagconfig.DAGConfig {
 		DockerImage:   "busybox",
 		RetryPolicy:   "Never",
 		Command:       command,
-		TimeLimit:     20,
+		TimeLimit:     nil,
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
