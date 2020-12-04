@@ -121,7 +121,11 @@ func (orchestrator Orchestrator) DagRuns() []dagrun.DAGRun {
 
 // CollectDAGs fills up the dag map with existing dags
 func (orchestrator *Orchestrator) CollectDAGs() {
-	dagSlice := dagtype.GetDAGSFromFolder(orchestrator.config.DAGPath, orchestrator.kubeClient, *orchestrator.config)
+	dagSlice := dagtype.GetDAGSFromFolder(
+		orchestrator.config.DAGPath,
+		orchestrator.kubeClient,
+		*orchestrator.config,
+	)
 	for _, dag := range dagSlice {
 		dagPresent := orchestrator.isDagPresent(*dag)
 		if !dagPresent {
