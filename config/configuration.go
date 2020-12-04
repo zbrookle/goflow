@@ -2,6 +2,8 @@ package config
 
 import (
 	"encoding/json"
+	"goflow/jsonpanic"
+	"goflow/logs"
 	"io/ioutil"
 )
 
@@ -24,12 +26,14 @@ func readConfig(filePath string) []byte {
 // CreateConfig creates a configuration object based on the file at the given path
 func CreateConfig(filePath string) *GoFlowConfig {
 	configBytes := readConfig(filePath)
-	emptyConfig := &GoFlowConfig{}
-	err := json.Unmarshal(configBytes, emptyConfig)
+	configStruct := &GoFlowConfig{}
+	err := json.Unmarshal(configBytes, configStruct)
 	if err != nil {
 		panic(err)
 	}
-	return emptyConfig
+	logs.InfoLogger.Println("Starting GoFlow with the following configs:")
+	logs.InfoLogger.Println(jsonpanic.JSONPanicFormat(configStruct))
+	return configStruct
 }
 
 // SaveConfig saves the current in memory configuration to the config file
