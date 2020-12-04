@@ -5,14 +5,21 @@ import (
 	"goflow/jsonpanic"
 	"goflow/logs"
 	"io/ioutil"
+
+	core "k8s.io/api/core/v1"
 )
 
 // GoFlowConfig is a configuration struct for the GoFlow application settings
 type GoFlowConfig struct {
-	DefaultNamespace   string
-	DefaultDockerImage string
-	DAGPath            string
-	DateFormat         string
+	DefaultNamespace     string
+	DefaultDockerImage   string
+	DefaultRestartPolicy core.RestartPolicy
+	Parallelism          int32
+	TimeLimit            int64
+	Retries              int32
+	MaxActiveRuns        int
+	DAGPath              string
+	DateFormat           string
 }
 
 func readConfig(filePath string) []byte {
