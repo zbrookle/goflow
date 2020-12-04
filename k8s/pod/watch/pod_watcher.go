@@ -147,22 +147,45 @@ func (podWatcher *PodWatcher) callFuncUntilPodSucceedOrFail(callFunc func()) {
 	}
 }
 
+func getStringFromLogger(
+	logger io.ReadCloser,
+	logChan chan string,
+	podName string,
+) (addedLogs bool) {
+	addedLogs = false
+	logBuffer := new(bytes.Buffer)
+	_, err := io.Copy(logBuffer, logger)
+	if err != nil {
+		panic(err)
+	}
+	logString := logBuffer.String()
+	logs.InfoLogger.Println("Found log", logString, "for pod", podName)
+	logs.InfoLogger.Println("Logs channel:", logChan, "for pod", podName)
+	if logString != "" {
+		logs.InfoLogger.Println("Added log:", logString, "for pod", podName)
+		addedLogs = true
+		logChan <- logString
+	}
+	return
+}
+
 func (podWatcher *PodWatcher) readLogsUntilSucceedOrFail(
 	logger io.ReadCloser,
 ) {
+	logs.InfoLogger.Println(podWatcher.podName)
 	defer logger.Close()
+	addedLogs := false
 	podWatcher.callFuncUntilPodSucceedOrFail(func() {
-		logBuffer := new(bytes.Buffer)
-		_, err := io.Copy(logBuffer, logger)
-		if err != nil {
-			panic(err)
-		}
-		logString := logBuffer.String()
-		logs.InfoLogger.Println(logString)
-		if logString != "" && podWatcher.Logs != nil {
-			podWatcher.Logs <- logString
+		if getStringFromLogger(logger, podWatcher.Logs, podWatcher.podName) {
+			addedLogs = true
 		}
 	})
+	if !addedLogs {
+		addedLogs = getStringFromLogger(logger, podWatcher.Logs, podWatcher.podName)
+		if !addedLogs {
+			logs.InfoLogger.Printf("No logs retrieved for pod %s\n", podWatcher.podName)
+		}
+	}
 }
 
 func (podWatcher *PodWatcher) setMonitorDone() {
@@ -172,9 +195,8 @@ func (podWatcher *PodWatcher) setMonitorDone() {
 
 // MonitorPod collects pod logs until the pod terminates
 func (podWatcher *PodWatcher) MonitorPod() {
-	logs.InfoLogger.Printf("Beginning to monitor pod %s\n", podWatcher.podName)
 	defer podWatcher.setMonitorDone()
-
+	logs.InfoLogger.Printf("Beginning to monitor pod %s\n", podWatcher.podName)
 	podWatcher.waitForPodAdded()
 	logger, err := podWatcher.getLogger()
 	if err != nil {
