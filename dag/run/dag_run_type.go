@@ -161,8 +161,8 @@ func (dagRun *DAGRun) Start() {
 }
 
 // Logs returns the channel holding the watcher's logs
-func (dagRun *DAGRun) Logs() *chan string {
-	return &dagRun.watcher.Logs
+func (dagRun *DAGRun) Logs() chan string {
+	return dagRun.watcher.Logs
 }
 
 // DeletePod deletes the dag run's associated pod

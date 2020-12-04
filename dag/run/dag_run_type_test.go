@@ -117,7 +117,7 @@ func TestRunPod(t *testing.T) {
 
 			// Test for log output if logs enabled
 			if table.withLogs {
-				logMsg := <-*dagRun.Logs()
+				logMsg := <-dagRun.Logs()
 				logMsg = strings.ReplaceAll(logMsg, "\n", "")
 				if logMsg != expectedLogMessage && logMsg != "fake logs" {
 					t.Errorf(
