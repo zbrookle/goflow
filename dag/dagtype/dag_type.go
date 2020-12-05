@@ -3,6 +3,7 @@ package dagtype
 import (
 	"encoding/json"
 	goflowconfig "goflow/config"
+	"goflow/dag/activeruns"
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
 	"goflow/k8s/pod/event/holder"
@@ -25,7 +26,7 @@ type DAG struct {
 	EndDateTime         time.Time
 	DAGRuns             []*dagrun.DAGRun
 	kubeClient          kubernetes.Interface
-	ActiveRuns          int
+	ActiveRuns          *activeruns.ActiveRuns
 	MostRecentExecution time.Time
 }
 
@@ -53,7 +54,13 @@ func CreateDAG(config *dagconfig.DAGConfig, code string, client kubernetes.Inter
 	if config.Labels == nil {
 		config.Labels = make(map[string]string)
 	}
-	dag := DAG{Config: config, Code: code, DAGRuns: make([]*dagrun.DAGRun, 0), kubeClient: client}
+	dag := DAG{
+		Config:     config,
+		Code:       code,
+		DAGRuns:    make([]*dagrun.DAGRun, 0),
+		kubeClient: client,
+		ActiveRuns: activeruns.New(),
+	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
 		dag.EndDateTime = getDateFromString(dag.Config.EndDateTime)
@@ -153,9 +160,15 @@ func (dag *DAG) AddDagRun(
 	withLogs bool,
 	holder *holder.ChannelHolder,
 ) *dagrun.DAGRun {
-	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient, holder)
+	dagRun := dagrun.NewDAGRun(
+		executionDate,
+		dag.Config,
+		withLogs,
+		dag.kubeClient,
+		holder,
+		dag.ActiveRuns,
+	)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
-	dag.ActiveRuns++
 	return dagRun
 }
 
@@ -166,6 +179,7 @@ func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 			dag.MostRecentExecution = dag.StartDateTime
 		}
 		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs, holder)
+		dag.ActiveRuns.Inc()
 		go dagRun.Start()
 	}
 }
@@ -182,7 +196,8 @@ func (dag *DAG) Ready() bool {
 	currentTime := time.Now()
 	scheduleReady := dag.MostRecentExecution.Before(currentTime) ||
 		dag.MostRecentExecution.Equal(currentTime)
-	return (dag.ActiveRuns < dag.Config.MaxActiveRuns) && scheduleReady
+	logs.InfoLogger.Printf("dag %s is ready: %v\n", dag.Config.Name, scheduleReady)
+	return (dag.ActiveRuns.Get() < dag.Config.MaxActiveRuns) && scheduleReady
 }
 
 // Marshal returns the JSON byte slice representation of the DAG
