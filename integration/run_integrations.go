@@ -129,8 +129,8 @@ func getDagID(config dagconfig.DAGConfig) int {
 	return id
 }
 
-func podNamesInPodMap(names []string, podMap map[string]*core.Pod) bool {
-	for _, name := range names {
+func podNamesInPodMap(names map[string]struct{}, podMap map[string]*core.Pod) bool {
+	for name := range names {
 		_, ok := podMap[name]
 		if ok {
 			return true
@@ -142,9 +142,9 @@ func podNamesInPodMap(names []string, podMap map[string]*core.Pod) bool {
 func waitUntilPodsGoneOrTimePassed(
 	seconds time.Duration,
 	client kubernetes.Interface,
-	firstDAGRunPodNames []string,
+	firstDAGRunPodNamesSet map[string]struct{},
 ) {
-	logs.InfoLogger.Println(firstDAGRunPodNames)
+	logs.InfoLogger.Println(firstDAGRunPodNamesSet)
 	endWait := make(chan struct{})
 
 	secondsTime := seconds * time.Second
@@ -162,7 +162,7 @@ func waitUntilPodsGoneOrTimePassed(
 			case _, _ = <-endWait:
 				break
 			default:
-				if podNamesInPodMap(firstDAGRunPodNames, defaultNameSpaceMap) {
+				if !podNamesInPodMap(firstDAGRunPodNamesSet, defaultNameSpaceMap) {
 					logs.InfoLogger.Println("Pods gone")
 					close(endWait)
 					return
@@ -185,11 +185,12 @@ func getDateFromString(dateStr string) time.Time {
 	return time
 }
 
-func getFirstRunDagNames(dags []*dagtype.DAG) []string {
-	names := make([]string, len(dags))
+func getFirstRunDagNames(dags []*dagtype.DAG) map[string]struct{} {
+	names := make(map[string]struct{})
 	for _, dag := range dags {
 		dagFirstRunDateString := getDateFromString(dag.Config.StartDateTime).String()
-		names = append(names, podutils.CleanK8sName(dag.Config.Name+"-"+dagFirstRunDateString))
+		dagName := podutils.CleanK8sName(dag.Config.Name + "-" + dagFirstRunDateString)
+		names[dagName] = struct{}{}
 	}
 	return names
 }
@@ -216,23 +217,28 @@ func startServer() {
 	waitUntilPodsGoneOrTimePassed(30, kubeClient, firstRunDagNames)
 
 	for _, run := range orch.DagRuns() {
-		select {
-		case logText := <-run.Logs():
-			withoutNewlines := strings.TrimSpace(logText)
-			expectedLogMessage := getLogMessage(getDagID(*run.Config))
-			if withoutNewlines != expectedLogMessage {
-				panic(
-					fmt.Sprintf(
-						"Expected log message %s, but got message %s",
-						expectedLogMessage,
-						withoutNewlines,
-					),
-				)
+		logs.InfoLogger.Println(run)
+		_, ok := firstRunDagNames[run.Name]
+		if ok {
+			select {
+			case logText := <-run.Logs():
+				withoutNewlines := strings.TrimSpace(logText)
+				expectedLogMessage := getLogMessage(getDagID(*run.Config))
+				if withoutNewlines != expectedLogMessage {
+					panic(
+						fmt.Sprintf(
+							"Expected log message %s, but got message %s",
+							expectedLogMessage,
+							withoutNewlines,
+						),
+					)
+				}
+			default:
+				logs.InfoLogger.Println(run.Logs())
+				panic(fmt.Sprintf("No logs available for pod %s!!!", run.Name))
 			}
-		default:
-			logs.InfoLogger.Println(run.Logs())
-			panic(fmt.Sprintf("No logs available for pod %s!!!", run.Name))
 		}
+
 	}
 
 	close(loopBreaker)
