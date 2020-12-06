@@ -159,10 +159,7 @@ func getStringFromLogger(
 		panic(err)
 	}
 	logString := logBuffer.String()
-	logs.InfoLogger.Println("Found log", logString, "for pod", podName)
-	logs.InfoLogger.Println("Logs channel:", logChan, "for pod", podName)
 	if logString != "" {
-		logs.InfoLogger.Println("Added log:", logString, "for pod", podName)
 		addedLogs = true
 		logChan <- logString
 	}

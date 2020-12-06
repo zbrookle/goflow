@@ -3,11 +3,13 @@ package dagtype
 import (
 	"context"
 	goflowconfig "goflow/config"
+	"goflow/dag/activeruns"
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
 	k8sclient "goflow/k8s/client"
 	"goflow/k8s/pod/event/holder"
 	podutils "goflow/k8s/pod/utils"
+	"goflow/logs"
 	"goflow/testutils"
 	"path/filepath"
 	"sort"
@@ -92,7 +94,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		EndDateTime:         time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 		DAGRuns:             make([]*dagrun.DAGRun, 0),
 		kubeClient:          nil,
-		ActiveRuns:          0,
+		ActiveRuns:          activeruns.New(),
 		MostRecentExecution: time.Time{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
@@ -185,9 +187,26 @@ func TestAddDagRun(t *testing.T) {
 }
 
 func TestAddDagRunIfReady(t *testing.T) {
-	testDAG := getTestDAGFakeClient()
-	channelHolder := holder.New()
-	testDAG.AddNextDagRunIfReady(channelHolder)
-	testDAG.AddNextDagRunIfReady(channelHolder)
-	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
+	actionCases := []struct {
+		actionFunc   func(dag *DAG)
+		expectedRuns int
+	}{
+		{
+			func(dag *DAG) {},
+			1,
+		},
+		{
+			func(dag *DAG) { dag.ActiveRuns.Dec() },
+			2,
+		},
+	}
+	for _, action := range actionCases {
+		testDAG := getTestDAGFakeClient()
+		channelHolder := holder.New()
+		testDAG.AddNextDagRunIfReady(channelHolder)
+		action.actionFunc(testDAG)
+		testDAG.AddNextDagRunIfReady(channelHolder)
+		logs.InfoLogger.Println(testDAG.ActiveRuns.Get())
+		reportErrorCounts(t, len(testDAG.DAGRuns), action.expectedRuns, testDAG)
+	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"goflow/logs"
 
+	"goflow/dag/activeruns"
 	dagconfig "goflow/dag/config"
 	"goflow/k8s/pod/event/holder"
 	"goflow/k8s/pod/utils"
@@ -33,6 +34,7 @@ type DAGRun struct {
 	kubeClient    kubernetes.Interface
 	watcher       *podwatch.PodWatcher
 	holder        *holder.ChannelHolder
+	dagRunCount   *activeruns.ActiveRuns
 }
 
 // NewDAGRun returns a new instance of DAGRun
@@ -42,6 +44,7 @@ func NewDAGRun(
 	withLogs bool,
 	kubeClient kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
+	activeRuns *activeruns.ActiveRuns,
 ) *DAGRun {
 	podName := utils.CleanK8sName(dagConfig.Name + "-" + executionDate.String())
 	return &DAGRun{
@@ -65,7 +68,8 @@ func NewDAGRun(
 			withLogs,
 			channelHolder,
 		),
-		holder: channelHolder,
+		holder:      channelHolder,
+		dagRunCount: activeRuns,
 	}
 }
 
@@ -155,6 +159,7 @@ func (dagRun *DAGRun) Run() {
 // Start runs the dagrun and waits for the monitoring to finish
 func (dagRun *DAGRun) Start() {
 	defer dagRun.DeletePod()
+	defer dagRun.dagRunCount.Dec()
 	go dagRun.Run()
 	dagRun.watcher.WaitForMonitorDone()
 }

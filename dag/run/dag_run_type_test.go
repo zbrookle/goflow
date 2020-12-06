@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"goflow/dag/activeruns"
 	dagconfig "goflow/dag/config"
 	"goflow/jsonpanic"
 
@@ -49,6 +50,7 @@ func TestCreatePod(t *testing.T) {
 		false,
 		client,
 		holder.New(),
+		activeruns.New(),
 	)
 	dagRun.createPod()
 	foundPod, err := dagRun.kubeClient.CoreV1().Pods(
@@ -93,6 +95,7 @@ func TestRunPod(t *testing.T) {
 				table.withLogs,
 				client,
 				holder.New(),
+				activeruns.New(),
 			)
 			dagRun.Run()
 
@@ -142,6 +145,7 @@ func TestDeletePod(t *testing.T) {
 		false,
 		client,
 		holder.New(),
+		activeruns.New(),
 	)
 	podFrame := dagRun.getPodFrame()
 	podsClient := client.CoreV1().Pods(dagRun.Config.Namespace)
@@ -187,6 +191,7 @@ func TestStart(t *testing.T) {
 				table.withLogs,
 				client,
 				holder.New(),
+				activeruns.New(),
 			)
 			go dagRun.Start()
 

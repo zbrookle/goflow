@@ -2,7 +2,9 @@ package dagtype
 
 import (
 	"encoding/json"
+	"fmt"
 	goflowconfig "goflow/config"
+	"goflow/dag/activeruns"
 	dagconfig "goflow/dag/config"
 	dagrun "goflow/dag/run"
 	"goflow/k8s/pod/event/holder"
@@ -14,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robfig/cron"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -25,7 +28,7 @@ type DAG struct {
 	EndDateTime         time.Time
 	DAGRuns             []*dagrun.DAGRun
 	kubeClient          kubernetes.Interface
-	ActiveRuns          int
+	ActiveRuns          *activeruns.ActiveRuns
 	MostRecentExecution time.Time
 }
 
@@ -53,7 +56,13 @@ func CreateDAG(config *dagconfig.DAGConfig, code string, client kubernetes.Inter
 	if config.Labels == nil {
 		config.Labels = make(map[string]string)
 	}
-	dag := DAG{Config: config, Code: code, DAGRuns: make([]*dagrun.DAGRun, 0), kubeClient: client}
+	dag := DAG{
+		Config:     config,
+		Code:       code,
+		DAGRuns:    make([]*dagrun.DAGRun, 0),
+		kubeClient: client,
+		ActiveRuns: activeruns.New(),
+	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
 		dag.EndDateTime = getDateFromString(dag.Config.EndDateTime)
@@ -75,6 +84,19 @@ func createDAGFromJSONBytes(
 	if err != nil {
 		return DAG{}, err
 	}
+
+	// Validate schedule
+	_, err = cron.Parse(dagConfigStruct.Schedule)
+	if err != nil {
+		panic(
+			fmt.Sprintf(
+				"DAG %s has a scheduling err with schedule \"%s\": ",
+				dagConfigStruct.Name,
+				dagConfigStruct.Schedule,
+			) + err.Error(),
+		)
+	}
+
 	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client)
 	return dag, nil
 }
@@ -153,19 +175,37 @@ func (dag *DAG) AddDagRun(
 	withLogs bool,
 	holder *holder.ChannelHolder,
 ) *dagrun.DAGRun {
-	dagRun := dagrun.NewDAGRun(executionDate, dag.Config, withLogs, dag.kubeClient, holder)
+	dagRun := dagrun.NewDAGRun(
+		executionDate,
+		dag.Config,
+		withLogs,
+		dag.kubeClient,
+		holder,
+		dag.ActiveRuns,
+	)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
-	dag.ActiveRuns++
 	return dagRun
+}
+
+// getNextTime returns the next time according to the cron schedule
+func (dag *DAG) getNextTime(lastTime time.Time) time.Time {
+	schedule, _ := cron.Parse(dag.Config.Schedule)
+	next := schedule.Next(lastTime)
+	logs.InfoLogger.Println("Next:", next)
+	return next
 }
 
 // AddNextDagRunIfReady adds the next dag run if ready for it
 func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 	if dag.Ready() {
-		if dag.MostRecentExecution.IsZero() {
+		switch {
+		case dag.MostRecentExecution.IsZero():
 			dag.MostRecentExecution = dag.StartDateTime
+		default:
+			dag.MostRecentExecution = dag.getNextTime(dag.MostRecentExecution)
 		}
 		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs, holder)
+		dag.ActiveRuns.Inc()
 		go dagRun.Start()
 	}
 }
@@ -180,9 +220,10 @@ func (dag *DAG) TerminateAndDeleteRuns() {
 // Ready returns true if the DAG is ready for another DAG Run to be created
 func (dag *DAG) Ready() bool {
 	currentTime := time.Now()
-	scheduleReady := dag.MostRecentExecution.Before(currentTime) ||
-		dag.MostRecentExecution.Equal(currentTime)
-	return (dag.ActiveRuns < dag.Config.MaxActiveRuns) && scheduleReady
+	scheduleReady := (dag.MostRecentExecution.Before(currentTime) ||
+		dag.MostRecentExecution.Equal(currentTime) && dag.MostRecentExecution.Before(dag.EndDateTime))
+	logs.InfoLogger.Printf("dag %s is ready: %v\n", dag.Config.Name, scheduleReady)
+	return (dag.ActiveRuns.Get() < dag.Config.MaxActiveRuns) && scheduleReady
 }
 
 // Marshal returns the JSON byte slice representation of the DAG

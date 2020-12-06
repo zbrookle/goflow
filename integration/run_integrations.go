@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"goflow/config"
 	dagconfig "goflow/dag/config"
+	"goflow/dag/dagtype"
 	"goflow/logs"
 
 	"goflow/dag/orchestrator"
@@ -128,7 +129,22 @@ func getDagID(config dagconfig.DAGConfig) int {
 	return id
 }
 
-func waitUntilPodsGoneOrTimePassed(seconds time.Duration, client kubernetes.Interface) {
+func podNamesInPodMap(names map[string]struct{}, podMap map[string]*core.Pod) bool {
+	for name := range names {
+		_, ok := podMap[name]
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
+func waitUntilPodsGoneOrTimePassed(
+	seconds time.Duration,
+	client kubernetes.Interface,
+	firstDAGRunPodNamesSet map[string]struct{},
+) {
+	logs.InfoLogger.Println(firstDAGRunPodNamesSet)
 	endWait := make(chan struct{})
 
 	secondsTime := seconds * time.Second
@@ -140,13 +156,13 @@ func waitUntilPodsGoneOrTimePassed(seconds time.Duration, client kubernetes.Inte
 	// Wait for pods deleted
 	go func() {
 		for {
-			podDict := getPods(client)
-			defaultNameSpaceDict := podDict["default"]
+			podMap := getPods(client)
+			defaultNameSpaceMap := podMap["default"]
 			select {
 			case _, _ = <-endWait:
 				break
 			default:
-				if len(defaultNameSpaceDict) == 0 {
+				if !podNamesInPodMap(firstDAGRunPodNamesSet, defaultNameSpaceMap) {
 					logs.InfoLogger.Println("Pods gone")
 					close(endWait)
 					return
@@ -161,6 +177,24 @@ func waitUntilPodsGoneOrTimePassed(seconds time.Duration, client kubernetes.Inte
 	logs.InfoLogger.Println("Wait done")
 }
 
+func getDateFromString(dateStr string) time.Time {
+	time, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		panic(err)
+	}
+	return time
+}
+
+func getFirstRunDagNames(dags []*dagtype.DAG) map[string]struct{} {
+	names := make(map[string]struct{})
+	for _, dag := range dags {
+		dagFirstRunDateString := getDateFromString(dag.Config.StartDateTime).String()
+		dagName := podutils.CleanK8sName(dag.Config.Name + "-" + dagFirstRunDateString)
+		names[dagName] = struct{}{}
+	}
+	return names
+}
+
 func startServer() {
 	kubeClient := k8sclient.CreateKubeClient()
 	defer podutils.CleanUpEnvironment(kubeClient)
@@ -170,34 +204,41 @@ func startServer() {
 
 	time.Sleep(3 * time.Second)
 
-	if len(orch.DAGs()) != expectedDagCount {
-		panic(fmt.Sprintf("Expected %d DAGs but only found %d", expectedDagCount, len(orch.DAGs())))
+	dags := orch.DAGs()
+	if len(dags) != expectedDagCount {
+		panic(fmt.Sprintf("Expected %d DAGs but only found %d", expectedDagCount, len(dags)))
 	}
 
 	if len(orch.DagRuns()) == 0 {
 		panic("Expected runs to be present but none were found")
 	}
 
-	waitUntilPodsGoneOrTimePassed(30, kubeClient)
+	firstRunDagNames := getFirstRunDagNames(dags)
+	waitUntilPodsGoneOrTimePassed(30, kubeClient, firstRunDagNames)
 
 	for _, run := range orch.DagRuns() {
-		select {
-		case logText := <-run.Logs():
-			withoutNewlines := strings.TrimSpace(logText)
-			expectedLogMessage := getLogMessage(getDagID(*run.Config))
-			if withoutNewlines != expectedLogMessage {
-				panic(
-					fmt.Sprintf(
-						"Expected log message %s, but got message %s",
-						expectedLogMessage,
-						withoutNewlines,
-					),
-				)
+		logs.InfoLogger.Println(run)
+		_, ok := firstRunDagNames[run.Name]
+		if ok {
+			select {
+			case logText := <-run.Logs():
+				withoutNewlines := strings.TrimSpace(logText)
+				expectedLogMessage := getLogMessage(getDagID(*run.Config))
+				if withoutNewlines != expectedLogMessage {
+					panic(
+						fmt.Sprintf(
+							"Expected log message %s, but got message %s",
+							expectedLogMessage,
+							withoutNewlines,
+						),
+					)
+				}
+			default:
+				logs.InfoLogger.Println(run.Logs())
+				panic(fmt.Sprintf("No logs available for pod %s!!!", run.Name))
 			}
-		default:
-			logs.InfoLogger.Println(run.Logs())
-			panic(fmt.Sprintf("No logs available for pod %s!!!", run.Name))
 		}
+
 	}
 
 	close(loopBreaker)
