@@ -3,5 +3,5 @@
     "Command": ["echo", "1"],
     "StartDateTime": "2019-01-01",
     "EndDateTime": "2020-01-01",
-    "Scedule": "* * * * *"
+    "Schedule": "* * * * *"
 }
