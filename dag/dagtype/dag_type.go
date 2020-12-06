@@ -2,6 +2,7 @@ package dagtype
 
 import (
 	"encoding/json"
+	"fmt"
 	goflowconfig "goflow/config"
 	"goflow/dag/activeruns"
 	dagconfig "goflow/dag/config"
@@ -87,7 +88,13 @@ func createDAGFromJSONBytes(
 	// Validate schedule
 	_, err = cron.Parse(dagConfigStruct.Schedule)
 	if err != nil {
-		panic(err)
+		panic(
+			fmt.Sprintf(
+				"DAG %s has a scheduling err with schedule \"%s\": ",
+				dagConfigStruct.Name,
+				dagConfigStruct.Schedule,
+			) + err.Error(),
+		)
 	}
 
 	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client)
