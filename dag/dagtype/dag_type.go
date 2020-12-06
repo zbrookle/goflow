@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robfig/cron"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -82,6 +83,13 @@ func createDAGFromJSONBytes(
 	if err != nil {
 		return DAG{}, err
 	}
+
+	// Validate schedule
+	_, err = cron.Parse(dagConfigStruct.Schedule)
+	if err != nil {
+		panic(err)
+	}
+
 	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client)
 	return dag, nil
 }
@@ -172,11 +180,22 @@ func (dag *DAG) AddDagRun(
 	return dagRun
 }
 
+// getNextTime returns the next time according to the cron schedule
+func (dag *DAG) getNextTime(lastTime time.Time) time.Time {
+	schedule, _ := cron.Parse(dag.Config.Schedule)
+	next := schedule.Next(lastTime)
+	logs.InfoLogger.Println("Next:", next)
+	return next
+}
+
 // AddNextDagRunIfReady adds the next dag run if ready for it
 func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 	if dag.Ready() {
-		if dag.MostRecentExecution.IsZero() {
+		switch {
+		case dag.MostRecentExecution.IsZero():
 			dag.MostRecentExecution = dag.StartDateTime
+		default:
+			dag.MostRecentExecution = dag.getNextTime(dag.MostRecentExecution)
 		}
 		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs, holder)
 		dag.ActiveRuns.Inc()
@@ -194,8 +213,8 @@ func (dag *DAG) TerminateAndDeleteRuns() {
 // Ready returns true if the DAG is ready for another DAG Run to be created
 func (dag *DAG) Ready() bool {
 	currentTime := time.Now()
-	scheduleReady := dag.MostRecentExecution.Before(currentTime) ||
-		dag.MostRecentExecution.Equal(currentTime)
+	scheduleReady := (dag.MostRecentExecution.Before(currentTime) ||
+		dag.MostRecentExecution.Equal(currentTime) && dag.MostRecentExecution.Before(dag.EndDateTime))
 	logs.InfoLogger.Printf("dag %s is ready: %v\n", dag.Config.Name, scheduleReady)
 	return (dag.ActiveRuns.Get() < dag.Config.MaxActiveRuns) && scheduleReady
 }
