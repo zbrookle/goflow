@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron"
@@ -30,6 +31,7 @@ type DAG struct {
 	kubeClient          kubernetes.Interface
 	ActiveRuns          *activeruns.ActiveRuns
 	MostRecentExecution time.Time
+	timeLock            *sync.Mutex
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -62,6 +64,7 @@ func CreateDAG(config *dagconfig.DAGConfig, code string, client kubernetes.Inter
 		DAGRuns:    make([]*dagrun.DAGRun, 0),
 		kubeClient: client,
 		ActiveRuns: activeruns.New(),
+		timeLock:   &sync.Mutex{},
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -198,6 +201,7 @@ func (dag *DAG) getNextTime(lastTime time.Time) time.Time {
 // AddNextDagRunIfReady adds the next dag run if ready for it
 func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 	if dag.Ready() {
+		dag.timeLock.Lock()
 		switch {
 		case dag.MostRecentExecution.IsZero():
 			dag.MostRecentExecution = dag.StartDateTime
@@ -205,6 +209,7 @@ func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 			dag.MostRecentExecution = dag.getNextTime(dag.MostRecentExecution)
 		}
 		dagRun := dag.AddDagRun(dag.MostRecentExecution, dag.Config.WithLogs, holder)
+		dag.timeLock.Unlock()
 		dag.ActiveRuns.Inc()
 		go dagRun.Start()
 	}

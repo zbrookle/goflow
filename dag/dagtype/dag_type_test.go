@@ -13,6 +13,7 @@ import (
 	"goflow/testutils"
 	"path/filepath"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -96,6 +97,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		kubeClient:          nil,
 		ActiveRuns:          activeruns.New(),
 		MostRecentExecution: time.Time{},
+		timeLock:            &sync.Mutex{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
 	dag, err := createDAGFromJSONBytes(
