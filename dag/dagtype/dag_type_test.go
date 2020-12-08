@@ -104,6 +104,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		[]byte(formattedJSONString),
 		fake.NewSimpleClientset(),
 		goflowconfig.GoFlowConfig{},
+		make(ScheduleCache),
 	)
 	if err != nil {
 		panic(err)
@@ -154,7 +155,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client)
+	}, "", client, make(ScheduleCache))
 	return &dag
 }
 

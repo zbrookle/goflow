@@ -25,6 +25,7 @@ type Orchestrator struct {
 	kubeClient    kubernetes.Interface
 	config        *config.GoFlowConfig
 	channelHolder *holder.ChannelHolder
+	schedules     dagtype.ScheduleCache
 }
 
 func newOrchestratorFromClientAndConfig(
@@ -37,6 +38,7 @@ func newOrchestratorFromClientAndConfig(
 		client,
 		config,
 		holder.New(),
+		make(dagtype.ScheduleCache),
 	}
 }
 
@@ -126,6 +128,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 		orchestrator.config.DAGPath,
 		orchestrator.kubeClient,
 		*orchestrator.config,
+		orchestrator.schedules,
 	)
 	for _, dag := range dagSlice {
 		dagPresent := orchestrator.isDagPresent(*dag)

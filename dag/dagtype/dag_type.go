@@ -21,6 +21,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// ScheduleCache is a map from string to cron schedule
+type ScheduleCache map[string]cron.Schedule
+
 // DAG is directed acyclic graph for hold job information
 type DAG struct {
 	Config              *dagconfig.DAGConfig
@@ -32,6 +35,7 @@ type DAG struct {
 	ActiveRuns          *activeruns.ActiveRuns
 	MostRecentExecution time.Time
 	timeLock            *sync.Mutex
+	schedules           ScheduleCache
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -51,7 +55,12 @@ func getDateFromString(dateStr string) time.Time {
 }
 
 // CreateDAG returns a dag using the configuration passed and stores the code string
-func CreateDAG(config *dagconfig.DAGConfig, code string, client kubernetes.Interface) DAG {
+func CreateDAG(
+	config *dagconfig.DAGConfig,
+	code string,
+	client kubernetes.Interface,
+	schedules ScheduleCache,
+) DAG {
 	if config.Annotations == nil {
 		config.Annotations = make(map[string]string)
 	}
@@ -65,6 +74,7 @@ func CreateDAG(config *dagconfig.DAGConfig, code string, client kubernetes.Inter
 		kubeClient: client,
 		ActiveRuns: activeruns.New(),
 		timeLock:   &sync.Mutex{},
+		schedules:  schedules,
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -80,6 +90,7 @@ func createDAGFromJSONBytes(
 	dagBytes []byte,
 	client kubernetes.Interface,
 	goflowConfig goflowconfig.GoFlowConfig,
+	scheduleCache ScheduleCache,
 ) (DAG, error) {
 	dagConfigStruct := dagconfig.DAGConfig{}
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
@@ -100,7 +111,7 @@ func createDAGFromJSONBytes(
 		)
 	}
 
-	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client)
+	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client, scheduleCache)
 	return dag, nil
 }
 
@@ -109,12 +120,13 @@ func getDAGFromJSON(
 	dagFilePath string,
 	client kubernetes.Interface,
 	goflowConfig goflowconfig.GoFlowConfig,
+	scheduleCache ScheduleCache,
 ) (DAG, error) {
 	dagBytes, err := readDAGFile(dagFilePath)
 	if err != nil {
 		return DAG{}, err
 	}
-	dagJSON, err := createDAGFromJSONBytes(dagBytes, client, goflowConfig)
+	dagJSON, err := createDAGFromJSONBytes(dagBytes, client, goflowConfig, scheduleCache)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
 		return DAG{}, err
@@ -155,12 +167,13 @@ func GetDAGSFromFolder(
 	folder string,
 	client kubernetes.Interface,
 	goflowConfig goflowconfig.GoFlowConfig,
+	schedules ScheduleCache,
 ) []*DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file, client, goflowConfig)
+			dag, err := getDAGFromJSON(file, client, goflowConfig, schedules)
 			if os.ErrNotExist == err {
 				logs.ErrorLogger.Printf("File %s no longer exists", file)
 			}
@@ -190,9 +203,20 @@ func (dag *DAG) AddDagRun(
 	return dagRun
 }
 
+// getSchedule parses and caches or returns the stored schedule
+func (dag *DAG) getSchedule() cron.Schedule {
+	schedule, ok := dag.schedules[dag.Config.Schedule]
+	if ok {
+		return schedule
+	}
+	schedule, _ = cron.Parse(dag.Config.Schedule)
+	dag.schedules[dag.Config.Schedule] = schedule
+	return schedule
+}
+
 // getNextTime returns the next time according to the cron schedule
 func (dag *DAG) getNextTime(lastTime time.Time) time.Time {
-	schedule, _ := cron.Parse(dag.Config.Schedule)
+	schedule := dag.getSchedule()
 	next := schedule.Next(lastTime)
 	logs.InfoLogger.Println("Next:", next)
 	return next
