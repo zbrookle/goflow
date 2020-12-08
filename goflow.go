@@ -17,9 +17,8 @@ func main() {
 
 	orch := *orchestrator.NewOrchestrator(*configPath)
 	loopBreaker := make(chan struct{}, 1)
+	defer close(loopBreaker)
 	orch.Start(1*time.Second, loopBreaker)
 
-	for {
-
-	}
+	<-loopBreaker
 }
