@@ -199,8 +199,7 @@ func startServer() {
 	kubeClient := k8sclient.CreateKubeClient()
 	defer podutils.CleanUpEnvironment(kubeClient)
 	orch := *orchestrator.NewOrchestrator(configPath)
-	loopBreaker := make(chan struct{}, 1)
-	go orch.Start(1*time.Second, loopBreaker)
+	go orch.Start(1 * time.Second)
 
 	time.Sleep(3 * time.Second)
 
@@ -241,7 +240,7 @@ func startServer() {
 
 	}
 
-	close(loopBreaker)
+	orch.Stop()
 }
 
 func init() {
