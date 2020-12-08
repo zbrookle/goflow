@@ -20,12 +20,13 @@ import (
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
-	dagMapLock    *sync.RWMutex
-	dagMap        map[string]*dagtype.DAG
-	kubeClient    kubernetes.Interface
-	config        *config.GoFlowConfig
-	channelHolder *holder.ChannelHolder
-	schedules     dagtype.ScheduleCache
+	dagMapLock     *sync.RWMutex
+	dagMap         map[string]*dagtype.DAG
+	kubeClient     kubernetes.Interface
+	config         *config.GoFlowConfig
+	channelHolder  *holder.ChannelHolder
+	schedules      dagtype.ScheduleCache
+	closingChannel chan struct{}
 }
 
 func newOrchestratorFromClientAndConfig(
@@ -39,6 +40,7 @@ func newOrchestratorFromClientAndConfig(
 		config,
 		holder.New(),
 		make(dagtype.ScheduleCache),
+		make(chan struct{}),
 	}
 }
 
@@ -176,14 +178,29 @@ func (orchestrator *Orchestrator) getTaskInformer() inform.TaskInformer {
 }
 
 // Start begins the orchestrator event loop
-func (orchestrator *Orchestrator) Start(cycleDuration time.Duration, closingChannel chan struct{}) {
+func (orchestrator *Orchestrator) Start(cycleDuration time.Duration) {
 	taskInformer := orchestrator.getTaskInformer()
 	taskInformer.Start()
 	go cycleUntilChannelClose(
 		orchestrator.CollectDAGs,
-		closingChannel,
+		orchestrator.closingChannel,
 		cycleDuration,
 		"Collect DAGs",
 	)
-	go cycleUntilChannelClose(orchestrator.RunDags, closingChannel, cycleDuration, "Run DAGs")
+	go cycleUntilChannelClose(
+		orchestrator.RunDags,
+		orchestrator.closingChannel,
+		cycleDuration,
+		"Run DAGs",
+	)
+}
+
+// Wait blocks the current thread until the orchestrator has terminated
+func (orchestrator *Orchestrator) Wait() {
+	<-orchestrator.closingChannel
+}
+
+// Stop terminates the orchestrators cycles
+func (orchestrator *Orchestrator) Stop() {
+	close(orchestrator.closingChannel)
 }
