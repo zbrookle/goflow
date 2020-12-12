@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"goflow/dag/orchestrator"
-	"goflow/k8s/client"
-	"goflow/k8s/pod/utils"
-	"goflow/paths"
-	"goflow/termination"
+	"goflow/internal/dag/orchestrator"
+	"goflow/internal/k8s/client"
+	"goflow/internal/k8s/pod/utils"
+	"goflow/internal/paths"
+	"goflow/internal/termination"
 	"time"
 )
 
