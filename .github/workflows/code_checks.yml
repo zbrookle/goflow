@@ -60,4 +60,4 @@ jobs:
         driver: docker
 
     - name: Integration test
-      run: go run integration/run_integrations.go
+      run: go run internal/integration/run_integrations.go
