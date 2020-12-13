@@ -7,6 +7,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	sqlite "github.com/mattn/go-sqlite3"
 )
@@ -30,6 +31,21 @@ func NewSQLiteClient(dsn string) *SQLClient {
 	}
 	return &SQLClient{
 		database: db,
+	}
+}
+
+// RowResult is implemented to retrieve the result for a rows object
+type RowResult interface {
+	ScanAppend() error
+}
+
+func putNRowValues(rows *sql.Rows, result RowResult, n int) {
+	defer rows.Close()
+	for rows.Next() {
+		err := result.ScanAppend()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -62,4 +78,15 @@ func (client *SQLClient) SetupDatabase() {
 		name: "dags",
 		cols: make([]column, 0),
 	})
+}
+
+// Insert inserts rows into a given table in the database
+func (client *SQLClient) Insert(table string, columns, values []string) {
+	commaJoin := func(s []string) string { return strings.Join(s, ",") }
+	err := client.Exec(
+		fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", table, commaJoin(columns), commaJoin(values)),
+	)
+	if err != nil {
+		panic(err)
+	}
 }

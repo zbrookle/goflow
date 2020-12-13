@@ -2,6 +2,15 @@ package database
 
 import "fmt"
 
+// Row is a row in a database, it must be defined differently depending on the table
+// Values should returns a struct containing the values
+// String should contain a string representation of the row, taking into account the schema, it should be of the form
+// VALUES(val1, val2, val3,...)
+type Row interface {
+	Values()
+	String() string
+}
+
 type column struct {
 	name  string
 	dtype string
