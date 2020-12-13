@@ -13,8 +13,14 @@ var databaseFile = path.Join(testutils.GetTestFolder(), "test.sqlite3")
 var client *SQLClient
 
 const testTable = "test"
+const expectedID = 2
+const expectedName = "yes"
+const idName = "id"
+const nameName = "name"
 
-var createTableQuery = fmt.Sprintf("create table %s(id integer, name string)", testTable)
+var createTableQuery = fmt.Sprintf("CREATE TABLE %s(%s INTEGER, %s STRING)", testTable, idName, nameName)
+
+var insertionQuery = fmt.Sprintf("INSERT INTO %s(%s, %s) VALUES(%d, '%s')", testTable, idName, nameName, expectedID, expectedName)
 
 func removeDBFile() {
 	if _, err := os.Stat(databaseFile); err == nil {
@@ -86,26 +92,23 @@ type resultType struct {
 
 type testRowResult struct {
 	rows         *sql.Rows
-	returnedRows *[]resultType
+	returnedRows []resultType
 }
 
-func (result testRowResult) ScanAppend() error {
+func (result *testRowResult) ScanAppend() error {
+	fmt.Println("help!!!!")
 	row := resultType{}
 	err := result.rows.Scan(&row.id, &row.name)
-	*result.returnedRows = append(*result.returnedRows, row)
+	result.returnedRows = append(result.returnedRows, row)
 	return err
 }
 
-func (result testRowResult) Rows() *sql.Rows {
+func (result *testRowResult) Rows() *sql.Rows {
 	return result.rows
 }
 
-func (result testRowResult) Capacity() int {
-	return cap(*result.returnedRows)
-}
-
-func (result testRowResult) SetRows(rows *sql.Rows) {
-	result.rows = rows
+func (result *testRowResult) Capacity() int {
+	return cap(result.returnedRows)
 }
 
 func TestInsertIntoTable(t *testing.T) {
@@ -114,16 +117,14 @@ func TestInsertIntoTable(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	expectedID := 2
-	expectedName := "yes"
 	client.Insert(testTable, []string{"id", "name"}, []string{fmt.Sprint(expectedID), "'yes'"})
 	rows, err := client.database.Query(fmt.Sprintf("SELECT * FROM %s", testTable))
 	if err != nil {
 		panic(err)
 	}
-	returnedRows := make([]resultType, 0, 1)
 
 	// Retrieve rows
+	returnedRows := make([]resultType, 0, 1)
 	for rows.Next() {
 		result := resultType{}
 		rows.Scan(&result.id, &result.name)
@@ -138,16 +139,31 @@ func TestInsertIntoTable(t *testing.T) {
 	}
 }
 
-// func TestQueryRowsIntoResult(t *testing.T) {
-// 	returnedRows := make([]resultType, 0)
-// result := testRowResult{rows, &returnedRows}
-// PutNRowValues(result)
-// t.Log(result)
-// firstRow := returnedRows[0]
-// if firstRow.name != expectedName {
-// 	t.Errorf("Expected name %s, got %s", expectedName, firstRow.name)
-// }
-// if firstRow.id != expectedID {
-// 	t.Errorf("Expected id %d, got %d", expectedID, firstRow.id)
-// }
-// }
+func TestQueryRowsIntoResult(t *testing.T) {
+	defer purgeDB()
+
+	// Set up table
+	_, err := client.database.Exec(createTableQuery)
+	if err != nil {
+		panic(err)
+	}
+	_, err = client.database.Exec(insertionQuery)
+	if err != nil {
+		panic(err)
+	}
+
+	rows, err := client.Query(fmt.Sprintf("SELECT * FROM %s", testTable))
+	if err != nil {
+		panic(err)
+	}
+	returnedRows := make([]resultType, 0, 1)
+	result := testRowResult{rows: rows, returnedRows: returnedRows}
+	PutNRowValues(&result)
+	firstRow := result.returnedRows[0]
+	if firstRow.name != expectedName {
+		t.Errorf("Expected name %s, got %s", expectedName, firstRow.name)
+	}
+	if firstRow.id != expectedID {
+		t.Errorf("Expected id %d, got %d", expectedID, firstRow.id)
+	}
+}
