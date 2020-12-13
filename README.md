@@ -41,3 +41,31 @@ metrics from these CronJobs.
 
 GoFlow also features a comprehensive UI, that allows users to easily create new jobs, view performance of running
 jobs, and track the health of the server itself
+
+### Job Information
+
+GoFlow collects all DAG and DAG run information in a database for convenience and backup purposes. This information may
+be useful for tracking tasks externally.
+
+#### DAGs
+
+Table includes:
+
+- dag_id
+- name
+- namespace
+- file_path
+- file_format
+- created_date
+- last_updated_date
+
+#### DAGRuns
+
+Table includes:
+
+- dag_id
+- status
+- execution_date
+- start_date
+- end_date
+- last_updated_date

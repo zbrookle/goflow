@@ -1,9 +1,5 @@
 package database
 
-// What to store in database?
-// Table for dags
-// Table for dagruns
-
 import (
 	"database/sql"
 	"fmt"
