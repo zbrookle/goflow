@@ -90,25 +90,28 @@ type resultType struct {
 	name string
 }
 
-type testRowResult struct {
+type testQueryResult struct {
 	rows         *sql.Rows
 	returnedRows []resultType
 }
 
-func (result *testRowResult) ScanAppend() error {
-	fmt.Println("help!!!!")
+func (result *testQueryResult) ScanAppend() error {
 	row := resultType{}
 	err := result.rows.Scan(&row.id, &row.name)
 	result.returnedRows = append(result.returnedRows, row)
 	return err
 }
 
-func (result *testRowResult) Rows() *sql.Rows {
+func (result *testQueryResult) Rows() *sql.Rows {
 	return result.rows
 }
 
-func (result *testRowResult) Capacity() int {
+func (result *testQueryResult) Capacity() int {
 	return cap(result.returnedRows)
+}
+
+func (result *testQueryResult) SetRows(rows *sql.Rows) {
+	result.rows = rows
 }
 
 func TestInsertIntoTable(t *testing.T) {
@@ -152,13 +155,9 @@ func TestQueryRowsIntoResult(t *testing.T) {
 		panic(err)
 	}
 
-	rows, err := client.Query(fmt.Sprintf("SELECT * FROM %s", testTable))
-	if err != nil {
-		panic(err)
-	}
 	returnedRows := make([]resultType, 0, 1)
-	result := testRowResult{rows: rows, returnedRows: returnedRows}
-	PutNRowValues(&result)
+	result := testQueryResult{returnedRows: returnedRows}
+	client.QueryIntoResults(&result, fmt.Sprintf("SELECT * FROM %s", testTable))
 	firstRow := result.returnedRows[0]
 	if firstRow.name != expectedName {
 		t.Errorf("Expected name %s, got %s", expectedName, firstRow.name)
