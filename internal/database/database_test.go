@@ -75,7 +75,7 @@ func TestCreateTable(t *testing.T) {
 	defer purgeDB()
 	client.CreateTable(Table{
 		Name: "test",
-		Cols: []Column{{"column1", "string"}, {"column2", "int"}},
+		Cols: []Column{{"column1", String{}}, {"column2", Int{}}},
 	})
 }
 
@@ -100,6 +100,10 @@ func (result testRowResult) Rows() *sql.Rows {
 	return result.rows
 }
 
+func (result testRowResult) Capacity() int {
+	return cap(*result.returnedRows)
+}
+
 func TestInsertIntoTable(t *testing.T) {
 	defer purgeDB()
 	_, err := client.database.Exec(createTableQuery)
@@ -115,7 +119,7 @@ func TestInsertIntoTable(t *testing.T) {
 	}
 	returnedRows := make([]resultType, 0)
 	result := testRowResult{rows, &returnedRows}
-	PutNRowValues(result, 0)
+	PutNRowValues(result)
 	t.Log(result)
 	firstRow := returnedRows[0]
 	if firstRow.name != expectedName {

@@ -4,12 +4,12 @@ import "fmt"
 
 // Column is a column in the database structure
 type Column struct {
-	name  string
-	dtype string
+	Name  string
+	DType SQLType
 }
 
 func (col Column) String() string {
-	return fmt.Sprintf("%s %s", col.name, col.dtype)
+	return fmt.Sprintf("%s %s", col.Name, col.DType.typeName())
 }
 
 // Table can be used in various inputs to create tables
@@ -18,8 +18,8 @@ type Table struct {
 	Cols []Column
 }
 
-// CreateQuery returns the SQL query that can create the table represented by table
-func (table *Table) CreateQuery() string {
+// createQuery returns the SQL query that can create the table represented by table
+func (table *Table) createQuery() string {
 	query := fmt.Sprintf("CREATE TABLE %s(", table.Name)
 	colCount := len(table.Cols)
 	for i, col := range table.Cols {
