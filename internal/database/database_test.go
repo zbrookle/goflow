@@ -86,14 +86,18 @@ type resultType struct {
 
 type testRowResult struct {
 	rows         *sql.Rows
-	returnedRows []resultType
+	returnedRows *[]resultType
 }
 
 func (result testRowResult) ScanAppend() error {
 	row := resultType{}
 	err := result.rows.Scan(&row.id, &row.name)
-	result.returnedRows = append(result.returnedRows, row)
+	*result.returnedRows = append(*result.returnedRows, row)
 	return err
+}
+
+func (result testRowResult) Rows() *sql.Rows {
+	return result.rows
 }
 
 func TestInsertIntoTable(t *testing.T) {
@@ -110,8 +114,9 @@ func TestInsertIntoTable(t *testing.T) {
 		panic(err)
 	}
 	returnedRows := make([]resultType, 0)
-	result := testRowResult{rows, returnedRows}
-	putNRowValues(rows, result, 0)
+	result := testRowResult{rows, &returnedRows}
+	PutNRowValues(result, 0)
+	t.Log(result)
 	firstRow := returnedRows[0]
 	if firstRow.name != expectedName {
 		t.Errorf("Expected name %s, got %s", expectedName, firstRow.name)

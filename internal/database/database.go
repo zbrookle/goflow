@@ -37,11 +37,13 @@ func NewSQLiteClient(dsn string) *SQLClient {
 // RowResult is implemented to retrieve the result for a rows object
 type RowResult interface {
 	ScanAppend() error
+	Rows() *sql.Rows
 }
 
-func putNRowValues(rows *sql.Rows, result RowResult, n int) {
-	defer rows.Close()
-	for rows.Next() {
+// PutNRowValues returns
+func PutNRowValues(result RowResult, n int) {
+	defer result.Rows().Close()
+	for result.Rows().Next() {
 		err := result.ScanAppend()
 		if err != nil {
 			panic(err)
