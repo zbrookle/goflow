@@ -51,9 +51,10 @@ be useful for tracking tasks externally.
 
 Table includes:
 
-- dag_id
+- id
 - name
 - namespace
+- version
 - file_path
 - file_format
 - created_date
