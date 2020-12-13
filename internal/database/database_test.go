@@ -1,7 +1,7 @@
 package database
 
 import (
-	"goflow/internal/logs"
+	"fmt"
 	"goflow/internal/testutils"
 	"os"
 	"path"
@@ -32,11 +32,22 @@ func purgeDB() {
 	if err != nil {
 		panic(err)
 	}
-	columns, err := rows.Columns()
-	if err != nil {
-		panic(err)
+	client.database.Begin()
+	tables := make([]string, 0)
+	for rows.Next() {
+		var name string
+		err := rows.Scan(&name)
+		if err != nil {
+			panic(err)
+		}
+		tables = append(tables, name)
 	}
-	logs.InfoLogger.Println(columns)
+	for _, table := range tables {
+		_, err = client.database.Exec(fmt.Sprintf("DROP TABLE %s", table))
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func TestNewDatabaseConnection(t *testing.T) {
@@ -48,18 +59,15 @@ func TestNewDatabaseConnection(t *testing.T) {
 
 func TestCreateTable(t *testing.T) {
 	defer purgeDB()
-	err := client.createTable(table{
-		name: "dags",
+	client.createTable(table{
+		name: "test",
 		cols: []column{{"column1", "string"}, {"column2", "int"}},
 	})
-	if err != nil {
-		t.Error(err)
-	}
 }
 
 func TestRunDatabaseQuery(t *testing.T) {
 	defer purgeDB()
-	err := client.Exec(`create table dags(id integer, name string)`)
+	err := client.Exec(`create table test(id integer, name string)`)
 	if err != nil {
 		t.Error(err)
 	}

@@ -8,7 +8,7 @@ type column struct {
 }
 
 func (col column) String() string {
-	return fmt.Sprintf("%s, %s", col.name, col.dtype)
+	return fmt.Sprintf("%s %s", col.name, col.dtype)
 }
 
 type table struct {
@@ -18,8 +18,13 @@ type table struct {
 
 func (table *table) createQuery() string {
 	query := fmt.Sprintf("CREATE TABLE %s(", table.name)
-	for _, col := range table.cols {
+	colCount := len(table.cols)
+	for i, col := range table.cols {
 		query += col.String()
+		if i < colCount-1 {
+			query += ", "
+		}
 	}
+	query += ")"
 	return query
 }
