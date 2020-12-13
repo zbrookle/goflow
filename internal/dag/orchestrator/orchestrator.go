@@ -3,6 +3,7 @@ package orchestrator
 import (
 	dagtype "goflow/internal/dag/dagtype"
 	dagrun "goflow/internal/dag/run"
+	"goflow/internal/database"
 	"goflow/internal/jsonpanic"
 	"goflow/internal/logs"
 	"sync"
@@ -27,6 +28,7 @@ type Orchestrator struct {
 	channelHolder  *holder.ChannelHolder
 	schedules      dagtype.ScheduleCache
 	closingChannel chan struct{}
+	sqlClient      *database.SQLClient
 }
 
 func newOrchestratorFromClientAndConfig(
@@ -41,6 +43,7 @@ func newOrchestratorFromClientAndConfig(
 		holder.New(),
 		make(dagtype.ScheduleCache),
 		make(chan struct{}),
+		database.NewSQLiteClient(config.DatabaseDNS),
 	}
 }
 
