@@ -36,6 +36,7 @@ type RowResult interface {
 	ScanAppend() error
 	Rows() *sql.Rows
 	Capacity() int
+	SetRows(*sql.Rows)
 }
 
 // PutNRowValues puts the first RowResult.Length rows into row result
@@ -52,6 +53,16 @@ func PutNRowValues(result RowResult) {
 		}
 		i++
 	}
+}
+
+// QueryIntoRowValues puts the results from query into usable values
+func (client *SQLClient) QueryIntoRowValues(result RowResult, queryString string) {
+	rows, err := client.Query(queryString)
+	if err != nil {
+		panic(err)
+	}
+	result.SetRows(rows)
+	PutNRowValues(result)
 }
 
 // Query runs a database query and returns the rows

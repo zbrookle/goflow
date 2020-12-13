@@ -104,6 +104,10 @@ func (result testRowResult) Capacity() int {
 	return cap(*result.returnedRows)
 }
 
+func (result testRowResult) SetRows(rows *sql.Rows) {
+	result.rows = rows
+}
+
 func TestInsertIntoTable(t *testing.T) {
 	defer purgeDB()
 	_, err := client.database.Exec(createTableQuery)
@@ -117,10 +121,14 @@ func TestInsertIntoTable(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	returnedRows := make([]resultType, 0)
-	result := testRowResult{rows, &returnedRows}
-	PutNRowValues(result)
-	t.Log(result)
+	returnedRows := make([]resultType, 0, 1)
+
+	// Retrieve rows
+	for rows.Next() {
+		result := resultType{}
+		rows.Scan(&result.id, &result.name)
+		returnedRows = append(returnedRows, result)
+	}
 	firstRow := returnedRows[0]
 	if firstRow.name != expectedName {
 		t.Errorf("Expected name %s, got %s", expectedName, firstRow.name)
@@ -129,3 +137,17 @@ func TestInsertIntoTable(t *testing.T) {
 		t.Errorf("Expected id %d, got %d", expectedID, firstRow.id)
 	}
 }
+
+// func TestQueryRowsIntoResult(t *testing.T) {
+// 	returnedRows := make([]resultType, 0)
+// result := testRowResult{rows, &returnedRows}
+// PutNRowValues(result)
+// t.Log(result)
+// firstRow := returnedRows[0]
+// if firstRow.name != expectedName {
+// 	t.Errorf("Expected name %s, got %s", expectedName, firstRow.name)
+// }
+// if firstRow.id != expectedID {
+// 	t.Errorf("Expected id %d, got %d", expectedID, firstRow.id)
+// }
+// }
