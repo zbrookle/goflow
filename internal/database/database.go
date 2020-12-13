@@ -58,24 +58,13 @@ func (client *SQLClient) Exec(queryString string) error {
 	return err
 }
 
-func (client *SQLClient) createTable(t table) {
-	query := t.createQuery()
+// CreateTable creates a table in the database for the given SQLClient
+func (client *SQLClient) CreateTable(t Table) {
+	query := t.CreateQuery()
 	err := client.Exec(query)
 	if err != nil {
 		panic(fmt.Sprintf("error '%s' occurred for query '%s'", err.Error(), query))
 	}
-}
-
-// SetupDatabase creates the database and necessary tables for the application
-func (client *SQLClient) SetupDatabase() {
-	err := client.database.Ping()
-	if err != nil {
-		panic(err)
-	}
-	client.createTable(table{
-		name: "dags",
-		cols: make([]column, 0),
-	})
 }
 
 // Insert inserts rows into a given table in the database

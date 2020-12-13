@@ -73,9 +73,9 @@ func TestRunDatabaseQuery(t *testing.T) {
 
 func TestCreateTable(t *testing.T) {
 	defer purgeDB()
-	client.createTable(table{
-		name: "test",
-		cols: []column{{"column1", "string"}, {"column2", "int"}},
+	client.CreateTable(Table{
+		Name: "test",
+		Cols: []Column{{"column1", "string"}, {"column2", "int"}},
 	})
 }
 
