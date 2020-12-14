@@ -165,6 +165,21 @@ func (result *testQueryResult) SetRows(rows *sql.Rows) {
 	result.rows = rows
 }
 
+func getRowsFromTestTable() []resultType {
+	rows, err := client.database.Query(fmt.Sprintf("SELECT * FROM %s", testTable))
+	if err != nil {
+		panic(err)
+	}
+	// Retrieve rows
+	returnedRows := make([]resultType, 0, 1)
+	for rows.Next() {
+		result := resultType{}
+		rows.Scan(&result.id, &result.name)
+		returnedRows = append(returnedRows, result)
+	}
+	return returnedRows
+}
+
 func TestInsertIntoTable(t *testing.T) {
 	defer PurgeDB(client)
 	_, err := client.database.Exec(createTableQuery)
@@ -176,18 +191,8 @@ func TestInsertIntoTable(t *testing.T) {
 		[]Column{{idName, Int{}}, {nameName, String{}}},
 		[]string{fmt.Sprint(expectedID), expectedName},
 	)
-	rows, err := client.database.Query(fmt.Sprintf("SELECT * FROM %s", testTable))
-	if err != nil {
-		panic(err)
-	}
 
-	// Retrieve rows
-	returnedRows := make([]resultType, 0, 1)
-	for rows.Next() {
-		result := resultType{}
-		rows.Scan(&result.id, &result.name)
-		returnedRows = append(returnedRows, result)
-	}
+	returnedRows := getRowsFromTestTable()
 	firstRow := returnedRows[0]
 	if firstRow.name != expectedName {
 		t.Errorf("Expected name %s, got %s", expectedName, firstRow.name)
@@ -197,9 +202,7 @@ func TestInsertIntoTable(t *testing.T) {
 	}
 }
 
-func TestQueryRowsIntoResult(t *testing.T) {
-	// defer PurgeDB(client)
-
+func setUpTableAndInsertOneRow() {
 	// Set up table
 	_, err := client.database.Exec(createTableQuery)
 	if err != nil {
@@ -209,6 +212,12 @@ func TestQueryRowsIntoResult(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func TestQueryRowsIntoResult(t *testing.T) {
+	defer PurgeDB(client)
+
+	setUpTableAndInsertOneRow()
 
 	returnedRows := make([]resultType, 0, 1)
 	result := testQueryResult{returnedRows: returnedRows}
@@ -219,5 +228,23 @@ func TestQueryRowsIntoResult(t *testing.T) {
 	}
 	if firstRow.id != expectedID {
 		t.Errorf("Expected id %d, got %d", expectedID, firstRow.id)
+	}
+}
+
+func TestUpdateTable(t *testing.T) {
+	defer PurgeDB(client)
+
+	setUpTableAndInsertOneRow()
+
+	const newName = "no"
+	client.Update(
+		testTable,
+		[]ColumnWithValue{{Column{nameName, String{}}, newName}},
+		[]ColumnWithValue{{Column{idName, Int{}}, fmt.Sprint(expectedID)}},
+	)
+	rows := getRowsFromTestTable()
+	fmt.Println(rows[0])
+	if rows[0].name != newName {
+		t.Errorf("Column %s was not updated from %s to %s", nameName, expectedName, newName)
 	}
 }
