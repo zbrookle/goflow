@@ -44,21 +44,19 @@ func PurgeDB(client *SQLClient) {
 
 // QueryResult is implemented to retrieve the result for a rows object
 type QueryResult interface {
-	ScanAppend() error
-	Rows() *sql.Rows
+	ScanAppend(*sql.Rows) error
 	Capacity() int
-	SetRows(*sql.Rows)
 }
 
 // PutNRowValues puts the first RowResult.Length rows into row result
-func PutNRowValues(result QueryResult) {
-	defer result.Rows().Close()
+func PutNRowValues(result QueryResult, rows *sql.Rows) {
+	defer rows.Close()
 	i := 0
-	for result.Rows().Next() {
+	for rows.Next() {
 		if i == result.Capacity() && result.Capacity() != unlimitedCapacity {
 			break
 		}
-		err := result.ScanAppend()
+		err := result.ScanAppend(rows)
 		if err != nil {
 			panic(err)
 		}
@@ -77,8 +75,7 @@ func (client *SQLClient) QueryIntoResults(result QueryResult, queryString string
 	if err != nil {
 		panic(err)
 	}
-	result.SetRows(rows)
-	PutNRowValues(result)
+	PutNRowValues(result, rows)
 }
 
 // Exec runs a database query without returning rows

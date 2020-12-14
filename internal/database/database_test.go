@@ -146,9 +146,9 @@ type testQueryResult struct {
 	returnedRows []resultType
 }
 
-func (result *testQueryResult) ScanAppend() error {
+func (result *testQueryResult) ScanAppend(rows *sql.Rows) error {
 	row := resultType{}
-	err := result.rows.Scan(&row.id, &row.name)
+	err := rows.Scan(&row.id, &row.name)
 	result.returnedRows = append(result.returnedRows, row)
 	return err
 }

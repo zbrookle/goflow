@@ -1,4 +1,4 @@
-package dag
+package dagrun
 
 import (
 	"database/sql"
@@ -7,13 +7,11 @@ import (
 
 // Row is a struct containing data about a particular dag
 type Row struct {
-	id              int
-	name            string
-	namespace       string
-	version         string
-	filePath        string
-	fileFormat      string
-	createdDate     time.Time
+	dagID           int
+	status          string
+	executionDate   time.Time
+	startDate       time.Time
+	endDate         time.Time
 	lastUpdatedDate time.Time
 }
 
@@ -31,13 +29,11 @@ func newRowResult(n int) dagRowResult {
 func (result *dagRowResult) ScanAppend(rows *sql.Rows) error {
 	row := Row{}
 	err := rows.Scan(
-		&row.id,
-		&row.name,
-		&row.namespace,
-		&row.version,
-		&row.filePath,
-		&row.fileFormat,
-		&row.createdDate,
+		&row.dagID,
+		&row.status,
+		&row.executionDate,
+		&row.startDate,
+		&row.endDate,
 		&row.lastUpdatedDate,
 	)
 	result.returnedRows = append(result.returnedRows, row)
