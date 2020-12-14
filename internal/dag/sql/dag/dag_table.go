@@ -6,6 +6,8 @@ import (
 )
 
 const tableName = "dags"
+const nameName = "name"
+const namespaceName = "namespace"
 
 // TableClient is a struct that interacts with the DAG table
 type TableClient struct {
@@ -16,16 +18,7 @@ type TableClient struct {
 // NewTableClient returns a new table client
 func NewTableClient(sqlClient *database.SQLClient) *TableClient {
 	return &TableClient{sqlClient, database.Table{Name: tableName,
-		Cols: []database.Column{
-			{Name: "id", DType: database.Int{}},
-			{Name: "name", DType: database.String{}},
-			{Name: "namespace", DType: database.String{}},
-			{Name: "version", DType: database.String{}},
-			{Name: "file_path", DType: database.String{}},
-			{Name: "file_format", DType: database.String{}},
-			{Name: "created_date", DType: database.TimeStamp{}},
-			{Name: "last_updated_date", DType: database.TimeStamp{}},
-		},
+		Cols: Row{}.columnar().Columns(),
 	}}
 }
 
@@ -66,6 +59,25 @@ func (client *TableClient) IsDagPresent(name, namespace string) bool {
 
 // UpsertDag inserts a new dag if it does not exist or updates
 // an existing dag record
-func UpsertDag() {
-
+func (client *TableClient) UpsertDag(dagRow Row) {
+	dagPresent := client.IsDagPresent(dagRow.name, dagRow.namespace)
+	switch dagPresent {
+	case true:
+		client.sqlClient.Insert(tableName, dagRow.columnar())
+	default:
+		client.sqlClient.Update(
+			tableName,
+			dagRow.columnar(),
+			[]database.ColumnWithValue{
+				{
+					Column: database.Column{Name: nameName, DType: database.String{}},
+					Value:  dagRow.name,
+				},
+				{
+					Column: database.Column{Name: namespaceName, DType: database.String{}},
+					Value:  dagRow.namespace,
+				},
+			},
+		)
+	}
 }

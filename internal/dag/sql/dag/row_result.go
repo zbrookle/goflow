@@ -2,6 +2,8 @@ package dag
 
 import (
 	"database/sql"
+	"fmt"
+	"goflow/internal/database"
 	"time"
 )
 
@@ -25,6 +27,31 @@ type dagRowResult struct {
 func newRowResult(n int) dagRowResult {
 	return dagRowResult{
 		returnedRows: make([]Row, 0, n),
+	}
+}
+
+func (row Row) columnar() database.ColumnWithValueSlice {
+	return []database.ColumnWithValue{
+		{Column: database.Column{Name: "id", DType: database.Int{}}, Value: fmt.Sprint(row.id)},
+		{Column: database.Column{Name: nameName, DType: database.String{}}, Value: row.name},
+		{
+			Column: database.Column{Name: namespaceName, DType: database.String{}},
+			Value:  row.namespace,
+		},
+		{Column: database.Column{Name: "version", DType: database.String{}}, Value: row.version},
+		{Column: database.Column{Name: "file_path", DType: database.String{}}, Value: row.filePath},
+		{
+			Column: database.Column{Name: "file_format", DType: database.String{}},
+			Value:  row.fileFormat,
+		},
+		{
+			Column: database.Column{Name: "created_date", DType: database.TimeStamp{}},
+			Value:  row.createdDate.String(),
+		},
+		{
+			Column: database.Column{Name: "last_updated_date", DType: database.TimeStamp{}},
+			Value:  row.lastUpdatedDate.String(),
+		},
 	}
 }
 

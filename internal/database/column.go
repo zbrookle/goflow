@@ -32,9 +32,10 @@ func (colWithVal ColumnWithValue) getEqualsValue() string {
 	return fmt.Sprintf("%s = %s", colWithVal.Name, colWithVal.ValRep())
 }
 
-type columnWithValueSlice []ColumnWithValue
+// ColumnWithValueSlice is a slice of ColumnWithValue
+type ColumnWithValueSlice []ColumnWithValue
 
-func (slice columnWithValueSlice) String() string {
+func (slice ColumnWithValueSlice) String() string {
 	result := ""
 	for i, val := range slice {
 		result += val.getEqualsValue()
@@ -45,7 +46,7 @@ func (slice columnWithValueSlice) String() string {
 	return result
 }
 
-func (slice columnWithValueSlice) Columns() []Column {
+func (slice ColumnWithValueSlice) Columns() []Column {
 	columns := make([]Column, 0, len(slice))
 	for _, colWithValue := range slice {
 		columns = append(columns, colWithValue.Column)
