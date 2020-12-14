@@ -36,5 +36,5 @@ func (t TimeStamp) typeName() string {
 }
 
 func (t TimeStamp) getValRep(val string) string {
-	return val
+	return "'" + val + "'"
 }

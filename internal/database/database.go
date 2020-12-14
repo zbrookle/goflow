@@ -108,16 +108,15 @@ func (client *SQLClient) Insert(table string, columns []Column, values []string)
 		columnNames = append(columnNames, col.Name)
 		valueStrings = append(valueStrings, col.DType.getValRep(values[i]))
 	}
-	err := client.Exec(
-		fmt.Sprintf(
-			"INSERT INTO %s(%s) VALUES(%s)",
-			table,
-			commaJoin(columnNames),
-			commaJoin(valueStrings),
-		),
+	query := fmt.Sprintf(
+		"INSERT INTO %s(%s) VALUES(%s)",
+		table,
+		commaJoin(columnNames),
+		commaJoin(valueStrings),
 	)
+	err := client.Exec(query)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("for query: '%s': %s", query, err.Error()))
 	}
 }
 
@@ -134,6 +133,5 @@ func (client *SQLClient) Tables() []string {
 		rows.Scan(&name)
 		names = append(names, name)
 	}
-	fmt.Println(names)
 	return names
 }
