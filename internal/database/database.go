@@ -48,6 +48,11 @@ type QueryResult interface {
 	Capacity() int
 }
 
+// queryErrorMessage returns the error message along with the associated query
+func queryErrorMessage(query string, err error) string {
+	return fmt.Sprintf("for query: '%s': %s", query, err.Error())
+}
+
 // PutNRowValues puts the first RowResult.Length rows into row result
 func PutNRowValues(result QueryResult, rows *sql.Rows) {
 	defer rows.Close()
@@ -89,7 +94,7 @@ func (client *SQLClient) CreateTable(t Table) {
 	query := t.createQuery()
 	err := client.Exec(query)
 	if err != nil {
-		panic(fmt.Sprintf("error '%s' occurred for query '%s'", err.Error(), query))
+		panic(queryErrorMessage(query, err))
 	}
 }
 
@@ -110,7 +115,7 @@ func (client *SQLClient) Insert(table string, columns []ColumnWithValue) {
 	)
 	err := client.Exec(query)
 	if err != nil {
-		panic(fmt.Sprintf("for query: '%s': %s", query, err.Error()))
+		panic(queryErrorMessage(query, err))
 	}
 }
 
@@ -119,7 +124,7 @@ func (client *SQLClient) Update(table string, values, conditions ColumnWithValue
 	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s", table, values.String(), conditions.String())
 	err := client.Exec(query)
 	if err != nil {
-		panic(err)
+		panic(queryErrorMessage(query, err))
 	}
 }
 
