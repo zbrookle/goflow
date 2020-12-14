@@ -62,7 +62,7 @@ func (client *TableClient) IsDagPresent(name, namespace string) bool {
 func (client *TableClient) UpsertDag(dagRow Row) {
 	dagPresent := client.IsDagPresent(dagRow.name, dagRow.namespace)
 	switch dagPresent {
-	case true:
+	case false:
 		client.sqlClient.Insert(tableName, dagRow.columnar())
 	default:
 		client.sqlClient.Update(

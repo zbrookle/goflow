@@ -19,8 +19,30 @@ type Row struct {
 	lastUpdatedDate time.Time
 }
 
+func (row Row) String() string {
+	return fmt.Sprintf(
+		`{
+		  id: %d, 
+		  name: %s, 
+		  namespace: %s,
+		  version: %s, 
+		  filePath: %s,
+		  fileFormat: %s, 
+		  createDate: %s, 
+		  lastUpdatedDate: %s
+		}`,
+		row.id,
+		row.name,
+		row.namespace,
+		row.version,
+		row.filePath,
+		row.fileFormat,
+		row.createdDate.String(),
+		row.lastUpdatedDate.String(),
+	)
+}
+
 type dagRowResult struct {
-	rows         *sql.Rows
 	returnedRows []Row
 }
 

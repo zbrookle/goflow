@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 		os.Remove(databaseFile)
 	}
 	sqlClient = database.NewSQLiteClient(databaseFile)
-	defer database.PurgeDB(sqlClient)
+	// defer database.PurgeDB(sqlClient)
 	tableClient = NewTableClient(sqlClient)
 	m.Run()
 }
@@ -39,10 +39,14 @@ func TestCreateDagTable(t *testing.T) {
 	}
 }
 
+func createTestTable() {
+	tableClient.sqlClient.CreateTable(tableClient.tableDef)
+}
+
 func TestIsDagInDagTable(t *testing.T) {
 	defer database.PurgeDB(sqlClient)
 
-	tableClient.CreateTable()
+	createTestTable()
 
 	const dagName = "test"
 	const namespace = "default"
@@ -68,6 +72,56 @@ func TestIsDagInDagTable(t *testing.T) {
 	}
 }
 
-func TestUpsertDagTable(t *testing.T) {
+func getTestRows() []Row {
+	result := dagRowResult{}
+	tableClient.sqlClient.QueryIntoResults(&result, "SELECT * FROM "+tableName)
+	return result.returnedRows
+}
 
+func TestUpsertDagTable(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+
+	createTestTable()
+
+	expectedRow := Row{
+		id:              0,
+		name:            "test",
+		namespace:       "default",
+		version:         "0.1.0",
+		filePath:        "path",
+		fileFormat:      "json",
+		createdDate:     time.Time{},
+		lastUpdatedDate: time.Time{},
+	}
+
+	tableClient.UpsertDag(expectedRow)
+
+	rows := getTestRows()
+	rowCount := len(rows)
+	if rowCount != 1 {
+		t.Errorf("Expected only 1 row, found %d", rowCount)
+	}
+
+	if rows[0] != expectedRow {
+		t.Errorf(
+			"Expected %s, got %s",
+			expectedRow,
+			rows[0],
+		)
+	}
+
+	expectedRow.version = "0.2.0"
+	tableClient.UpsertDag(expectedRow)
+
+	rows = getTestRows()
+	if rowCount != 1 {
+		t.Errorf("Expected only 1 row, found %d", rowCount)
+	}
+	if rows[0] != expectedRow {
+		t.Errorf(
+			"Expected %s, got %s",
+			expectedRow,
+			rows[0],
+		)
+	}
 }
