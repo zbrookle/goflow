@@ -12,6 +12,7 @@ func (col Column) String() string {
 	return fmt.Sprintf("%s %s", col.Name, col.DType.typeName())
 }
 
+// WithValue returns a column with a value specified
 func (col Column) WithValue(value string) ColumnWithValue {
 	return ColumnWithValue{col, value}
 }
