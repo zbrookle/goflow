@@ -55,10 +55,56 @@ func TestRunDatabaseQuery(t *testing.T) {
 
 func TestCreateTable(t *testing.T) {
 	defer PurgeDB(client)
-	client.CreateTable(Table{
-		Name: "test",
-		Cols: []Column{{"column1", String{}}, {"column2", Int{}}},
-	})
+	idColumn := Column{idName, Int{}}
+	nameColumn := Column{nameName, String{}}
+	name2Column := Column{"name2Name", String{}}
+	tables := []Table{
+		{Name: testTable, Cols: []Column{idColumn, nameColumn}},
+		{
+			Name:          testTable,
+			Cols:          []Column{idColumn, nameColumn},
+			PrimaryKeyCol: Column{idName, Int{}},
+		},
+		{
+			Name:       testTable,
+			Cols:       []Column{idColumn, nameColumn, name2Column},
+			UniqueCols: []Column{nameColumn, name2Column},
+		},
+		{
+			Name:          testTable,
+			Cols:          []Column{idColumn, nameColumn, name2Column},
+			PrimaryKeyCol: Column{idName, Int{}},
+			UniqueCols:    []Column{nameColumn, name2Column},
+		},
+	}
+
+	for _, table := range tables {
+		func() {
+			defer PurgeDB(client)
+			client.CreateTable(table)
+
+			rows, err := client.database.Query(
+				fmt.Sprintf(
+					"SELECT name FROM sqlite_master WHERE type = 'table' and name = '%s'",
+					testTable,
+				),
+			)
+			if err != nil {
+				panic(err)
+			}
+			defer rows.Close()
+			names := make([]string, 0)
+			for rows.Next() {
+				var name string
+				rows.Scan(&name)
+				names = append(names, name)
+			}
+			if len(names) != 1 {
+				t.Error("Expected one table from query")
+			}
+		}()
+
+	}
 }
 
 type resultType struct {
