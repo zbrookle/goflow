@@ -44,3 +44,11 @@ func (slice columnWithValueSlice) String() string {
 	}
 	return result
 }
+
+func (slice columnWithValueSlice) Columns() []Column {
+	columns := make([]Column, 0, len(slice))
+	for _, colWithValue := range slice {
+		columns = append(columns, colWithValue.Column)
+	}
+	return columns
+}
