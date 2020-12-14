@@ -31,6 +31,17 @@ func NewSQLiteClient(dsn string) *SQLClient {
 	}
 }
 
+// PurgeDB removes all tables from the database
+func PurgeDB(client *SQLClient) {
+	tables := client.Tables()
+	for _, table := range tables {
+		_, err := client.database.Exec(fmt.Sprintf("DROP TABLE %s", table))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 // QueryResult is implemented to retrieve the result for a rows object
 type QueryResult interface {
 	ScanAppend() error
@@ -86,12 +97,43 @@ func (client *SQLClient) CreateTable(t Table) {
 }
 
 // Insert inserts rows into a given table in the database
-func (client *SQLClient) Insert(table string, columns, values []string) {
+func (client *SQLClient) Insert(table string, columns []Column, values []string) {
+	if len(columns) != len(values) {
+		panic("columns and values must be the same length")
+	}
 	commaJoin := func(s []string) string { return strings.Join(s, ",") }
+	columnNames := make([]string, 0, len(columns))
+	valueStrings := make([]string, 0, len(values))
+	for i, col := range columns {
+		columnNames = append(columnNames, col.Name)
+		valueStrings = append(valueStrings, col.DType.getValRep(values[i]))
+	}
 	err := client.Exec(
-		fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", table, commaJoin(columns), commaJoin(values)),
+		fmt.Sprintf(
+			"INSERT INTO %s(%s) VALUES(%s)",
+			table,
+			commaJoin(columnNames),
+			commaJoin(valueStrings),
+		),
 	)
 	if err != nil {
 		panic(err)
 	}
+}
+
+// Tables returns a list of the table names in the databse
+func (client *SQLClient) Tables() []string {
+	rows, err := client.database.Query("SELECT name FROM sqlite_master WHERE type = 'table'")
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+	names := make([]string, 0)
+	for rows.Next() {
+		var name string
+		rows.Scan(&name)
+		names = append(names, name)
+	}
+	fmt.Println(names)
+	return names
 }

@@ -38,30 +38,6 @@ func getTestSQLiteClient() *SQLClient {
 	return NewSQLiteClient(databaseFile)
 }
 
-func purgeDB() {
-	rows, err := client.database.Query("SELECT name FROM sqlite_master WHERE type = 'table'")
-	defer rows.Close()
-	if err != nil {
-		panic(err)
-	}
-	client.database.Begin()
-	tables := make([]string, 0)
-	for rows.Next() {
-		var name string
-		err := rows.Scan(&name)
-		if err != nil {
-			panic(err)
-		}
-		tables = append(tables, name)
-	}
-	for _, table := range tables {
-		_, err = client.database.Exec(fmt.Sprintf("DROP TABLE %s", table))
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
 func TestNewDatabaseConnection(t *testing.T) {
 	err := client.database.Ping()
 	if err != nil {
@@ -70,7 +46,7 @@ func TestNewDatabaseConnection(t *testing.T) {
 }
 
 func TestRunDatabaseQuery(t *testing.T) {
-	defer purgeDB()
+	defer PurgeDB(client)
 	err := client.Exec(createTableQuery)
 	if err != nil {
 		t.Error(err)
@@ -78,7 +54,7 @@ func TestRunDatabaseQuery(t *testing.T) {
 }
 
 func TestCreateTable(t *testing.T) {
-	defer purgeDB()
+	defer PurgeDB(client)
 	client.CreateTable(Table{
 		Name: "test",
 		Cols: []Column{{"column1", String{}}, {"column2", Int{}}},
@@ -115,12 +91,16 @@ func (result *testQueryResult) SetRows(rows *sql.Rows) {
 }
 
 func TestInsertIntoTable(t *testing.T) {
-	defer purgeDB()
+	defer PurgeDB(client)
 	_, err := client.database.Exec(createTableQuery)
 	if err != nil {
 		panic(err)
 	}
-	client.Insert(testTable, []string{"id", "name"}, []string{fmt.Sprint(expectedID), "'yes'"})
+	client.Insert(
+		testTable,
+		[]Column{{idName, Int{}}, {nameName, String{}}},
+		[]string{fmt.Sprint(expectedID), expectedName},
+	)
 	rows, err := client.database.Query(fmt.Sprintf("SELECT * FROM %s", testTable))
 	if err != nil {
 		panic(err)
@@ -143,7 +123,7 @@ func TestInsertIntoTable(t *testing.T) {
 }
 
 func TestQueryRowsIntoResult(t *testing.T) {
-	defer purgeDB()
+	defer PurgeDB(client)
 
 	// Set up table
 	_, err := client.database.Exec(createTableQuery)
