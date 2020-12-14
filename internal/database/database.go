@@ -94,16 +94,13 @@ func (client *SQLClient) CreateTable(t Table) {
 }
 
 // Insert inserts rows into a given table in the database
-func (client *SQLClient) Insert(table string, columns []Column, values []string) {
-	if len(columns) != len(values) {
-		panic("columns and values must be the same length")
-	}
+func (client *SQLClient) Insert(table string, columns []ColumnWithValue) {
 	commaJoin := func(s []string) string { return strings.Join(s, ",") }
 	columnNames := make([]string, 0, len(columns))
-	valueStrings := make([]string, 0, len(values))
-	for i, col := range columns {
+	valueStrings := make([]string, 0, len(columns))
+	for _, col := range columns {
 		columnNames = append(columnNames, col.Name)
-		valueStrings = append(valueStrings, col.DType.getValRep(values[i]))
+		valueStrings = append(valueStrings, col.ValRep())
 	}
 	query := fmt.Sprintf(
 		"INSERT INTO %s(%s) VALUES(%s)",

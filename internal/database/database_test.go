@@ -188,8 +188,10 @@ func TestInsertIntoTable(t *testing.T) {
 	}
 	client.Insert(
 		testTable,
-		[]Column{{idName, Int{}}, {nameName, String{}}},
-		[]string{fmt.Sprint(expectedID), expectedName},
+		[]ColumnWithValue{
+			{Column{idName, Int{}}, fmt.Sprint(expectedID)},
+			{Column{nameName, String{}}, expectedName},
+		},
 	)
 
 	returnedRows := getRowsFromTestTable()

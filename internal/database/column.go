@@ -12,6 +12,10 @@ func (col Column) String() string {
 	return fmt.Sprintf("%s %s", col.Name, col.DType.typeName())
 }
 
+func (col Column) WithValue(value string) ColumnWithValue {
+	return ColumnWithValue{col, value}
+}
+
 // ColumnWithValue is a column with an associated value
 type ColumnWithValue struct {
 	Column

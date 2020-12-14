@@ -64,3 +64,17 @@ func (table *Table) getUniqueSyntax() string {
 func (table *Table) createQuery() string {
 	return table.getCreateSyntax() + table.getUniqueSyntax() + ")"
 }
+
+// GetColumnsWithValues returns a slice of ColumnWithValue struct with the given values
+func (table *Table) GetColumnsWithValues(values []string) []ColumnWithValue {
+	colLength := len(table.Cols)
+	valLength := len(values)
+	if colLength != valLength {
+		panic(fmt.Sprintf("table can only recieve %d values, was given %d", colLength, valLength))
+	}
+	columnsWithValues := make([]ColumnWithValue, 0, len(values))
+	for i, col := range table.Cols {
+		columnsWithValues = append(columnsWithValues, col.WithValue(values[i]))
+	}
+	return columnsWithValues
+}
