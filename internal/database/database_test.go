@@ -18,6 +18,9 @@ const expectedName = "yes"
 const idName = "id"
 const nameName = "name"
 
+var idColumn = Column{idName, Int{}}
+var nameColumn = Column{nameName, String{}}
+
 var createTableQuery = fmt.Sprintf("CREATE TABLE %s(%s INTEGER, %s STRING)", testTable, idName, nameName)
 
 var insertionQuery = fmt.Sprintf("INSERT INTO %s(%s, %s) VALUES(%d, '%s')", testTable, idName, nameName, expectedID, expectedName)
@@ -55,8 +58,6 @@ func TestRunDatabaseQuery(t *testing.T) {
 
 func TestCreateTable(t *testing.T) {
 	defer PurgeDB(client)
-	idColumn := Column{idName, Int{}}
-	nameColumn := Column{nameName, String{}}
 	name2Column := Column{"name2Name", String{}}
 	tables := []Table{
 		{Name: testTable, Cols: []Column{idColumn, nameColumn}},
@@ -105,6 +106,34 @@ func TestCreateTable(t *testing.T) {
 		}()
 
 	}
+}
+
+func TestCreateTablesForeignKey(t *testing.T) {
+	defer PurgeDB(client)
+	t1 := Table{
+		Name:          testTable,
+		Cols:          []Column{idColumn, nameColumn},
+		PrimaryKeyCol: Column{idName, Int{}},
+	}
+
+	t2IdColumn := Column{"t1Id", Int{}}
+	t2 := Table{
+		Name: "table2",
+		Cols: []Column{
+			t2IdColumn,
+			{
+				"otherColumn",
+				String{},
+			},
+		},
+		ForeignKeys: []KeyReference{{
+			Key:      t2IdColumn,
+			RefTable: t1,
+			RefCol:   idColumn,
+		},
+		}}
+	client.CreateTable(t1)
+	client.CreateTable(t2)
 }
 
 type resultType struct {
@@ -169,7 +198,7 @@ func TestInsertIntoTable(t *testing.T) {
 }
 
 func TestQueryRowsIntoResult(t *testing.T) {
-	defer PurgeDB(client)
+	// defer PurgeDB(client)
 
 	// Set up table
 	_, err := client.database.Exec(createTableQuery)

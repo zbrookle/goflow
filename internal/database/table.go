@@ -16,12 +16,25 @@ func (col Column) String() string {
 	return fmt.Sprintf("%s %s", col.Name, col.DType.typeName())
 }
 
+// KeyReference is a pair of columns defining that one column references another
+type KeyReference struct {
+	Key      Column
+	RefTable Table
+	RefCol   Column
+}
+
+// refString returns a string of SQL that reflects the KeyReference struct
+func (ref KeyReference) refString(tableName string) string {
+	return fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(%s)", ref.Key, ref.RefTable, ref.RefCol)
+}
+
 // Table can be used in various inputs to create tables
 type Table struct {
 	Name          string
 	Cols          []Column
 	UniqueCols    []Column
 	PrimaryKeyCol Column
+	ForeignKeys   []KeyReference
 }
 
 // getCreateSyntax returns the create table segment of the create table expression
@@ -54,10 +67,10 @@ func (table *Table) getUniqueSyntax() string {
 		}
 		query += ")"
 	}
-	return query + ")"
+	return query
 }
 
 // createQuery returns the SQL query that can create the table represented by table
 func (table *Table) createQuery() string {
-	return table.getCreateSyntax() + table.getUniqueSyntax()
+	return table.getCreateSyntax() + table.getUniqueSyntax() + ")"
 }
