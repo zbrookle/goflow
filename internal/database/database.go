@@ -121,7 +121,12 @@ func (client *SQLClient) Insert(table string, columns []ColumnWithValue) {
 
 // Update updates a given table with row values, for a given condition
 func (client *SQLClient) Update(table string, values, conditions ColumnWithValueSlice) {
-	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s", table, values.String(), conditions.String())
+	query := fmt.Sprintf(
+		"UPDATE %s SET %s WHERE %s",
+		table,
+		values.Join(", "),
+		conditions.Join(" AND "),
+	)
 	err := client.Exec(query)
 	if err != nil {
 		panic(queryErrorMessage(query, err))

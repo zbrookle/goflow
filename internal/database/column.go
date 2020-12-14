@@ -35,17 +35,19 @@ func (colWithVal ColumnWithValue) getEqualsValue() string {
 // ColumnWithValueSlice is a slice of ColumnWithValue
 type ColumnWithValueSlice []ColumnWithValue
 
-func (slice ColumnWithValueSlice) String() string {
+// Join returns the equals value representation along separated by a given string
+func (slice ColumnWithValueSlice) Join(sep string) string {
 	result := ""
 	for i, val := range slice {
 		result += val.getEqualsValue()
 		if i < len(slice)-1 {
-			result += ", "
+			result += sep
 		}
 	}
 	return result
 }
 
+// Columns returns a slice columns using the columns from the ColumnWithValue structs
 func (slice ColumnWithValueSlice) Columns() []Column {
 	columns := make([]Column, 0, len(slice))
 	for _, colWithValue := range slice {
