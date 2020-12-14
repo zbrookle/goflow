@@ -117,6 +117,15 @@ func (client *SQLClient) Insert(table string, columns []Column, values []string)
 	}
 }
 
+// Update updates a given table with row values, for a given condition
+func (client *SQLClient) Update(table string, values, conditions columnWithValueSlice) {
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s", table, values.String(), conditions.String())
+	err := client.Exec(query)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // Tables returns a list of the table names in the databse
 func (client *SQLClient) Tables() []string {
 	rows, err := client.database.Query("SELECT name FROM sqlite_master WHERE type = 'table'")

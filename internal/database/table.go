@@ -6,16 +6,6 @@ import (
 
 const commaSpace = ", "
 
-// Column is a column in the database structure
-type Column struct {
-	Name  string
-	DType SQLType
-}
-
-func (col Column) String() string {
-	return fmt.Sprintf("%s %s", col.Name, col.DType.typeName())
-}
-
 // KeyReference is a pair of columns defining that one column references another
 type KeyReference struct {
 	Key      Column
