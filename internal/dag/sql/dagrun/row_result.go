@@ -2,8 +2,14 @@ package dagrun
 
 import (
 	"database/sql"
+	"fmt"
+	"goflow/internal/database"
 	"time"
 )
+
+const statusName = "status"
+const dagIDName = "dag_id"
+const executionDateName = "execution_date"
 
 // Row is a struct containing data about a particular dag
 type Row struct {
@@ -23,6 +29,32 @@ type dagRowResult struct {
 func newRowResult(n int) dagRowResult {
 	return dagRowResult{
 		returnedRows: make([]Row, 0, n),
+	}
+}
+
+func (row Row) columnar() database.ColumnWithValueSlice {
+	return []database.ColumnWithValue{
+		{
+			Column: database.Column{Name: dagIDName, DType: database.Int{}},
+			Value:  fmt.Sprint(row.dagID),
+		},
+		{Column: database.Column{Name: statusName, DType: database.String{}}, Value: row.status},
+		{
+			Column: database.Column{Name: executionDateName, DType: database.TimeStamp{}},
+			Value:  row.executionDate.String(),
+		},
+		{
+			Column: database.Column{Name: "start_date", DType: database.TimeStamp{}},
+			Value:  row.startDate.String(),
+		},
+		{
+			Column: database.Column{Name: "end_date", DType: database.TimeStamp{}},
+			Value:  row.endDate.String(),
+		},
+		{
+			Column: database.Column{Name: "last_updated_date", DType: database.TimeStamp{}},
+			Value:  row.lastUpdatedDate.String(),
+		},
 	}
 }
 
