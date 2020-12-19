@@ -14,8 +14,13 @@ type KeyReference struct {
 }
 
 // refString returns a string of SQL that reflects the KeyReference struct
-func (ref KeyReference) refString(tableName string) string {
-	return fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(%s)", ref.Key, ref.RefTable, ref.RefCol)
+func (ref KeyReference) refString() string {
+	return fmt.Sprintf(
+		"FOREIGN KEY(%s) REFERENCES %s(%s)",
+		ref.Key.Name,
+		ref.RefTable,
+		ref.RefCol.Name,
+	)
 }
 
 // Table can be used in various inputs to create tables
@@ -60,9 +65,19 @@ func (table *Table) getUniqueSyntax() string {
 	return query
 }
 
+func (table *Table) getReferenceSyntax() string {
+	query := ""
+	if table.ForeignKeys != nil {
+		for _, col := range table.ForeignKeys {
+			query += ", " + col.refString()
+		}
+	}
+	return query
+}
+
 // createQuery returns the SQL query that can create the table represented by table
 func (table *Table) createQuery() string {
-	return table.getCreateSyntax() + table.getUniqueSyntax() + ")"
+	return table.getCreateSyntax() + table.getUniqueSyntax() + table.getReferenceSyntax() + ")"
 }
 
 // GetColumnsWithValues returns a slice of ColumnWithValue struct with the given values

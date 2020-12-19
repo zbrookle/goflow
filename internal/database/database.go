@@ -22,7 +22,7 @@ type SQLClient struct {
 
 // NewSQLiteClient returns a new SQLlite Client
 func NewSQLiteClient(dsn string) *SQLClient {
-	db, err := sql.Open(sqliteDriver, dsn)
+	db, err := sql.Open(sqliteDriver, dsn+"?_foreign_keys=true")
 	if err != nil {
 		panic(err)
 	}

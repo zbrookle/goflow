@@ -67,7 +67,7 @@ func setUpTestTable() {
 
 func TestGetLastNDagRuns(t *testing.T) {
 	defer database.PurgeDB(sqlClient)
-	// setUpDagTable()
+	setUpDagTable()
 	setUpTestTable()
 
 	const insertedDays = 31

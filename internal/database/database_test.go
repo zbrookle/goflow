@@ -249,3 +249,38 @@ func TestUpdateTable(t *testing.T) {
 		t.Errorf("Column %s was not updated from %s to %s", nameName, expectedName, newName)
 	}
 }
+
+func TestRequireForeignKeys(t *testing.T) {
+	defer PurgeDB(client)
+	refColumn := Column{
+		Name:  "refId",
+		DType: Int{},
+	}
+	reference := KeyReference{
+		Key:      refColumn,
+		RefTable: testTable,
+		RefCol:   idColumn,
+	}
+	table := Table{
+		Name:        "refTable",
+		Cols:        []Column{refColumn},
+		ForeignKeys: []KeyReference{reference},
+	}
+	fmt.Println(table.createQuery())
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in f", r)
+		} else {
+			t.Error("foreign reference should have caused an error")
+		}
+	}()
+	client.CreateTable(table)
+	client.Insert(
+		table.Name, []ColumnWithValue{{Column{
+			Name:  refColumn.Name,
+			DType: Int{5},
+		}},
+		},
+	)
+}
