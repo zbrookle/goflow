@@ -19,6 +19,14 @@ type Row struct {
 	lastUpdatedDate time.Time
 }
 
+// NewRow returns a new row with the appropriate update and create time stamps
+func NewRow(id int, name, namespace, version, filePath, fileFormat string) Row {
+	creation := time.Now()
+	return Row{
+		id, name, namespace, version, filePath, fileFormat, creation, creation,
+	}
+}
+
 func (row Row) String() string {
 	return fmt.Sprintf(
 		`{
