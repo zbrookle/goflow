@@ -60,7 +60,7 @@ func (client *TableClient) IsDagPresent(name, namespace string) bool {
 // UpsertDag inserts a new dag if it does not exist or updates
 // an existing dag record
 func (client *TableClient) UpsertDag(dagRow Row) {
-	dagPresent := client.IsDagPresent(dagRow.name, dagRow.namespace)
+	dagPresent := client.IsDagPresent(dagRow.Name, dagRow.Namespace)
 	switch dagPresent {
 	case false:
 		client.sqlClient.Insert(tableName, dagRow.columnar())
@@ -71,11 +71,11 @@ func (client *TableClient) UpsertDag(dagRow Row) {
 			[]database.ColumnWithValue{
 				{
 					Column: database.Column{Name: nameName, DType: database.String{}},
-					Value:  dagRow.name,
+					Value:  dagRow.Name,
 				},
 				{
 					Column: database.Column{Name: namespaceName, DType: database.String{}},
-					Value:  dagRow.namespace,
+					Value:  dagRow.Namespace,
 				},
 			},
 		)

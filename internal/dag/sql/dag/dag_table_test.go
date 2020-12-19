@@ -84,14 +84,14 @@ func TestUpsertDagTable(t *testing.T) {
 	createTestTable()
 
 	expectedRow := Row{
-		id:              0,
-		name:            "test",
-		namespace:       "default",
-		version:         "0.1.0",
-		filePath:        "path",
-		fileFormat:      "json",
-		createdDate:     time.Time{},
-		lastUpdatedDate: time.Time{},
+		ID:              0,
+		Name:            "test",
+		Namespace:       "default",
+		Version:         "0.1.0",
+		FilePath:        "path",
+		FileFormat:      "json",
+		CreatedDate:     time.Time{},
+		LastUpdatedDate: time.Time{},
 	}
 
 	tableClient.UpsertDag(expectedRow)
@@ -110,7 +110,7 @@ func TestUpsertDagTable(t *testing.T) {
 		)
 	}
 
-	expectedRow.version = "0.2.0"
+	expectedRow.Version = "0.2.0"
 	tableClient.UpsertDag(expectedRow)
 
 	rows = getTestRows()
