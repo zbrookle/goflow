@@ -56,16 +56,16 @@ func TestIsDagInDagTable(t *testing.T) {
 	}
 	sqlClient.Insert(
 		tableName,
-		tableClient.tableDef.GetColumnsWithValues([]string{
-			"0",
-			dagName,
-			namespace,
-			"0.0.1",
-			"path",
-			"json",
-			time.Now().String(),
-			time.Now().String(),
-		}),
+		Row{
+			ID:              0,
+			Name:            dagName,
+			Namespace:       namespace,
+			Version:         "0.0.1",
+			FilePath:        "path",
+			FileFormat:      "json",
+			CreatedDate:     time.Now(),
+			LastUpdatedDate: time.Now(),
+		}.columnar(),
 	)
 	if !tableClient.IsDagPresent(dagName, namespace) {
 		t.Errorf("Record should " + errMessageSuffix)

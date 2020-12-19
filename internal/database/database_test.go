@@ -189,8 +189,8 @@ func TestInsertIntoTable(t *testing.T) {
 	client.Insert(
 		testTable,
 		[]ColumnWithValue{
-			{Column{idName, Int{}}, fmt.Sprint(expectedID)},
-			{Column{nameName, String{}}, expectedName},
+			{Column{idName, Int{expectedID}}},
+			{Column{nameName, String{expectedName}}},
 		},
 	)
 
@@ -241,8 +241,8 @@ func TestUpdateTable(t *testing.T) {
 	const newName = "no"
 	client.Update(
 		testTable,
-		[]ColumnWithValue{{Column{nameName, String{}}, newName}},
-		[]ColumnWithValue{{Column{idName, Int{}}, fmt.Sprint(expectedID)}},
+		[]ColumnWithValue{{Column{nameName, String{newName}}}},
+		[]ColumnWithValue{{Column{idName, Int{expectedID}}}},
 	)
 	rows := getRowsFromTestTable()
 	fmt.Println(rows[0])

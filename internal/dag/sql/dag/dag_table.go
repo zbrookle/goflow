@@ -70,12 +70,16 @@ func (client *TableClient) UpsertDag(dagRow Row) {
 			dagRow.columnar(),
 			[]database.ColumnWithValue{
 				{
-					Column: database.Column{Name: nameName, DType: database.String{}},
-					Value:  dagRow.Name,
+					Column: database.Column{
+						Name:  nameName,
+						DType: database.String{Val: dagRow.Name},
+					},
 				},
 				{
-					Column: database.Column{Name: namespaceName, DType: database.String{}},
-					Value:  dagRow.Namespace,
+					Column: database.Column{
+						Name:  namespaceName,
+						DType: database.String{Val: dagRow.Namespace},
+					},
 				},
 			},
 		)

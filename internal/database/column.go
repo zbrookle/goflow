@@ -14,18 +14,17 @@ func (col Column) String() string {
 
 // WithValue returns a column with a value specified
 func (col Column) WithValue(value string) ColumnWithValue {
-	return ColumnWithValue{col, value}
+	return ColumnWithValue{col}
 }
 
 // ColumnWithValue is a column with an associated value
 type ColumnWithValue struct {
 	Column
-	Value string
 }
 
 // ValRep returns the values in it SQL representation
 func (colWithVal ColumnWithValue) ValRep() string {
-	return colWithVal.DType.getValRep(colWithVal.Value)
+	return colWithVal.DType.getValRep()
 }
 
 // getEqualsValue returns a string representing the conditional representation between the columns

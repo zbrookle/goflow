@@ -62,25 +62,33 @@ func newRowResult(n int) dagRowResult {
 
 func (row Row) columnar() database.ColumnWithValueSlice {
 	return []database.ColumnWithValue{
-		{Column: database.Column{Name: "id", DType: database.Int{}}, Value: fmt.Sprint(row.ID)},
-		{Column: database.Column{Name: nameName, DType: database.String{}}, Value: row.Name},
+		{Column: database.Column{Name: "id", DType: database.Int{Val: row.ID}}},
+		{Column: database.Column{Name: nameName, DType: database.String{Val: row.Name}}},
 		{
-			Column: database.Column{Name: namespaceName, DType: database.String{}},
-			Value:  row.Namespace,
+			Column: database.Column{
+				Name:  namespaceName,
+				DType: database.String{Val: row.Namespace},
+			},
 		},
-		{Column: database.Column{Name: "version", DType: database.String{}}, Value: row.Version},
-		{Column: database.Column{Name: "file_path", DType: database.String{}}, Value: row.FilePath},
+		{Column: database.Column{Name: "version", DType: database.String{Val: row.Version}}},
+		{Column: database.Column{Name: "file_path", DType: database.String{Val: row.FilePath}}},
 		{
-			Column: database.Column{Name: "file_format", DType: database.String{}},
-			Value:  row.FileFormat,
+			Column: database.Column{
+				Name:  "file_format",
+				DType: database.String{Val: row.FileFormat},
+			},
 		},
 		{
-			Column: database.Column{Name: "created_date", DType: database.TimeStamp{}},
-			Value:  row.CreatedDate.String(),
+			Column: database.Column{
+				Name:  "created_date",
+				DType: database.TimeStamp{Val: row.CreatedDate},
+			},
 		},
 		{
-			Column: database.Column{Name: "last_updated_date", DType: database.TimeStamp{}},
-			Value:  row.LastUpdatedDate.String(),
+			Column: database.Column{
+				Name:  "last_updated_date",
+				DType: database.TimeStamp{Val: row.LastUpdatedDate},
+			},
 		},
 	}
 }
