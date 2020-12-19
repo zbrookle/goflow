@@ -128,7 +128,7 @@ func TestCreateTablesForeignKey(t *testing.T) {
 		},
 		ForeignKeys: []KeyReference{{
 			Key:      t2IdColumn,
-			RefTable: t1,
+			RefTable: t1.Name,
 			RefCol:   idColumn,
 		},
 		}}

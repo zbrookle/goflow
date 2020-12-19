@@ -9,7 +9,7 @@ const commaSpace = ", "
 // KeyReference is a pair of columns defining that one column references another
 type KeyReference struct {
 	Key      Column
-	RefTable Table
+	RefTable string
 	RefCol   Column
 }
 

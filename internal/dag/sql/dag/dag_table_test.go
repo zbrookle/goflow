@@ -30,12 +30,12 @@ func TestCreateDagTable(t *testing.T) {
 	tableClient.CreateTable()
 	found := false
 	for _, table := range sqlClient.Tables() {
-		if table == tableName {
+		if table == TableName {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("Did not find table %s in tables", tableName)
+		t.Errorf("Did not find table %s in tables", TableName)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestIsDagInDagTable(t *testing.T) {
 		t.Errorf("Record should not " + errMessageSuffix)
 	}
 	sqlClient.Insert(
-		tableName,
+		TableName,
 		Row{
 			ID:              0,
 			Name:            dagName,
@@ -74,7 +74,7 @@ func TestIsDagInDagTable(t *testing.T) {
 
 func getTestRows() []Row {
 	result := dagRowResult{}
-	tableClient.sqlClient.QueryIntoResults(&result, "SELECT * FROM "+tableName)
+	tableClient.sqlClient.QueryIntoResults(&result, "SELECT * FROM "+TableName)
 	return result.returnedRows
 }
 

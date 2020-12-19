@@ -5,9 +5,11 @@ import (
 	"goflow/internal/database"
 )
 
-const tableName = "dags"
 const nameName = "name"
 const namespaceName = "namespace"
+
+// TableName is the name of the dag table
+const TableName = "dags"
 
 // TableClient is a struct that interacts with the DAG table
 type TableClient struct {
@@ -17,7 +19,7 @@ type TableClient struct {
 
 // NewTableClient returns a new table client
 func NewTableClient(sqlClient *database.SQLClient) *TableClient {
-	return &TableClient{sqlClient, database.Table{Name: tableName,
+	return &TableClient{sqlClient, database.Table{Name: TableName,
 		Cols: Row{}.columnar().Columns(),
 	}}
 }
@@ -33,7 +35,7 @@ func (client *TableClient) selectSpecificDag(name, namespace string) []Row {
 		&result,
 		fmt.Sprintf(
 			"SELECT * FROM %s WHERE name = '%s' and namespace = '%s'",
-			tableName,
+			TableName,
 			name,
 			namespace,
 		),
@@ -63,10 +65,10 @@ func (client *TableClient) UpsertDag(dagRow Row) {
 	dagPresent := client.IsDagPresent(dagRow.Name, dagRow.Namespace)
 	switch dagPresent {
 	case false:
-		client.sqlClient.Insert(tableName, dagRow.columnar())
+		client.sqlClient.Insert(TableName, dagRow.columnar())
 	default:
 		client.sqlClient.Update(
-			tableName,
+			TableName,
 			dagRow.columnar(),
 			[]database.ColumnWithValue{
 				{

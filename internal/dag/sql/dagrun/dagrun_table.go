@@ -2,6 +2,7 @@ package dagrun
 
 import (
 	"fmt"
+	dagtable "goflow/internal/dag/sql/dag"
 	"goflow/internal/database"
 	"sort"
 	"time"
@@ -17,15 +18,24 @@ type TableClient struct {
 
 // NewTableClient returns a new table client
 func NewTableClient(sqlClient *database.SQLClient) *TableClient {
+	dagIDColumn := database.Column{Name: dagIDName, DType: database.Int{}}
 	return &TableClient{sqlClient, database.Table{Name: tableName,
 		Cols: []database.Column{
-			{Name: dagIDName, DType: database.Int{}},
+			dagIDColumn,
 			{Name: "status", DType: database.String{}},
 			{Name: "execution_date", DType: database.TimeStamp{}},
 			{Name: "start_date", DType: database.TimeStamp{}},
 			{Name: "end_date", DType: database.TimeStamp{}},
 			{Name: "last_updated_date", DType: database.TimeStamp{}},
 		},
+		ForeignKeys: []database.KeyReference{{
+			Key:      dagIDColumn,
+			RefTable: dagtable.TableName,
+			RefCol: database.Column{
+				Name:  dagtable.IDName,
+				DType: database.Int{},
+			},
+		}},
 	}}
 }
 

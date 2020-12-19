@@ -61,9 +61,14 @@ func insertDaysOfRuns(n int) []Row {
 	return insertedRows
 }
 
+func setUpTestTable() {
+	sqlClient.CreateTable(tableClient.tableDef)
+}
+
 func TestGetLastNDagRuns(t *testing.T) {
 	defer database.PurgeDB(sqlClient)
-	sqlClient.CreateTable(tableClient.tableDef)
+	// setUpDagTable()
+	setUpTestTable()
 
 	const insertedDays = 31
 	expectedRows := insertDaysOfRuns(insertedDays)
@@ -85,6 +90,50 @@ func TestGetLastNDagRuns(t *testing.T) {
 
 }
 
-func TestUpsertDagRun(t *testing.T) {
+// func TestUpsertDagRun(t *testing.T) {
+// 	defer database.PurgeDB(sqlClient)
 
-}
+// 	createTestTable()
+
+// 	expectedRow := Row{
+// 		ID:              0,
+// 		Name:            "test",
+// 		Namespace:       "default",
+// 		Version:         "0.1.0",
+// 		FilePath:        "path",
+// 		FileFormat:      "json",
+// 		CreatedDate:     time.Time{},
+// 		LastUpdatedDate: time.Time{},
+// 	}
+
+// 	tableClient.UpsertDag(expectedRow)
+
+// 	rows := getTestRows()
+// 	rowCount := len(rows)
+// 	if rowCount != 1 {
+// 		t.Errorf("Expected only 1 row, found %d", rowCount)
+// 	}
+
+// 	if rows[0] != expectedRow {
+// 		t.Errorf(
+// 			"Expected %s, got %s",
+// 			expectedRow,
+// 			rows[0],
+// 		)
+// 	}
+
+// 	expectedRow.Version = "0.2.0"
+// 	tableClient.UpsertDag(expectedRow)
+
+// 	rows = getTestRows()
+// 	if rowCount != 1 {
+// 		t.Errorf("Expected only 1 row, found %d", rowCount)
+// 	}
+// 	if rows[0] != expectedRow {
+// 		t.Errorf(
+// 			"Expected %s, got %s",
+// 			expectedRow,
+// 			rows[0],
+// 		)
+// 	}
+// }
