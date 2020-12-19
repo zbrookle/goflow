@@ -34,7 +34,7 @@ func (client *TableClient) CreateTable() {
 }
 
 // GetLastNRunsForDagID retrieves the rows for a given dag id
-func (client *TableClient) GetLastNRunsForDagID(dagID int, n int) dagRowResult {
+func (client *TableClient) GetLastNRunsForDagID(dagID int, n int) []Row {
 	result := newRowResult(n)
 	client.sqlClient.QueryIntoResults(
 		&result,
@@ -43,7 +43,7 @@ func (client *TableClient) GetLastNRunsForDagID(dagID int, n int) dagRowResult {
 			dagID,
 		),
 	)
-	return result
+	return result.returnedRows
 }
 
 func (client *TableClient) selectSpecificDagRun(dagID int, executionDate time.Time) dagRowResult {
