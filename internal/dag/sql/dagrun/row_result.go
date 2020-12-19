@@ -2,8 +2,9 @@ package dagrun
 
 import (
 	"database/sql"
-	"fmt"
 	"goflow/internal/database"
+	"goflow/internal/dateutils"
+	"goflow/internal/jsonpanic"
 	"time"
 )
 
@@ -13,17 +14,47 @@ const executionDateName = "execution_date"
 
 // Row is a struct containing data about a particular dag
 type Row struct {
-	dagID           int
-	status          string
-	executionDate   time.Time
-	startDate       time.Time
-	endDate         time.Time
-	lastUpdatedDate time.Time
+	DagID           int
+	Status          string
+	ExecutionDate   time.Time
+	StartDate       time.Time
+	EndDate         time.Time
+	LastUpdatedDate time.Time
+}
+
+func (row Row) String() string {
+	return jsonpanic.JSONPanicFormat(row)
+}
+
+// NewRow returns a new row with the appropriate update and create time stamps
+func NewRow(dagID int, status string, executionDate time.Time) Row {
+	creationTime := dateutils.GetDateTimeNowMilliSecond()
+	return Row{
+		DagID: dagID, Status: status, ExecutionDate: executionDate, StartDate: creationTime, LastUpdatedDate: creationTime,
+	}
+}
+
+// RowList is a list of Rows
+type RowList []Row
+
+// Less returns true if the ExecutionDate of the row at i comes before the one at j
+func (rl RowList) Less(i, j int) bool {
+	return rl[i].ExecutionDate.Before(rl[j].ExecutionDate)
+}
+
+// Len returns the length of the row
+func (rl RowList) Len() int {
+	return len(rl)
+}
+
+// Swap switches the indices of the two elements
+func (rl RowList) Swap(i, j int) {
+	rl[i], rl[j] = rl[j], rl[i]
 }
 
 type dagRowResult struct {
 	rows         *sql.Rows
-	returnedRows []Row
+	returnedRows RowList
 }
 
 func newRowResult(n int) dagRowResult {
@@ -35,25 +66,29 @@ func newRowResult(n int) dagRowResult {
 func (row Row) columnar() database.ColumnWithValueSlice {
 	return []database.ColumnWithValue{
 		{
-			Column: database.Column{Name: dagIDName, DType: database.Int{}},
-			Value:  fmt.Sprint(row.dagID),
+			Column: database.Column{Name: dagIDName, DType: database.Int{Val: row.DagID}},
 		},
-		{Column: database.Column{Name: statusName, DType: database.String{}}, Value: row.status},
+		{Column: database.Column{Name: statusName, DType: database.String{Val: row.Status}}},
 		{
-			Column: database.Column{Name: executionDateName, DType: database.TimeStamp{}},
-			Value:  row.executionDate.String(),
-		},
-		{
-			Column: database.Column{Name: "start_date", DType: database.TimeStamp{}},
-			Value:  row.startDate.String(),
+			Column: database.Column{
+				Name:  executionDateName,
+				DType: database.TimeStamp{Val: row.ExecutionDate},
+			},
 		},
 		{
-			Column: database.Column{Name: "end_date", DType: database.TimeStamp{}},
-			Value:  row.endDate.String(),
+			Column: database.Column{
+				Name:  "start_date",
+				DType: database.TimeStamp{Val: row.StartDate},
+			},
 		},
 		{
-			Column: database.Column{Name: "last_updated_date", DType: database.TimeStamp{}},
-			Value:  row.lastUpdatedDate.String(),
+			Column: database.Column{Name: "end_date", DType: database.TimeStamp{Val: row.EndDate}},
+		},
+		{
+			Column: database.Column{
+				Name:  "last_updated_date",
+				DType: database.TimeStamp{Val: row.LastUpdatedDate},
+			},
 		},
 	}
 }
@@ -61,12 +96,12 @@ func (row Row) columnar() database.ColumnWithValueSlice {
 func (result *dagRowResult) ScanAppend(rows *sql.Rows) error {
 	row := Row{}
 	err := rows.Scan(
-		&row.dagID,
-		&row.status,
-		&row.executionDate,
-		&row.startDate,
-		&row.endDate,
-		&row.lastUpdatedDate,
+		&row.DagID,
+		&row.Status,
+		&row.ExecutionDate,
+		&row.StartDate,
+		&row.EndDate,
+		&row.LastUpdatedDate,
 	)
 	result.returnedRows = append(result.returnedRows, row)
 	return err

@@ -245,7 +245,6 @@ func TestUpdateTable(t *testing.T) {
 		[]ColumnWithValue{{Column{idName, Int{expectedID}}}},
 	)
 	rows := getRowsFromTestTable()
-	fmt.Println(rows[0])
 	if rows[0].name != newName {
 		t.Errorf("Column %s was not updated from %s to %s", nameName, expectedName, newName)
 	}

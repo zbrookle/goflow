@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"goflow/internal/database"
+	"goflow/internal/dateutils"
 	"time"
 )
 
@@ -21,9 +22,9 @@ type Row struct {
 
 // NewRow returns a new row with the appropriate update and create time stamps
 func NewRow(id int, name, namespace, version, filePath, fileFormat string) Row {
-	creation := time.Now()
+	creationTime := dateutils.GetDateTimeNowMilliSecond()
 	return Row{
-		id, name, namespace, version, filePath, fileFormat, creation, creation,
+		id, name, namespace, version, filePath, fileFormat, creationTime, creationTime,
 	}
 }
 

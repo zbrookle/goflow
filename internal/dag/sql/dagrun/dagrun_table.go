@@ -3,6 +3,7 @@ package dagrun
 import (
 	"fmt"
 	"goflow/internal/database"
+	"sort"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type TableClient struct {
 func NewTableClient(sqlClient *database.SQLClient) *TableClient {
 	return &TableClient{sqlClient, database.Table{Name: tableName,
 		Cols: []database.Column{
-			{Name: "dag_id", DType: database.Int{}},
+			{Name: dagIDName, DType: database.Int{}},
 			{Name: "status", DType: database.String{}},
 			{Name: "execution_date", DType: database.TimeStamp{}},
 			{Name: "start_date", DType: database.TimeStamp{}},
@@ -39,10 +40,13 @@ func (client *TableClient) GetLastNRunsForDagID(dagID int, n int) []Row {
 	client.sqlClient.QueryIntoResults(
 		&result,
 		fmt.Sprintf(
-			"SELECT * FROM dagrun WHERE dag_id = %d ORDER BY last_updated_date desc",
+			"SELECT * FROM dagrun WHERE %s = %d ORDER BY %s DESC",
+			dagIDName,
 			dagID,
+			executionDateName,
 		),
 	)
+	sort.Sort(result.returnedRows)
 	return result.returnedRows
 }
 
@@ -66,25 +70,31 @@ func (client *TableClient) isDagRunPresent(dagID int, executionDate time.Time) b
 
 // UpsertDagRun inserts or updates the dag run
 func (client *TableClient) UpsertDagRun(dagRunRow Row) {
-	switch client.isDagRunPresent(dagRunRow.dagID, dagRunRow.executionDate) {
+	switch client.isDagRunPresent(dagRunRow.DagID, dagRunRow.ExecutionDate) {
 	case false:
 		client.sqlClient.Insert(tableName, dagRunRow.columnar())
 	default:
 		client.sqlClient.Update(tableName,
 			[]database.ColumnWithValue{
 				{
-					Column: database.Column{Name: statusName, DType: database.String{}},
-					Value:  dagRunRow.status,
+					Column: database.Column{
+						Name:  statusName,
+						DType: database.String{Val: dagRunRow.Status},
+					},
 				},
 			},
 			[]database.ColumnWithValue{
 				{
-					Column: database.Column{Name: dagIDName, DType: database.String{}},
-					Value:  fmt.Sprint(dagRunRow.dagID),
+					Column: database.Column{
+						Name:  dagIDName,
+						DType: database.Int{Val: dagRunRow.DagID},
+					},
 				},
 				{
-					Column: database.Column{Name: executionDateName, DType: database.String{}},
-					Value:  dagRunRow.executionDate.String(),
+					Column: database.Column{
+						Name:  executionDateName,
+						DType: database.TimeStamp{Val: dagRunRow.ExecutionDate},
+					},
 				},
 			})
 	}
