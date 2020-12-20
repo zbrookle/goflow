@@ -21,6 +21,10 @@ type TableClient struct {
 func NewTableClient(sqlClient *database.SQLClient) *TableClient {
 	return &TableClient{sqlClient, database.Table{Name: TableName,
 		Cols: Row{}.columnar().Columns(),
+		PrimaryKeyCol: database.Column{
+			Name:  IDName,
+			DType: database.Int{},
+		},
 	}}
 }
 
