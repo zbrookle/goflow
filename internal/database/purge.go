@@ -62,21 +62,19 @@ func PurgeDB(client *SQLClient) {
 			panic(err)
 		}
 		stack = append(stack, table)
-		fmt.Println(stack)
 		for len(stack) > 0 {
 			n := len(stack) - 1
 			currTable := stack[n]
 			stack = stack[:n]
-			if _, ok := tableSet[currTable]; ok {
+			if tableSet.Contains(currTable) {
 				dependents := getDependentTables(currTable, client)
 				switch len(dependents) {
 				case 0:
-					_, err := client.database.Exec(fmt.Sprintf("DROP TABLE %s", table))
+					_, err := client.database.Exec(fmt.Sprintf("DROP TABLE %s", currTable))
 					if err != nil {
 						panic(err)
 					}
 					tableSet.Remove(currTable)
-					fmt.Println(tableSet)
 				default:
 					stack = append(stack, currTable)
 					stack = append(stack, dependents...)
