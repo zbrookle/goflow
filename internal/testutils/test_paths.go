@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 )
@@ -35,4 +36,12 @@ func GetDagsFolder() string {
 // GetSQLiteLocation returns the path to the sqlite database
 func GetSQLiteLocation() string {
 	return filepath.Join(GetTestFolder(), "test.sqlite3")
+}
+
+// RemoveSQLiteDB removes the sqlite database if it exists
+func RemoveSQLiteDB() {
+	databaseFile := GetSQLiteLocation()
+	if err, _ := os.Stat(databaseFile); err == nil {
+		os.Remove(databaseFile)
+	}
 }
