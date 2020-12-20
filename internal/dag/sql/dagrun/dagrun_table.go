@@ -4,6 +4,7 @@ import (
 	"fmt"
 	dagtable "goflow/internal/dag/sql/dag"
 	"goflow/internal/database"
+	"goflow/internal/dateutils"
 	"sort"
 	"time"
 )
@@ -65,9 +66,9 @@ func (client *TableClient) selectSpecificDagRun(dagID int, executionDate time.Ti
 	client.sqlClient.QueryIntoResults(
 		&result,
 		fmt.Sprintf(
-			"SELECT * FROM dagrun WHERE dag_id = %d AND executionDate = %s ORDER BY last_updated_date desc",
+			"SELECT * FROM dagrun WHERE dag_id = %d AND execution_date = %s ORDER BY last_updated_date desc",
 			dagID,
-			executionDate,
+			"'"+executionDate.Format(dateutils.SQLiteDateForm)+"'",
 		),
 	)
 	return result
@@ -80,32 +81,31 @@ func (client *TableClient) isDagRunPresent(dagID int, executionDate time.Time) b
 
 // UpsertDagRun inserts or updates the dag run
 func (client *TableClient) UpsertDagRun(dagRunRow Row) {
-	switch client.isDagRunPresent(dagRunRow.DagID, dagRunRow.ExecutionDate) {
-	case false:
+	if !client.isDagRunPresent(dagRunRow.DagID, dagRunRow.ExecutionDate) {
 		client.sqlClient.Insert(tableName, dagRunRow.columnar())
-	default:
-		client.sqlClient.Update(tableName,
-			[]database.ColumnWithValue{
-				{
-					Column: database.Column{
-						Name:  statusName,
-						DType: database.String{Val: dagRunRow.Status},
-					},
+		return
+	}
+	client.sqlClient.Update(tableName,
+		[]database.ColumnWithValue{
+			{
+				Column: database.Column{
+					Name:  statusName,
+					DType: database.String{Val: dagRunRow.Status},
 				},
 			},
-			[]database.ColumnWithValue{
-				{
-					Column: database.Column{
-						Name:  dagIDName,
-						DType: database.Int{Val: dagRunRow.DagID},
-					},
+		},
+		[]database.ColumnWithValue{
+			{
+				Column: database.Column{
+					Name:  dagIDName,
+					DType: database.Int{Val: dagRunRow.DagID},
 				},
-				{
-					Column: database.Column{
-						Name:  executionDateName,
-						DType: database.TimeStamp{Val: dagRunRow.ExecutionDate},
-					},
+			},
+			{
+				Column: database.Column{
+					Name:  executionDateName,
+					DType: database.TimeStamp{Val: dagRunRow.ExecutionDate},
 				},
-			})
-	}
+			},
+		})
 }

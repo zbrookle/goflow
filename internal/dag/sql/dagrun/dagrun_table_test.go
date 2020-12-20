@@ -90,50 +90,48 @@ func TestGetLastNDagRuns(t *testing.T) {
 
 }
 
-// func TestUpsertDagRun(t *testing.T) {
-// 	defer database.PurgeDB(sqlClient)
+func getTestRows() []Row {
+	result := dagRowResult{}
+	tableClient.sqlClient.QueryIntoResults(&result, "SELECT * FROM "+tableName)
+	return result.returnedRows
+}
 
-// 	createTestTable()
+func TestUpsertDagRun(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	setUpDagTable()
+	setUpTestTable()
 
-// 	expectedRow := Row{
-// 		ID:              0,
-// 		Name:            "test",
-// 		Namespace:       "default",
-// 		Version:         "0.1.0",
-// 		FilePath:        "path",
-// 		FileFormat:      "json",
-// 		CreatedDate:     time.Time{},
-// 		LastUpdatedDate: time.Time{},
-// 	}
+	startTime, _ := time.Parse("2006-01-02", "2019-01-01")
+	expectedRow := NewRow(testDagRow.ID, "RUNNING", startTime)
 
-// 	tableClient.UpsertDag(expectedRow)
+	tableClient.UpsertDagRun(expectedRow)
 
-// 	rows := getTestRows()
-// 	rowCount := len(rows)
-// 	if rowCount != 1 {
-// 		t.Errorf("Expected only 1 row, found %d", rowCount)
-// 	}
+	rows := getTestRows()
+	rowCount := len(rows)
+	if rowCount != 1 {
+		t.Errorf("Expected only 1 row, found %d", rowCount)
+	}
 
-// 	if rows[0] != expectedRow {
-// 		t.Errorf(
-// 			"Expected %s, got %s",
-// 			expectedRow,
-// 			rows[0],
-// 		)
-// 	}
+	if rows[0] != expectedRow {
+		t.Errorf(
+			"Expected %s, got %s",
+			expectedRow,
+			rows[0],
+		)
+	}
 
-// 	expectedRow.Version = "0.2.0"
-// 	tableClient.UpsertDag(expectedRow)
+	expectedRow.Status = "FAILED"
+	tableClient.UpsertDagRun(expectedRow)
 
-// 	rows = getTestRows()
-// 	if rowCount != 1 {
-// 		t.Errorf("Expected only 1 row, found %d", rowCount)
-// 	}
-// 	if rows[0] != expectedRow {
-// 		t.Errorf(
-// 			"Expected %s, got %s",
-// 			expectedRow,
-// 			rows[0],
-// 		)
-// 	}
-// }
+	rows = getTestRows()
+	if rowCount != 1 {
+		t.Errorf("Expected only 1 row, found %d", rowCount)
+	}
+	if rows[0] != expectedRow {
+		t.Errorf(
+			"Expected %s, got %s",
+			expectedRow,
+			rows[0],
+		)
+	}
+}

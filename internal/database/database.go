@@ -67,7 +67,7 @@ func (client *SQLClient) Query(queryString string) (*sql.Rows, error) {
 func (client *SQLClient) QueryIntoResults(result QueryResult, queryString string) {
 	rows, err := client.Query(queryString)
 	if err != nil {
-		panic(err)
+		panic(queryErrorMessage(queryString, err))
 	}
 	PutNRowValues(result, rows)
 }

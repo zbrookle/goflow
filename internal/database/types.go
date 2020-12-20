@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"goflow/internal/dateutils"
 	"time"
 )
 
@@ -43,5 +44,5 @@ func (t TimeStamp) typeName() string {
 }
 
 func (t TimeStamp) getValRep() string {
-	return "'" + t.Val.Format("2006-01-02 15:04:05") + "'"
+	return "'" + t.Val.Format(dateutils.SQLiteDateForm) + "'"
 }
