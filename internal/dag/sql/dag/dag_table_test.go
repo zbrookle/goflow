@@ -78,6 +78,31 @@ func getTestRows() []Row {
 	return result.returnedRows
 }
 
+func TestDagCount(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+
+	createTestTable()
+
+	const count = 4
+	for i := 0; i < 4; i++ {
+		sqlClient.Insert(TableName, Row{
+			ID:              i,
+			Name:            "test" + fmt.Sprint(i),
+			Namespace:       "default",
+			Version:         "0.1.0",
+			FilePath:        "path",
+			FileFormat:      "json",
+			CreatedDate:     time.Time{},
+			LastUpdatedDate: time.Time{},
+		}.columnar())
+	}
+
+	foundCount := tableClient.DagCount()
+	if foundCount != count {
+		t.Errorf("expected count %d, got count %d", count, foundCount)
+	}
+}
+
 func TestUpsertDagTable(t *testing.T) {
 	defer database.PurgeDB(sqlClient)
 

@@ -81,7 +81,6 @@ func (client *SQLClient) Exec(queryString string) error {
 // CreateTable creates a table in the database for the given SQLClient
 func (client *SQLClient) CreateTable(t Table) {
 	query := t.createQuery()
-	fmt.Println(query)
 	err := client.Exec(query)
 	if err != nil {
 		panic(queryErrorMessage(query, err))

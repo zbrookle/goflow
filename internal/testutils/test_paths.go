@@ -31,3 +31,8 @@ func GetConfigPath() string {
 func GetDagsFolder() string {
 	return filepath.Join(GetTestFolder(), "test_dags")
 }
+
+// GetSQLiteLocation returns the path to the sqlite database
+func GetSQLiteLocation() string {
+	return filepath.Join(GetTestFolder(), "test.sqlite3")
+}

@@ -1,6 +1,7 @@
 package dag
 
 import (
+	"database/sql"
 	"fmt"
 	"goflow/internal/database"
 )
@@ -63,14 +64,55 @@ func (client *TableClient) IsDagPresent(name, namespace string) bool {
 	return len(rows) == 1
 }
 
+func scanInt(rows *sql.Rows, intPtr *int) {
+	if rows.Next() {
+		rows.Scan(intPtr)
+		err := rows.Close()
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+	panic("no rows found!")
+}
+
+// DagCount returns the number of dags in the database
+func (client *TableClient) DagCount() int {
+	rows, err := client.sqlClient.Query(fmt.Sprintf("SELECT COUNT(*) as count FROM %s", TableName))
+	if err != nil {
+		panic(err)
+	}
+	var count int
+	scanInt(rows, &count)
+	fmt.Println(count)
+	return count
+}
+
+// GetMostRecentID returns a new id
+func (client *TableClient) GetMostRecentID() int {
+	if client.DagCount() == 0 {
+		return 0
+	}
+	rows, err := client.sqlClient.Query(fmt.Sprintf("SELECT MAX(id) FROM %s", TableName))
+	if err != nil {
+		panic(err)
+	}
+	var rowNumber int
+	scanInt(rows, &rowNumber)
+	return rowNumber + 1
+}
+
 // UpsertDag inserts a new dag if it does not exist or updates
 // an existing dag record
 func (client *TableClient) UpsertDag(dagRow Row) {
 	dagPresent := client.IsDagPresent(dagRow.Name, dagRow.Namespace)
 	switch dagPresent {
 	case false:
+		dagRow.ID = client.GetMostRecentID()
 		client.sqlClient.Insert(TableName, dagRow.columnar())
 	default:
+		originalRow := client.GetDagRecord(dagRow.Name, dagRow.Namespace)
+		dagRow.ID = originalRow.ID
 		client.sqlClient.Update(
 			TableName,
 			dagRow.columnar(),

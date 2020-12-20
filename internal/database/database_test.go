@@ -306,7 +306,6 @@ func TestRequireForeignKeys(t *testing.T) {
 		Cols:        []Column{refColumn},
 		ForeignKeys: []KeyReference{reference},
 	}
-	fmt.Println(table.createQuery())
 
 	defer func() {
 		if r := recover(); r != nil {
