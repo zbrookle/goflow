@@ -24,6 +24,12 @@ func (s StringSet) Remove(str string) {
 	delete(s, str)
 }
 
+// Contains returns true if the string is in the set
+func (s StringSet) Contains(str string) bool {
+	_, ok := s[str]
+	return ok
+}
+
 // GetOne returns a string from the set
 func (s StringSet) GetOne() (retString string, err error) {
 	retString = ""
