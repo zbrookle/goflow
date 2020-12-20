@@ -6,11 +6,13 @@ import (
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
 	dagrun "goflow/internal/dag/run"
+	"goflow/internal/database"
 	k8sclient "goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/event/holder"
 	podutils "goflow/internal/k8s/pod/utils"
 	"goflow/internal/logs"
 	"goflow/internal/testutils"
+	"path"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -18,6 +20,8 @@ import (
 	"time"
 
 	"encoding/json"
+
+	dagtable "goflow/internal/dag/sql/dag"
 
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +31,7 @@ import (
 
 var DAGPATH string
 var KUBECLIENT kubernetes.Interface
+var TABLECLIENT *dagtable.TableClient
 
 func setUpNamespaces(client kubernetes.Interface) {
 	namespaceClient := client.CoreV1().Namespaces()
@@ -42,6 +47,9 @@ func setUpNamespaces(client kubernetes.Interface) {
 func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(testutils.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
+
+	sqlClient := database.NewSQLiteClient(path.Join(testutils.GetTestFolder(), "test.sqlite3"))
+	TABLECLIENT = dagtable.NewTableClient(sqlClient)
 	podutils.CleanUpEnvironment(KUBECLIENT)
 	setUpNamespaces(KUBECLIENT)
 	m.Run()
@@ -105,6 +113,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		fake.NewSimpleClientset(),
 		goflowconfig.GoFlowConfig{},
 		make(ScheduleCache),
+		TABLECLIENT,
 	)
 	if err != nil {
 		panic(err)
@@ -155,7 +164,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client, make(ScheduleCache))
+	}, "", client, make(ScheduleCache), TABLECLIENT)
 	return &dag
 }
 

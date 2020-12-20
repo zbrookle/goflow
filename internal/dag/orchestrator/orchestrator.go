@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"goflow/internal/config"
+	dagtable "goflow/internal/dag/sql/dag"
+	dagruntable "goflow/internal/dag/sql/dagrun"
 	k8sclient "goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/event/holder"
 	"goflow/internal/k8s/pod/inform"
@@ -21,20 +23,22 @@ import (
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
-	dagMapLock     *sync.RWMutex
-	dagMap         map[string]*dagtype.DAG
-	kubeClient     kubernetes.Interface
-	config         *config.GoFlowConfig
-	channelHolder  *holder.ChannelHolder
-	schedules      dagtype.ScheduleCache
-	closingChannel chan struct{}
-	sqlClient      *database.SQLClient
+	dagMapLock        *sync.RWMutex
+	dagMap            map[string]*dagtype.DAG
+	kubeClient        kubernetes.Interface
+	config            *config.GoFlowConfig
+	channelHolder     *holder.ChannelHolder
+	schedules         dagtype.ScheduleCache
+	closingChannel    chan struct{}
+	dagTableClient    *dagtable.TableClient
+	dagrunTableClient *dagruntable.TableClient
 }
 
 func newOrchestratorFromClientAndConfig(
 	client kubernetes.Interface,
 	config *config.GoFlowConfig,
 ) *Orchestrator {
+	sqlClient := database.NewSQLiteClient(config.DatabaseDNS)
 	return &Orchestrator{
 		&sync.RWMutex{},
 		make(map[string]*dagtype.DAG),
@@ -43,7 +47,8 @@ func newOrchestratorFromClientAndConfig(
 		holder.New(),
 		make(dagtype.ScheduleCache),
 		make(chan struct{}),
-		database.NewSQLiteClient(config.DatabaseDNS),
+		dagtable.NewTableClient(sqlClient),
+		dagruntable.NewTableClient(sqlClient),
 	}
 }
 
@@ -134,6 +139,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 		orchestrator.kubeClient,
 		*orchestrator.config,
 		orchestrator.schedules,
+		orchestrator.dagTableClient,
 	)
 	for _, dag := range dagSlice {
 		dagPresent := orchestrator.isDagPresent(*dag)
@@ -180,8 +186,14 @@ func (orchestrator *Orchestrator) getTaskInformer() inform.TaskInformer {
 	return inform.New(orchestrator.kubeClient, orchestrator.channelHolder)
 }
 
+func (orchestrator *Orchestrator) setupDatabaseTables() {
+	orchestrator.dagTableClient.CreateTable()
+	orchestrator.dagrunTableClient.CreateTable()
+}
+
 // Start begins the orchestrator event loop
 func (orchestrator *Orchestrator) Start(cycleDuration time.Duration) {
+	orchestrator.setupDatabaseTables()
 	taskInformer := orchestrator.getTaskInformer()
 	taskInformer.Start()
 	go cycleUntilChannelClose(

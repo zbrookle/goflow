@@ -14,6 +14,8 @@ import (
 
 	"time"
 
+	// dagruntable "goflow/internal/dag/sql/dagrun"
+
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -35,6 +37,7 @@ type DAGRun struct {
 	watcher       *podwatch.PodWatcher
 	holder        *holder.ChannelHolder
 	dagRunCount   *activeruns.ActiveRuns
+	// tableClient   *dagruntable.TableClient
 }
 
 // NewDAGRun returns a new instance of DAGRun
