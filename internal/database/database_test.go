@@ -41,6 +41,46 @@ func getTestSQLiteClient() *SQLClient {
 	return NewSQLiteClient(databaseFile)
 }
 
+func TestPurgeDatabase(t *testing.T) {
+	err := client.Exec(createTableQuery)
+	if err != nil {
+		panic(err)
+	}
+	refColumn := Column{
+		Name:  "refKey",
+		DType: Int{},
+	}
+	keyRef := KeyReference{
+		Key:      refColumn,
+		RefTable: testTable,
+		RefCol:   idColumn,
+	}
+	tables := []Table{
+		{
+			Name:        "t2",
+			Cols:        []Column{refColumn},
+			ForeignKeys: []KeyReference{keyRef},
+		},
+		{
+			Name:        "t3",
+			Cols:        []Column{refColumn},
+			ForeignKeys: []KeyReference{keyRef},
+		},
+	}
+	for _, table := range tables {
+		err := client.Exec(table.createQuery())
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	PurgeDB(client)
+
+	if len(client.Tables()) != 0 {
+		t.Error("There should not be any tables left")
+	}
+}
+
 func TestNewDatabaseConnection(t *testing.T) {
 	err := client.database.Ping()
 	if err != nil {

@@ -31,17 +31,6 @@ func NewSQLiteClient(dsn string) *SQLClient {
 	}
 }
 
-// PurgeDB removes all tables from the database
-func PurgeDB(client *SQLClient) {
-	tables := client.Tables()
-	for _, table := range tables {
-		_, err := client.database.Exec(fmt.Sprintf("DROP TABLE %s", table))
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
 // QueryResult is implemented to retrieve the result for a rows object
 type QueryResult interface {
 	ScanAppend(*sql.Rows) error
@@ -92,6 +81,7 @@ func (client *SQLClient) Exec(queryString string) error {
 // CreateTable creates a table in the database for the given SQLClient
 func (client *SQLClient) CreateTable(t Table) {
 	query := t.createQuery()
+	fmt.Println(query)
 	err := client.Exec(query)
 	if err != nil {
 		panic(queryErrorMessage(query, err))
