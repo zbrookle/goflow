@@ -20,6 +20,7 @@ type GoFlowConfig struct {
 	MaxActiveRuns        int
 	DAGPath              string
 	DateFormat           string
+	DatabaseDNS          string
 }
 
 func readConfig(filePath string) []byte {
@@ -33,6 +34,9 @@ func readConfig(filePath string) []byte {
 func verifyConfig(config GoFlowConfig) {
 	if config.DefaultRestartPolicy == "" {
 		panic("Restart policy must be specified!")
+	}
+	if config.DatabaseDNS == "" {
+		panic("Database DNS must be specified!")
 	}
 }
 

@@ -4,7 +4,9 @@ import (
 	"context"
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/database"
 	"goflow/internal/jsonpanic"
+	"goflow/internal/testutils"
 
 	"goflow/internal/k8s/pod/event/holder"
 	podutils "goflow/internal/k8s/pod/utils"
@@ -13,11 +15,26 @@ import (
 
 	"time"
 
+	dagtable "goflow/internal/dag/sql/dag"
+	dagruntable "goflow/internal/dag/sql/dagrun"
+
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+var TABLECLIENT *dagruntable.TableClient
+var DAGTABLECLIENT *dagtable.TableClient
+var SQLCLIENT *database.SQLClient
+
+func TestMain(m *testing.M) {
+	testutils.RemoveSQLiteDB()
+	SQLCLIENT = database.NewSQLiteClient(testutils.GetSQLiteLocation())
+	TABLECLIENT = dagruntable.NewTableClient(SQLCLIENT)
+	DAGTABLECLIENT = dagtable.NewTableClient(SQLCLIENT)
+	m.Run()
+}
 
 func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
@@ -51,6 +68,8 @@ func TestCreatePod(t *testing.T) {
 		client,
 		holder.New(),
 		activeruns.New(),
+		TABLECLIENT,
+		0,
 	)
 	dagRun.createPod()
 	foundPod, err := dagRun.kubeClient.CoreV1().Pods(
@@ -96,6 +115,8 @@ func TestRunPod(t *testing.T) {
 				client,
 				holder.New(),
 				activeruns.New(),
+				TABLECLIENT,
+				0,
 			)
 			dagRun.Run()
 
@@ -146,6 +167,8 @@ func TestDeletePod(t *testing.T) {
 		client,
 		holder.New(),
 		activeruns.New(),
+		TABLECLIENT,
+		0,
 	)
 	podFrame := dagRun.getPodFrame()
 	podsClient := client.CoreV1().Pods(dagRun.Config.Namespace)
@@ -167,10 +190,22 @@ func TestDeletePod(t *testing.T) {
 	}
 }
 
+func setupDatabase() {
+	DAGTABLECLIENT.CreateTable()
+	TABLECLIENT.CreateTable()
+	DAGTABLECLIENT.UpsertDag(dagtable.NewRow(0, "test", "default", "0.0.0", "test", "json"))
+}
+
 func TestStart(t *testing.T) {
 	// Test with logs and without logs
 	client := fake.NewSimpleClientset()
 	defer podutils.CleanUpEnvironment(client)
+
+	// Set up DB
+	setupDatabase()
+	defer database.PurgeDB(SQLCLIENT)
+
+	// Run tests
 	tables := []struct {
 		name     string
 		withLogs bool
@@ -192,6 +227,8 @@ func TestStart(t *testing.T) {
 				client,
 				holder.New(),
 				activeruns.New(),
+				TABLECLIENT,
+				0,
 			)
 			go dagRun.Start()
 

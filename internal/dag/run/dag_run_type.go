@@ -14,6 +14,8 @@ import (
 
 	"time"
 
+	dagruntable "goflow/internal/dag/sql/dagrun"
+
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -35,6 +37,8 @@ type DAGRun struct {
 	watcher       *podwatch.PodWatcher
 	holder        *holder.ChannelHolder
 	dagRunCount   *activeruns.ActiveRuns
+	*dagruntable.TableClient
+	dagID int
 }
 
 // NewDAGRun returns a new instance of DAGRun
@@ -45,6 +49,8 @@ func NewDAGRun(
 	kubeClient kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
 	activeRuns *activeruns.ActiveRuns,
+	tableClient *dagruntable.TableClient,
+	dagID int,
 ) *DAGRun {
 	podName := utils.CleanK8sName(dagConfig.Name + "-" + executionDate.String())
 	return &DAGRun{
@@ -70,6 +76,8 @@ func NewDAGRun(
 		),
 		holder:      channelHolder,
 		dagRunCount: activeRuns,
+		TableClient: tableClient,
+		dagID:       dagID,
 	}
 }
 
@@ -156,11 +164,16 @@ func (dagRun *DAGRun) Run() {
 	dagRun.createPod()
 }
 
+func (dagRun *DAGRun) row() dagruntable.Row {
+	return dagruntable.NewRow(dagRun.dagID, "", dagRun.ExecutionDate.Time)
+}
+
 // Start runs the dagrun and waits for the monitoring to finish
 func (dagRun *DAGRun) Start() {
 	defer dagRun.DeletePod()
 	defer dagRun.dagRunCount.Dec()
 	go dagRun.Run()
+	dagRun.UpsertDagRun(dagRun.row())
 	dagRun.watcher.WaitForMonitorDone()
 }
 

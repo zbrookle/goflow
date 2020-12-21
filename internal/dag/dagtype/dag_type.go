@@ -11,11 +11,15 @@ import (
 	"goflow/internal/logs"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	dagtable "goflow/internal/dag/sql/dag"
+	dagruntable "goflow/internal/dag/sql/dagrun"
 
 	"github.com/robfig/cron"
 	"k8s.io/client-go/kubernetes"
@@ -36,6 +40,10 @@ type DAG struct {
 	MostRecentExecution time.Time
 	timeLock            *sync.Mutex
 	schedules           ScheduleCache
+	*dagtable.TableClient
+	filePath          string
+	dagRunTableClient *dagruntable.TableClient
+	ID                int
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -60,6 +68,9 @@ func CreateDAG(
 	code string,
 	client kubernetes.Interface,
 	schedules ScheduleCache,
+	tableClient *dagtable.TableClient,
+	filePath string,
+	dagRunTableClient *dagruntable.TableClient,
 ) DAG {
 	if config.Annotations == nil {
 		config.Annotations = make(map[string]string)
@@ -68,13 +79,16 @@ func CreateDAG(
 		config.Labels = make(map[string]string)
 	}
 	dag := DAG{
-		Config:     config,
-		Code:       code,
-		DAGRuns:    make([]*dagrun.DAGRun, 0),
-		kubeClient: client,
-		ActiveRuns: activeruns.New(),
-		timeLock:   &sync.Mutex{},
-		schedules:  schedules,
+		Config:            config,
+		Code:              code,
+		DAGRuns:           make([]*dagrun.DAGRun, 0),
+		kubeClient:        client,
+		ActiveRuns:        activeruns.New(),
+		timeLock:          &sync.Mutex{},
+		schedules:         schedules,
+		TableClient:       tableClient,
+		filePath:          filePath,
+		dagRunTableClient: dagRunTableClient,
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -83,6 +97,17 @@ func CreateDAG(
 	if dag.Config.MaxActiveRuns < 1 {
 		panic("MaxActiveRuns must be greater than 0!")
 	}
+	row := dag.UpsertDag(
+		dagtable.NewRow(
+			0,
+			dag.Config.Name,
+			dag.Config.Namespace,
+			"dag.Config.Version",
+			dag.filePath,
+			path.Ext(dag.filePath),
+		),
+	)
+	dag.ID = row.ID
 	return dag
 }
 
@@ -91,6 +116,9 @@ func createDAGFromJSONBytes(
 	client kubernetes.Interface,
 	goflowConfig goflowconfig.GoFlowConfig,
 	scheduleCache ScheduleCache,
+	tableClient *dagtable.TableClient,
+	filePath string,
+	dagRunTableClient *dagruntable.TableClient,
 ) (DAG, error) {
 	dagConfigStruct := dagconfig.DAGConfig{}
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
@@ -111,7 +139,15 @@ func createDAGFromJSONBytes(
 		)
 	}
 
-	dag := CreateDAG(&dagConfigStruct, string(dagBytes), client, scheduleCache)
+	dag := CreateDAG(
+		&dagConfigStruct,
+		string(dagBytes),
+		client,
+		scheduleCache,
+		tableClient,
+		filePath,
+		dagRunTableClient,
+	)
 	return dag, nil
 }
 
@@ -121,12 +157,22 @@ func getDAGFromJSON(
 	client kubernetes.Interface,
 	goflowConfig goflowconfig.GoFlowConfig,
 	scheduleCache ScheduleCache,
+	tableClient *dagtable.TableClient,
+	dagRunTableClient *dagruntable.TableClient,
 ) (DAG, error) {
 	dagBytes, err := readDAGFile(dagFilePath)
 	if err != nil {
 		return DAG{}, err
 	}
-	dagJSON, err := createDAGFromJSONBytes(dagBytes, client, goflowConfig, scheduleCache)
+	dagJSON, err := createDAGFromJSONBytes(
+		dagBytes,
+		client,
+		goflowConfig,
+		scheduleCache,
+		tableClient,
+		dagFilePath,
+		dagRunTableClient,
+	)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
 		return DAG{}, err
@@ -168,12 +214,21 @@ func GetDAGSFromFolder(
 	client kubernetes.Interface,
 	goflowConfig goflowconfig.GoFlowConfig,
 	schedules ScheduleCache,
+	tableClient *dagtable.TableClient,
+	dagRunTableClient *dagruntable.TableClient,
 ) []*DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file, client, goflowConfig, schedules)
+			dag, err := getDAGFromJSON(
+				file,
+				client,
+				goflowConfig,
+				schedules,
+				tableClient,
+				dagRunTableClient,
+			)
 			if os.ErrNotExist == err {
 				logs.ErrorLogger.Printf("File %s no longer exists", file)
 			}
@@ -198,6 +253,8 @@ func (dag *DAG) AddDagRun(
 		dag.kubeClient,
 		holder,
 		dag.ActiveRuns,
+		dag.dagRunTableClient,
+		dag.ID,
 	)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	return dagRun
@@ -222,9 +279,10 @@ func (dag *DAG) getNextTime(lastTime time.Time) time.Time {
 	return next
 }
 
-// AddNextDagRunIfReady adds the next dag run if ready for it
-func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
-	if dag.Ready() {
+// AddNextDagRunIfReady adds the next dag run if ready for it, returns true if added, else false
+func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) (ready bool) {
+	ready = dag.Ready()
+	if ready {
 		dag.timeLock.Lock()
 		switch {
 		case dag.MostRecentExecution.IsZero():
@@ -237,11 +295,13 @@ func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) {
 		dag.ActiveRuns.Inc()
 		go dagRun.Start()
 	}
+	return
 }
 
 // TerminateAndDeleteRuns removes all active DAG runs and their associated pods
 func (dag *DAG) TerminateAndDeleteRuns() {
 	for _, run := range dag.DAGRuns {
+		fmt.Println(run.MostRecentPod())
 		run.DeletePod()
 	}
 }
