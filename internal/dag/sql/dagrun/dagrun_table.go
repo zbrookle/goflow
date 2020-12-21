@@ -21,14 +21,7 @@ type TableClient struct {
 func NewTableClient(sqlClient *database.SQLClient) *TableClient {
 	dagIDColumn := database.Column{Name: dagIDName, DType: database.Int{}}
 	return &TableClient{sqlClient, database.Table{Name: tableName,
-		Cols: []database.Column{
-			dagIDColumn,
-			{Name: "status", DType: database.String{}},
-			{Name: "execution_date", DType: database.TimeStamp{}},
-			{Name: "start_date", DType: database.TimeStamp{}},
-			{Name: "end_date", DType: database.TimeStamp{}},
-			{Name: "last_updated_date", DType: database.TimeStamp{}},
-		},
+		Cols: Row{}.columnar().Columns(),
 		ForeignKeys: []database.KeyReference{{
 			Key:      dagIDColumn,
 			RefTable: dagtable.TableName,
