@@ -85,7 +85,7 @@ func (table *Table) GetColumnsWithValues(values []string) []ColumnWithValue {
 	colLength := len(table.Cols)
 	valLength := len(values)
 	if colLength != valLength {
-		panic(fmt.Sprintf("table can only recieve %d values, was given %d", colLength, valLength))
+		panic(fmt.Sprintf("table can only receive %d values, was given %d", colLength, valLength))
 	}
 	columnsWithValues := make([]ColumnWithValue, 0, len(values))
 	for i, col := range table.Cols {

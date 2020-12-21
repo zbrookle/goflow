@@ -38,7 +38,7 @@ func (holder *ChannelHolder) AddChannelGroup(name string) {
 	holder.lockUnlockW(func() { holder.channelMap[name] = channel.New() })
 }
 
-// DeleteChannelGroup deletes a channel gropu with the given name
+// DeleteChannelGroup deletes a channel group with the given name
 func (holder *ChannelHolder) DeleteChannelGroup(name string) {
 	holder.lockUnlockW(func() { delete(holder.channelMap, name) })
 }
