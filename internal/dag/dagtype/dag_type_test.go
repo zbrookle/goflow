@@ -10,9 +10,7 @@ import (
 	k8sclient "goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/event/holder"
 	podutils "goflow/internal/k8s/pod/utils"
-	"goflow/internal/logs"
 	"goflow/internal/testutils"
-	"path"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -32,6 +30,7 @@ import (
 var DAGPATH string
 var KUBECLIENT kubernetes.Interface
 var TABLECLIENT *dagtable.TableClient
+var SQLCLIENT *database.SQLClient
 
 func setUpNamespaces(client kubernetes.Interface) {
 	namespaceClient := client.CoreV1().Namespaces()
@@ -48,8 +47,9 @@ func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(testutils.GetTestFolder(), "test_dags")
 	KUBECLIENT = fake.NewSimpleClientset()
 
-	sqlClient := database.NewSQLiteClient(path.Join(testutils.GetTestFolder(), "test.sqlite3"))
-	TABLECLIENT = dagtable.NewTableClient(sqlClient)
+	testutils.RemoveSQLiteDB()
+	SQLCLIENT = database.NewSQLiteClient(testutils.GetSQLiteLocation())
+	TABLECLIENT = dagtable.NewTableClient(SQLCLIENT)
 	podutils.CleanUpEnvironment(KUBECLIENT)
 	setUpNamespaces(KUBECLIENT)
 	m.Run()
@@ -78,7 +78,13 @@ func (stringMap StringMap) Bytes() []byte {
 	return bytes
 }
 
+func setUpDatabase() {
+	TABLECLIENT.CreateTable()
+}
+
 func TestDAGFromJSONBytes(t *testing.T) {
+	defer database.PurgeDB(SQLCLIENT)
+	setUpDatabase()
 	config := dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
@@ -114,14 +120,12 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		goflowconfig.GoFlowConfig{},
 		make(ScheduleCache),
 		TABLECLIENT,
+		"path",
 	)
 	if err != nil {
 		panic(err)
 	}
 	marshaledJSON := string(dag.Marshal())
-	if err != nil {
-		panic(err)
-	}
 	if expectedJSONString != marshaledJSON {
 		t.Error("DAG struct does not match up with expected values")
 		t.Error("Found:", dag)
@@ -164,7 +168,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client, make(ScheduleCache), TABLECLIENT)
+	}, "", client, make(ScheduleCache), TABLECLIENT, "path")
 	return &dag
 }
 
@@ -192,6 +196,8 @@ func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag 
 }
 
 func TestAddDagRun(t *testing.T) {
+	defer database.PurgeDB(SQLCLIENT)
+	setUpDatabase()
 	testDAG := getTestDAGFakeClient()
 	currentTime := getTestDate()
 	testDAG.AddDagRun(currentTime, testDAG.Config.WithLogs, holder.New())
@@ -199,6 +205,8 @@ func TestAddDagRun(t *testing.T) {
 }
 
 func TestAddDagRunIfReady(t *testing.T) {
+	defer database.PurgeDB(SQLCLIENT)
+	setUpDatabase()
 	actionCases := []struct {
 		actionFunc   func(dag *DAG)
 		expectedRuns int
@@ -212,13 +220,16 @@ func TestAddDagRunIfReady(t *testing.T) {
 			2,
 		},
 	}
+
 	for _, action := range actionCases {
-		testDAG := getTestDAGFakeClient()
-		channelHolder := holder.New()
-		testDAG.AddNextDagRunIfReady(channelHolder)
-		action.actionFunc(testDAG)
-		testDAG.AddNextDagRunIfReady(channelHolder)
-		logs.InfoLogger.Println(testDAG.ActiveRuns.Get())
-		reportErrorCounts(t, len(testDAG.DAGRuns), action.expectedRuns, testDAG)
+		func() {
+			defer podutils.CleanUpEnvironment(KUBECLIENT)
+			testDAG := getTestDAGFakeClient()
+			channelHolder := holder.New()
+			testDAG.AddNextDagRunIfReady(channelHolder)
+			action.actionFunc(testDAG)
+			testDAG.AddNextDagRunIfReady(channelHolder)
+			reportErrorCounts(t, len(testDAG.DAGRuns), action.expectedRuns, testDAG)
+		}()
 	}
 }

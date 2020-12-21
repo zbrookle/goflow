@@ -84,7 +84,6 @@ func (client *TableClient) DagCount() int {
 	}
 	var count int
 	scanInt(rows, &count)
-	fmt.Println(count)
 	return count
 }
 

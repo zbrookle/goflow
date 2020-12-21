@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"goflow/internal/database"
 	"goflow/internal/testutils"
-	"os"
-	"path"
 	"testing"
 	"time"
 )
@@ -13,14 +11,11 @@ import (
 var sqlClient *database.SQLClient
 var tableClient *TableClient
 
-var databaseFile = path.Join(testutils.GetTestFolder(), "test.sqlite3")
+var databaseFile = testutils.GetSQLiteLocation()
 
 func TestMain(m *testing.M) {
-	if err, _ := os.Stat(databaseFile); err == nil {
-		os.Remove(databaseFile)
-	}
+	testutils.RemoveSQLiteDB()
 	sqlClient = database.NewSQLiteClient(databaseFile)
-	// defer database.PurgeDB(sqlClient)
 	tableClient = NewTableClient(sqlClient)
 	m.Run()
 }

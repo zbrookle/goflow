@@ -58,7 +58,7 @@ func (holder *ChannelHolder) Contains(name string) bool {
 	return ok
 }
 
-// List returns containing pointers to all of the the channel groups
+// List returns a slice containing pointers to all of the the channel groups
 func (holder *ChannelHolder) List() []*channel.FuncChannelGroup {
 	groupList := make([]*channel.FuncChannelGroup, len(holder.channelMap))
 	for key := range holder.channelMap {

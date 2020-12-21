@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/database"
 	"goflow/internal/testutils"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 var kubeClient *fake.Clientset
 var configPath string
 var dagPath string
+var sqlClient *database.SQLClient
 
 func createFakeKubeClient() *fake.Clientset {
 	return fake.NewSimpleClientset()
@@ -23,6 +25,8 @@ func TestMain(m *testing.M) {
 	kubeClient = createFakeKubeClient()
 	configPath = testutils.GetConfigPath()
 	dagPath = testutils.GetDagsFolder()
+	sqlClient = database.NewSQLiteClient(testutils.GetSQLiteLocation())
+	database.PurgeDB(sqlClient)
 	m.Run()
 }
 
@@ -33,7 +37,9 @@ func testOrchestrator() *Orchestrator {
 }
 
 func TestRegisterDAG(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
 	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
 	dag := dagtype.CreateDAG(&dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
@@ -45,7 +51,7 @@ func TestRegisterDAG(t *testing.T) {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", orch.kubeClient, make(dagtype.ScheduleCache), orch.dagTableClient)
+	}, "", orch.kubeClient, make(dagtype.ScheduleCache), orch.dagTableClient, "path")
 	const expectedLength = 1
 	orch.AddDAG(&dag)
 	if orch.dagMap[dag.Config.Name] != &dag {
