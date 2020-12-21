@@ -43,6 +43,7 @@ type DAG struct {
 	*dagtable.TableClient
 	filePath          string
 	dagRunTableClient *dagruntable.TableClient
+	ID                int
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -96,7 +97,7 @@ func CreateDAG(
 	if dag.Config.MaxActiveRuns < 1 {
 		panic("MaxActiveRuns must be greater than 0!")
 	}
-	dag.UpsertDag(
+	row := dag.UpsertDag(
 		dagtable.NewRow(
 			0,
 			dag.Config.Name,
@@ -106,6 +107,7 @@ func CreateDAG(
 			path.Ext(dag.filePath),
 		),
 	)
+	dag.ID = row.ID
 	return dag
 }
 
@@ -252,6 +254,7 @@ func (dag *DAG) AddDagRun(
 		holder,
 		dag.ActiveRuns,
 		dag.dagRunTableClient,
+		dag.ID,
 	)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	return dagRun

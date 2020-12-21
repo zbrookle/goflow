@@ -103,7 +103,7 @@ func (client *TableClient) GetMostRecentID() int {
 
 // UpsertDag inserts a new dag if it does not exist or updates
 // an existing dag record
-func (client *TableClient) UpsertDag(dagRow Row) {
+func (client *TableClient) UpsertDag(dagRow Row) Row {
 	dagPresent := client.IsDagPresent(dagRow.Name, dagRow.Namespace)
 	switch dagPresent {
 	case false:
@@ -131,4 +131,5 @@ func (client *TableClient) UpsertDag(dagRow Row) {
 			},
 		)
 	}
+	return dagRow
 }

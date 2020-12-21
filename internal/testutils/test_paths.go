@@ -41,7 +41,7 @@ func GetSQLiteLocation() string {
 // RemoveSQLiteDB removes the sqlite database if it exists
 func RemoveSQLiteDB() {
 	databaseFile := GetSQLiteLocation()
-	if err, _ := os.Stat(databaseFile); err == nil {
+	if _, err := os.Stat(databaseFile); err == nil {
 		os.Remove(databaseFile)
 	}
 }

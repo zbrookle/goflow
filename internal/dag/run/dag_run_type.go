@@ -37,7 +37,8 @@ type DAGRun struct {
 	watcher       *podwatch.PodWatcher
 	holder        *holder.ChannelHolder
 	dagRunCount   *activeruns.ActiveRuns
-	tableClient   *dagruntable.TableClient
+	*dagruntable.TableClient
+	dagID int
 }
 
 // NewDAGRun returns a new instance of DAGRun
@@ -49,6 +50,7 @@ func NewDAGRun(
 	channelHolder *holder.ChannelHolder,
 	activeRuns *activeruns.ActiveRuns,
 	tableClient *dagruntable.TableClient,
+	dagID int,
 ) *DAGRun {
 	podName := utils.CleanK8sName(dagConfig.Name + "-" + executionDate.String())
 	return &DAGRun{
@@ -74,7 +76,8 @@ func NewDAGRun(
 		),
 		holder:      channelHolder,
 		dagRunCount: activeRuns,
-		tableClient: tableClient,
+		TableClient: tableClient,
+		dagID:       dagID,
 	}
 }
 
@@ -161,11 +164,16 @@ func (dagRun *DAGRun) Run() {
 	dagRun.createPod()
 }
 
+func (dagRun *DAGRun) row() dagruntable.Row {
+	return dagruntable.NewRow(dagRun.dagID, "", dagRun.ExecutionDate.Time)
+}
+
 // Start runs the dagrun and waits for the monitoring to finish
 func (dagRun *DAGRun) Start() {
 	defer dagRun.DeletePod()
 	defer dagRun.dagRunCount.Dec()
 	go dagRun.Run()
+	dagRun.UpsertDagRun(dagRun.row())
 	dagRun.watcher.WaitForMonitorDone()
 }
 
