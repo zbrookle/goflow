@@ -25,14 +25,15 @@ func TestMain(m *testing.M) {
 	kubeClient = createFakeKubeClient()
 	configPath = testutils.GetConfigPath()
 	dagPath = testutils.GetDagsFolder()
+	testutils.RemoveSQLiteDB()
 	sqlClient = database.NewSQLiteClient(testutils.GetSQLiteLocation())
-	database.PurgeDB(sqlClient)
 	m.Run()
 }
 
 func testOrchestrator() *Orchestrator {
 	configuration := config.CreateConfig(configPath)
 	configuration.DAGPath = dagPath
+	configuration.DatabaseDNS = testutils.GetSQLiteLocation()
 	return newOrchestratorFromClientAndConfig(kubeClient, configuration)
 }
 
@@ -63,7 +64,9 @@ func TestRegisterDAG(t *testing.T) {
 }
 
 func TestCollectDags(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
 	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
 	orch.CollectDAGs()
 	dagCount := len(orch.DAGs())
 	if dagCount == 0 {

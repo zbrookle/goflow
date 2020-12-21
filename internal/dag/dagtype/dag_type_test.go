@@ -83,6 +83,7 @@ func (stringMap StringMap) Bytes() []byte {
 
 func setUpDatabase() {
 	TABLECLIENT.CreateTable()
+	RUNTABLECLIENT.CreateTable()
 }
 
 func TestDAGFromJSONBytes(t *testing.T) {
