@@ -8,5 +8,5 @@
     "TimeLimit": 1,
     "Retries": 1,
     "MaxActiveRuns": 1,
-    "DatabaseDNS": "test.db"
+    "DatabaseDNS": "goflow.sqlite3"
 }

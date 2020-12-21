@@ -4,7 +4,9 @@ import (
 	"context"
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/database"
 	"goflow/internal/jsonpanic"
+	"goflow/internal/testutils"
 
 	"goflow/internal/k8s/pod/event/holder"
 	podutils "goflow/internal/k8s/pod/utils"
@@ -13,11 +15,21 @@ import (
 
 	"time"
 
+	dagruntable "goflow/internal/dag/sql/dagrun"
+
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+var TABLECLIENT *dagruntable.TableClient
+
+func TestMain(m *testing.M) {
+	sqlClient := database.NewSQLiteClient(testutils.GetSQLiteLocation())
+	TABLECLIENT = dagruntable.NewTableClient(sqlClient)
+	m.Run()
+}
 
 func getTestDate() time.Time {
 	return time.Date(2019, 1, 1, 0, 0, 0, 0, time.Now().Location())
@@ -51,6 +63,7 @@ func TestCreatePod(t *testing.T) {
 		client,
 		holder.New(),
 		activeruns.New(),
+		TABLECLIENT,
 	)
 	dagRun.createPod()
 	foundPod, err := dagRun.kubeClient.CoreV1().Pods(
@@ -96,6 +109,7 @@ func TestRunPod(t *testing.T) {
 				client,
 				holder.New(),
 				activeruns.New(),
+				TABLECLIENT,
 			)
 			dagRun.Run()
 
@@ -146,6 +160,7 @@ func TestDeletePod(t *testing.T) {
 		client,
 		holder.New(),
 		activeruns.New(),
+		TABLECLIENT,
 	)
 	podFrame := dagRun.getPodFrame()
 	podsClient := client.CoreV1().Pods(dagRun.Config.Namespace)
@@ -192,6 +207,7 @@ func TestStart(t *testing.T) {
 				client,
 				holder.New(),
 				activeruns.New(),
+				TABLECLIENT,
 			)
 			go dagRun.Start()
 

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	dagtable "goflow/internal/dag/sql/dag"
+	dagruntable "goflow/internal/dag/sql/dagrun"
 
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,7 @@ var DAGPATH string
 var KUBECLIENT kubernetes.Interface
 var TABLECLIENT *dagtable.TableClient
 var SQLCLIENT *database.SQLClient
+var RUNTABLECLIENT *dagruntable.TableClient
 
 func setUpNamespaces(client kubernetes.Interface) {
 	namespaceClient := client.CoreV1().Namespaces()
@@ -50,6 +52,7 @@ func TestMain(m *testing.M) {
 	testutils.RemoveSQLiteDB()
 	SQLCLIENT = database.NewSQLiteClient(testutils.GetSQLiteLocation())
 	TABLECLIENT = dagtable.NewTableClient(SQLCLIENT)
+	RUNTABLECLIENT = dagruntable.NewTableClient(SQLCLIENT)
 	podutils.CleanUpEnvironment(KUBECLIENT)
 	setUpNamespaces(KUBECLIENT)
 	m.Run()
@@ -121,6 +124,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		make(ScheduleCache),
 		TABLECLIENT,
 		"path",
+		RUNTABLECLIENT,
 	)
 	if err != nil {
 		panic(err)
@@ -168,7 +172,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client, make(ScheduleCache), TABLECLIENT, "path")
+	}, "", client, make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT)
 	return &dag
 }
 

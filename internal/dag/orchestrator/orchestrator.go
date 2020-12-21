@@ -140,6 +140,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 		*orchestrator.config,
 		orchestrator.schedules,
 		orchestrator.dagTableClient,
+		orchestrator.dagrunTableClient,
 	)
 	for _, dag := range dagSlice {
 		dagPresent := orchestrator.isDagPresent(*dag)

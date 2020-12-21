@@ -14,7 +14,7 @@ import (
 
 	"time"
 
-	// dagruntable "goflow/internal/dag/sql/dagrun"
+	dagruntable "goflow/internal/dag/sql/dagrun"
 
 	core "k8s.io/api/core/v1"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +37,7 @@ type DAGRun struct {
 	watcher       *podwatch.PodWatcher
 	holder        *holder.ChannelHolder
 	dagRunCount   *activeruns.ActiveRuns
-	// tableClient   *dagruntable.TableClient
+	tableClient   *dagruntable.TableClient
 }
 
 // NewDAGRun returns a new instance of DAGRun
@@ -48,6 +48,7 @@ func NewDAGRun(
 	kubeClient kubernetes.Interface,
 	channelHolder *holder.ChannelHolder,
 	activeRuns *activeruns.ActiveRuns,
+	tableClient *dagruntable.TableClient,
 ) *DAGRun {
 	podName := utils.CleanK8sName(dagConfig.Name + "-" + executionDate.String())
 	return &DAGRun{
@@ -73,6 +74,7 @@ func NewDAGRun(
 		),
 		holder:      channelHolder,
 		dagRunCount: activeRuns,
+		tableClient: tableClient,
 	}
 }
 

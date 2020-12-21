@@ -19,6 +19,7 @@ import (
 	"time"
 
 	dagtable "goflow/internal/dag/sql/dag"
+	dagruntable "goflow/internal/dag/sql/dagrun"
 
 	"github.com/robfig/cron"
 	"k8s.io/client-go/kubernetes"
@@ -40,7 +41,8 @@ type DAG struct {
 	timeLock            *sync.Mutex
 	schedules           ScheduleCache
 	*dagtable.TableClient
-	filePath string
+	filePath          string
+	dagRunTableClient *dagruntable.TableClient
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -67,6 +69,7 @@ func CreateDAG(
 	schedules ScheduleCache,
 	tableClient *dagtable.TableClient,
 	filePath string,
+	dagRunTableClient *dagruntable.TableClient,
 ) DAG {
 	if config.Annotations == nil {
 		config.Annotations = make(map[string]string)
@@ -75,15 +78,16 @@ func CreateDAG(
 		config.Labels = make(map[string]string)
 	}
 	dag := DAG{
-		Config:      config,
-		Code:        code,
-		DAGRuns:     make([]*dagrun.DAGRun, 0),
-		kubeClient:  client,
-		ActiveRuns:  activeruns.New(),
-		timeLock:    &sync.Mutex{},
-		schedules:   schedules,
-		TableClient: tableClient,
-		filePath:    filePath,
+		Config:            config,
+		Code:              code,
+		DAGRuns:           make([]*dagrun.DAGRun, 0),
+		kubeClient:        client,
+		ActiveRuns:        activeruns.New(),
+		timeLock:          &sync.Mutex{},
+		schedules:         schedules,
+		TableClient:       tableClient,
+		filePath:          filePath,
+		dagRunTableClient: dagRunTableClient,
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -112,6 +116,7 @@ func createDAGFromJSONBytes(
 	scheduleCache ScheduleCache,
 	tableClient *dagtable.TableClient,
 	filePath string,
+	dagRunTableClient *dagruntable.TableClient,
 ) (DAG, error) {
 	dagConfigStruct := dagconfig.DAGConfig{}
 	err := json.Unmarshal(dagBytes, &dagConfigStruct)
@@ -139,6 +144,7 @@ func createDAGFromJSONBytes(
 		scheduleCache,
 		tableClient,
 		filePath,
+		dagRunTableClient,
 	)
 	return dag, nil
 }
@@ -150,6 +156,7 @@ func getDAGFromJSON(
 	goflowConfig goflowconfig.GoFlowConfig,
 	scheduleCache ScheduleCache,
 	tableClient *dagtable.TableClient,
+	dagRunTableClient *dagruntable.TableClient,
 ) (DAG, error) {
 	dagBytes, err := readDAGFile(dagFilePath)
 	if err != nil {
@@ -162,6 +169,7 @@ func getDAGFromJSON(
 		scheduleCache,
 		tableClient,
 		dagFilePath,
+		dagRunTableClient,
 	)
 	if err != nil {
 		logs.ErrorLogger.Printf("Error parsing dag file %s", dagFilePath)
@@ -205,12 +213,20 @@ func GetDAGSFromFolder(
 	goflowConfig goflowconfig.GoFlowConfig,
 	schedules ScheduleCache,
 	tableClient *dagtable.TableClient,
+	dagRunTableClient *dagruntable.TableClient,
 ) []*DAG {
 	files := getDirSliceRecur(folder)
 	dags := make([]*DAG, 0, len(files))
 	for _, file := range files {
 		if strings.ToLower(filepath.Ext(file)) == ".json" {
-			dag, err := getDAGFromJSON(file, client, goflowConfig, schedules, tableClient)
+			dag, err := getDAGFromJSON(
+				file,
+				client,
+				goflowConfig,
+				schedules,
+				tableClient,
+				dagRunTableClient,
+			)
 			if os.ErrNotExist == err {
 				logs.ErrorLogger.Printf("File %s no longer exists", file)
 			}
@@ -235,6 +251,7 @@ func (dag *DAG) AddDagRun(
 		dag.kubeClient,
 		holder,
 		dag.ActiveRuns,
+		dag.dagRunTableClient,
 	)
 	dag.DAGRuns = append(dag.DAGRuns, dagRun)
 	return dagRun
