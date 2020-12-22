@@ -9,7 +9,6 @@ import (
 	"goflow/internal/database"
 	k8sclient "goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/event/holder"
-	podutils "goflow/internal/k8s/pod/utils"
 	"goflow/internal/testutils"
 	"path/filepath"
 	"sort"
@@ -29,7 +28,6 @@ import (
 )
 
 var DAGPATH string
-var KUBECLIENT kubernetes.Interface
 var TABLECLIENT *dagtable.TableClient
 var SQLCLIENT *database.SQLClient
 var RUNTABLECLIENT *dagruntable.TableClient
@@ -45,16 +43,19 @@ func setUpNamespaces(client kubernetes.Interface) {
 	}
 }
 
+func getNewTestClient() kubernetes.Interface {
+	client := fake.NewSimpleClientset()
+	setUpNamespaces(client)
+	return client
+}
+
 func TestMain(m *testing.M) {
 	DAGPATH = filepath.Join(testutils.GetTestFolder(), "test_dags")
-	KUBECLIENT = fake.NewSimpleClientset()
 
 	testutils.RemoveSQLiteDB()
 	SQLCLIENT = database.NewSQLiteClient(testutils.GetSQLiteLocation())
 	TABLECLIENT = dagtable.NewTableClient(SQLCLIENT)
 	RUNTABLECLIENT = dagruntable.NewTableClient(SQLCLIENT)
-	podutils.CleanUpEnvironment(KUBECLIENT)
-	setUpNamespaces(KUBECLIENT)
 	m.Run()
 }
 
@@ -177,8 +178,8 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 	return &dag
 }
 
-func getTestDAGFakeClient() *DAG {
-	return getTestDAG(KUBECLIENT)
+func getTestDAGFakeClient(client kubernetes.Interface) *DAG {
+	return getTestDAG(client)
 }
 
 func getTestDAGRealClient() *DAG {
@@ -203,7 +204,7 @@ func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag 
 func TestAddDagRun(t *testing.T) {
 	defer database.PurgeDB(SQLCLIENT)
 	setUpDatabase()
-	testDAG := getTestDAGFakeClient()
+	testDAG := getTestDAGFakeClient(getNewTestClient())
 	currentTime := getTestDate()
 	testDAG.AddDagRun(currentTime, testDAG.Config.WithLogs, holder.New())
 	reportErrorCounts(t, len(testDAG.DAGRuns), 1, testDAG)
@@ -228,8 +229,8 @@ func TestAddDagRunIfReady(t *testing.T) {
 
 	for _, action := range actionCases {
 		func() {
-			defer podutils.CleanUpEnvironment(KUBECLIENT)
-			testDAG := getTestDAGFakeClient()
+			client := getNewTestClient()
+			testDAG := getTestDAGFakeClient(client)
 			channelHolder := holder.New()
 			testDAG.AddNextDagRunIfReady(channelHolder)
 			action.actionFunc(testDAG)
