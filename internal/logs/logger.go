@@ -1,11 +1,10 @@
 package logs
 
 import (
-	"io/ioutil"
+	// "io/ioutil"
 	"log"
 	"os"
-
-	"flag"
+	// "flag"
 )
 
 var (
@@ -25,14 +24,14 @@ func init() {
 		log.Fatal(err)
 	}
 
-	verbosePtr := flag.Bool("V", false, "Verbose logging")
-	flag.Parse()
+	// verbosePtr := flag.Bool("V", false, "Verbose logging")
+	// flag.Parse()
 
 	InfoLogger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	WarningLogger = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
 	ErrorLogger = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 
-	if !*verbosePtr {
-		InfoLogger.SetOutput(ioutil.Discard)
-	}
+	// if !*verbosePtr {
+	// 	InfoLogger.SetOutput(ioutil.Discard)
+	// }
 }
