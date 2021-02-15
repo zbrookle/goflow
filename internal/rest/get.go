@@ -10,7 +10,7 @@ import (
 )
 
 func getDagFromRequest(
-	orch orchestrator.Orchestrator,
+	orch *orchestrator.Orchestrator,
 	w http.ResponseWriter,
 	r *http.Request,
 ) *dagtype.DAG {
@@ -24,9 +24,10 @@ func getDagFromRequest(
 	return dag
 }
 
-func registerGetHandles(orch orchestrator.Orchestrator, router *mux.Router) {
+func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 
 	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("here!!!!!", orch.DAGs())
 		fmt.Fprint(w, orch.DAGs())
 	})
 

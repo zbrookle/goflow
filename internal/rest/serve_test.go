@@ -1,15 +1,21 @@
 package rest
 
 import (
-	"fmt"
 	"goflow/internal/dag/orchestrator"
+
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-// Serve registers handlers and starts the goflow webserver
-func Serve(host string, port int, orchestrator *orchestrator.Orchestrator) {
+// serveSingle is for testing only
+func serveSingle(
+	host string,
+	port int,
+	orchestrator *orchestrator.Orchestrator,
+	handlerModifier func(*orchestrator.Orchestrator, *mux.Router),
+) {
 	router := mux.NewRouter()
 	registerGetHandles(orchestrator, router)
 	http.Handle("/", router)
