@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"goflow/internal/jsonpanic"
 	"goflow/internal/logs"
 
 	"goflow/internal/dag/activeruns"
@@ -205,4 +206,8 @@ func (dagRun *DAGRun) MostRecentPod() (core.Pod, error) {
 		return core.Pod{}, fmt.Errorf("pod %s has not been created yet", dagRun.Name)
 	}
 	return *dagRun.pod, nil
+}
+
+func (dagRun *DAGRun) String() string {
+	return jsonpanic.JSONPanicFormat(dagRun)
 }

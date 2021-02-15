@@ -93,7 +93,7 @@ func (orchestrator *Orchestrator) DeleteDAG(dagName string, namespace string) {
 }
 
 // DAGs returns []DAGs with all DAGs present in the map
-func (orchestrator Orchestrator) DAGs() dagtype.DAGList {
+func (orchestrator Orchestrator) DAGs() []*dagtype.DAG {
 	dagSlice := make([]*dagtype.DAG, 0, len(orchestrator.dagMap))
 	orchestrator.dagMapLock.RLock()
 	for dagName := range orchestrator.dagMap {
