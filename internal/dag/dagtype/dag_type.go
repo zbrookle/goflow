@@ -46,6 +46,17 @@ type DAG struct {
 	ID                int
 }
 
+// DAGList is a list of DAGs
+type DAGList []*DAG
+
+func (dagList DAGList) String() string {
+	dagListString := ""
+	for _, dag := range dagList {
+		dagListString += dag.String()
+	}
+	return dagListString
+}
+
 func readDAGFile(dagFilePath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(dagFilePath)
 	if err != nil {
