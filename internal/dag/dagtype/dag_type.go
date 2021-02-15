@@ -7,6 +7,7 @@ import (
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
 	dagrun "goflow/internal/dag/run"
+	"goflow/internal/jsonpanic"
 	"goflow/internal/k8s/pod/event/holder"
 	"goflow/internal/logs"
 	"io/ioutil"
@@ -44,17 +45,6 @@ type DAG struct {
 	filePath          string
 	dagRunTableClient *dagruntable.TableClient
 	ID                int
-}
-
-// DAGList is a list of DAGs
-type DAGList []*DAG
-
-func (dagList DAGList) String() string {
-	dagListString := ""
-	for _, dag := range dagList {
-		dagListString += dag.String()
-	}
-	return dagListString
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -337,9 +327,5 @@ func (dag *DAG) Marshal() []byte {
 
 // String returns a nice JSON representation of the dag
 func (dag *DAG) String() string {
-	jsonString, err := json.MarshalIndent(dag, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-	return string(jsonString)
+	return jsonpanic.JSONPanicFormat(dag)
 }
