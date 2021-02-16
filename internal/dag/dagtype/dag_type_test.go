@@ -236,7 +236,7 @@ func TestAddDagRunIfReady(t *testing.T) {
 			action.actionFunc(testDAG)
 			testDAG.AddNextDagRunIfReady(channelHolder)
 			reportErrorCounts(t, len(testDAG.DAGRuns), action.expectedRuns, testDAG)
-
+			time.Sleep(10000)
 			// Make sure there are no more active dagruns before test terminates
 			if testDAG.ActiveRuns.Get() != 0 {
 				testDAG.ActiveRuns.Dec()
