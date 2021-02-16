@@ -14,7 +14,6 @@ import (
 var host string
 var port int
 
-
 func main() {
 	defer utils.CleanUpEnvironment(client.CreateKubeClient())
 	configPath := flag.String(
