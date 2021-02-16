@@ -34,7 +34,8 @@ type Orchestrator struct {
 	dagrunTableClient *dagruntable.TableClient
 }
 
-func newOrchestratorFromClientAndConfig(
+// NewOrchestratorFromClientAndConfig creates an orchestractor from a given k8s client and goflow config
+func NewOrchestratorFromClientAndConfig(
 	client kubernetes.Interface,
 	config *config.GoFlowConfig,
 ) *Orchestrator {
@@ -54,7 +55,7 @@ func newOrchestratorFromClientAndConfig(
 
 // NewOrchestrator creates an empty instance of Orchestrator
 func NewOrchestrator(configPath string) *Orchestrator {
-	return newOrchestratorFromClientAndConfig(
+	return NewOrchestratorFromClientAndConfig(
 		k8sclient.CreateKubeClient(),
 		config.CreateConfig(configPath),
 	)

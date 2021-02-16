@@ -34,7 +34,7 @@ func testOrchestrator() *Orchestrator {
 	configuration := config.CreateConfig(configPath)
 	configuration.DAGPath = dagPath
 	configuration.DatabaseDNS = testutils.GetSQLiteLocation()
-	return newOrchestratorFromClientAndConfig(kubeClient, configuration)
+	return NewOrchestratorFromClientAndConfig(kubeClient, configuration)
 }
 
 func TestRegisterDAG(t *testing.T) {
