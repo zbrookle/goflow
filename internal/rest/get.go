@@ -27,7 +27,6 @@ func getDagFromRequest(
 func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 
 	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("here!!!!!", orch.DAGs())
 		fmt.Fprint(w, orch.DAGs())
 	})
 
