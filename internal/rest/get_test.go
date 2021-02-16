@@ -87,12 +87,19 @@ func TestGetDag(t *testing.T) {
 	}
 }
 
+func TestGetMissingDag(t *testing.T) {
+	bytes := get(fmt.Sprintf("dag/%s", "fake_dag"))
+	if string(bytes) != missingDagMsg {
+		t.Error("Message should indicate that DAG does not exist")
+	}
+}
+
 func TestGetDagRuns(t *testing.T) {
 	bytes := get(fmt.Sprintf("dag/%s/runs", testDag.Config.Name))
 	dagRuns := make([]dagrun.DAGRun, 0)
 	json.Unmarshal(bytes, &dagRuns)
 	dagRun := dagRuns[0]
 	if dagRun.Name != testRun.Name {
-		t.Errorf("Expected dag run does not match")
+		t.Error("Expected dag run does not match")
 	}
 }

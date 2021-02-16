@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const missingDagMsg = "\"There is no DAG with given name\""
+
 func getDagFromRequest(
 	orch *orchestrator.Orchestrator,
 	w http.ResponseWriter,
@@ -18,7 +20,7 @@ func getDagFromRequest(
 	dagName := vars["name"]
 	dag := orch.GetDag(dagName)
 	if dag == nil {
-		fmt.Fprintf(w, fmt.Sprintf("\"There is no DAG with name '%s'\"", dagName))
+		fmt.Fprintf(w, missingDagMsg)
 		return nil
 	}
 	return dag
