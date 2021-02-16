@@ -34,7 +34,7 @@ type Table struct {
 
 // getCreateSyntax returns the create table segment of the create table expression
 func (table *Table) getCreateSyntax() string {
-	query := fmt.Sprintf("CREATE TABLE %s(", table.Name)
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(", table.Name)
 	colCount := len(table.Cols)
 	for i, col := range table.Cols {
 		query += col.String()

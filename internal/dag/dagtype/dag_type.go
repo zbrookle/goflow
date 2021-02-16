@@ -7,6 +7,7 @@ import (
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
 	dagrun "goflow/internal/dag/run"
+	"goflow/internal/jsonpanic"
 	"goflow/internal/k8s/pod/event/holder"
 	"goflow/internal/logs"
 	"io/ioutil"
@@ -326,9 +327,5 @@ func (dag *DAG) Marshal() []byte {
 
 // String returns a nice JSON representation of the dag
 func (dag *DAG) String() string {
-	jsonString, err := json.MarshalIndent(dag, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-	return string(jsonString)
+	return jsonpanic.JSONPanicFormat(dag)
 }
