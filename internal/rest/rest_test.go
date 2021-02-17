@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 	orch.AddDAG(&testDag)
 	orch.GetDag(testDag.Config.Name).AddDagRun(testTime, false, nil)
 	testRun = orch.GetDag(testDag.Config.Name).DAGRuns[0]
-	go serveSingle(host, port, orch, registerGetHandles)
+	go Serve(host, port, orch)
 	m.Run()
 }
 
