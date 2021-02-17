@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
+	"goflow/internal/config"
 	dagconfig "goflow/internal/dag/config"
 	"goflow/internal/dag/dagtype"
 	"goflow/internal/dag/orchestrator"
@@ -13,6 +14,8 @@ import (
 	"time"
 
 	"net/http"
+
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var host string
@@ -21,6 +24,14 @@ var orch *orchestrator.Orchestrator
 var testDag dagtype.DAG
 var testTime time.Time
 var testRun *dagrun.DAGRun
+
+func getTestOrchestrator(configPath string) *orchestrator.Orchestrator {
+	kubeClient := fake.NewSimpleClientset()
+	configuration := config.CreateConfig(configPath)
+	configuration.DAGPath = testutils.GetDagsFolder()
+	configuration.DatabaseDNS = testutils.GetSQLiteLocation()
+	return orchestrator.NewOrchestratorFromClientAndConfig(kubeClient, configuration)
+}
 
 func TestMain(m *testing.M) {
 	configPath := testutils.GetConfigPath()
