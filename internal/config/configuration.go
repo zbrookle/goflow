@@ -65,3 +65,7 @@ func (config GoFlowConfig) SaveConfig(filePath string) {
 		panic(err)
 	}
 }
+
+func (config GoFlowConfig) String() string {
+	return jsonpanic.JSONPanicFormat(config)
+}

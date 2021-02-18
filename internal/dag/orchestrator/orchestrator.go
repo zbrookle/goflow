@@ -1,6 +1,8 @@
 package orchestrator
 
 import (
+	"fmt"
+	dagconfig "goflow/internal/dag/config"
 	dagtype "goflow/internal/dag/dagtype"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/database"
@@ -17,6 +19,8 @@ import (
 	"goflow/internal/k8s/pod/inform"
 	"goflow/internal/k8s/pod/utils"
 	"goflow/internal/k8s/serviceaccount"
+
+	"path"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -220,4 +224,13 @@ func (orchestrator *Orchestrator) Wait() {
 // Stop terminates the orchestrators cycles
 func (orchestrator *Orchestrator) Stop() {
 	close(orchestrator.closingChannel)
+}
+
+// WriteDAGFile writes a new DAG to the dag file location
+func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) error {
+	if !config.IsNameValid() {
+		return fmt.Errorf("DAG name must be alphanumeric characters only")
+	}
+	pathToFile := path.Join(orchestrator.config.DAGPath, fmt.Sprintf("%s.json", config.Name))
+	return config.WriteToFile(pathToFile)
 }
