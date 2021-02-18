@@ -17,10 +17,16 @@ func registerPutHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 		requestBytes := make([]byte, 0)
 		requestBytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			panic(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
 		}
 		json.Unmarshal(requestBytes, dagConfig)
-		fmt.Println(fmt.Sprint(dagConfig))
-		orch.WriteDAGFile(dagConfig)
+		status, err := orch.WriteDAGFile(dagConfig)
+		if err != nil {
+			w.WriteHeader(status)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+		fmt.Fprint(w, "DAG write success")
 	}).Methods("POST")
 }

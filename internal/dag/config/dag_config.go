@@ -10,10 +10,12 @@ import (
 	core "k8s.io/api/core/v1"
 )
 
+const validNameRegexString = "^[[:alpha:]][a-zA-Z0-9_-]+$"
+
 var validNameRegex *regexp.Regexp
 
 func init() {
-	compiledRegex, err := regexp.Compile("[[:alpha:]]\\w+")
+	compiledRegex, err := regexp.Compile(validNameRegexString)
 	if err != nil {
 		panic(err)
 	}
@@ -109,4 +111,9 @@ func (config *DAGConfig) WriteToFile(path string) error {
 
 func (config *DAGConfig) String() string {
 	return jsonpanic.JSONPanicFormat(config)
+}
+
+// Pattern returns the name pattern string that is used to determine valid names
+func (config *DAGConfig) Pattern() string {
+	return validNameRegexString
 }

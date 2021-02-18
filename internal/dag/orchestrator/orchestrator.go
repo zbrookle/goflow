@@ -8,6 +8,7 @@ import (
 	"goflow/internal/database"
 	"goflow/internal/jsonpanic"
 	"goflow/internal/logs"
+	"net/http"
 	"sync"
 	"time"
 
@@ -227,10 +228,17 @@ func (orchestrator *Orchestrator) Stop() {
 }
 
 // WriteDAGFile writes a new DAG to the dag file location
-func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) error {
+func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) (int, error) {
 	if !config.IsNameValid() {
-		return fmt.Errorf("DAG name must be alphanumeric characters only")
+		return http.StatusBadRequest, fmt.Errorf(
+			"DAG name must match the pattern \"%s\"",
+			config.Pattern(),
+		)
 	}
 	pathToFile := path.Join(orchestrator.config.DAGPath, fmt.Sprintf("%s.json", config.Name))
-	return config.WriteToFile(pathToFile)
+	err := config.WriteToFile(pathToFile)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, err
 }
