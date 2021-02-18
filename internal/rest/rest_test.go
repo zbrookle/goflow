@@ -88,6 +88,16 @@ func readRespBytes(resp *http.Response) []byte {
 	return bodyBytes
 }
 
+func errorCodeResponse(t *testing.T, expectedCode int, received int) {
+	if received != expectedCode {
+		t.Errorf(
+			"Should have code: %d, but received: %d",
+			expectedCode,
+			received,
+		)
+	}
+}
+
 func TestGetDags(t *testing.T) {
 	resp := get("dags")
 	bodyBytes := readRespBytes(resp)
@@ -97,6 +107,7 @@ func TestGetDags(t *testing.T) {
 	if expectedDag.Config.Name != testDag.Config.Name {
 		t.Errorf("Expected dag not found!")
 	}
+	errorCodeResponse(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestGetDag(t *testing.T) {
@@ -107,6 +118,7 @@ func TestGetDag(t *testing.T) {
 	if dag.Config.Name != testDag.Config.Name {
 		t.Errorf("Expected dag with name %s", testDag.Config.Name)
 	}
+	errorCodeResponse(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestGetMissingDag(t *testing.T) {
@@ -115,6 +127,7 @@ func TestGetMissingDag(t *testing.T) {
 	if string(bodyBytes) != missingDagMsg {
 		t.Error("Message should indicate that DAG does not exist")
 	}
+	errorCodeResponse(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestGetDagRuns(t *testing.T) {
@@ -126,6 +139,7 @@ func TestGetDagRuns(t *testing.T) {
 	if dagRun.Name != testRun.Name {
 		t.Error("Expected dag run does not match")
 	}
+	errorCodeResponse(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestPutDag(t *testing.T) {
@@ -160,13 +174,7 @@ func TestPutDag(t *testing.T) {
 			fmt.Sprint(&dagConfigSeen),
 		)
 	}
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf(
-			"Should have received bad request error: %d, but received %d",
-			http.StatusOK,
-			resp.StatusCode,
-		)
-	}
+	errorCodeResponse(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestPutInvalidDag(t *testing.T) {
@@ -190,11 +198,5 @@ func TestPutInvalidDag(t *testing.T) {
 	if !strings.Contains(string(bodyBytes), "DAG name must match") {
 		t.Error("Error response should have been raised!")
 	}
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf(
-			"Should have received bad request error: %d, but received %d",
-			http.StatusBadRequest,
-			resp.StatusCode,
-		)
-	}
+	errorCodeResponse(t, http.StatusBadRequest, resp.StatusCode)
 }
