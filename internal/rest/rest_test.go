@@ -57,12 +57,12 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func getUrl(suffix string) string {
+func getURL(suffix string) string {
 	return fmt.Sprintf("http://%s:%d/%s", host, port, suffix)
 }
 
 func put(suffix string, content string) []byte {
-	url := getUrl(suffix)
+	url := getURL(suffix)
 	reader := strings.NewReader(content)
 	resp, err := http.Post(url, "json", reader)
 	if err != nil {
@@ -76,7 +76,7 @@ func put(suffix string, content string) []byte {
 }
 
 func get(suffix string) []byte {
-	url := getUrl(suffix)
+	url := getURL(suffix)
 	resp, err := http.Get(url)
 	if err != nil {
 		panic(err)
@@ -124,18 +124,6 @@ func TestGetDagRuns(t *testing.T) {
 	}
 }
 
-// func getDagsPath() string {
-// 	goflowConfig := config.GoFlowConfig{}
-// 	fmt.Println("Path", configPath)
-// 	configBytes, err := ioutil.ReadFile(configPath)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	json.Unmarshal(configBytes, goflowConfig)
-// 	fmt.Println("Config", goflowConfig)
-// 	return goflowConfig.DAGPath
-// }
-
 func TestPutDag(t *testing.T) {
 	config := dagconfig.DAGConfig{
 		Name:          "test-dag-4",
@@ -161,7 +149,29 @@ func TestPutDag(t *testing.T) {
 		panic(err)
 	}
 	defer os.Remove(addedDagPath)
-	if ! cmp.Equal(config, dagConfigSeen) {
-		t.Errorf("Expected config: \n%s\nbut generated config:\n%s", fmt.Sprint(&config), fmt.Sprint(&dagConfigSeen))
+	if !cmp.Equal(config, dagConfigSeen) {
+		t.Errorf(
+			"Expected config: \n%s\nbut generated config:\n%s",
+			fmt.Sprint(&config),
+			fmt.Sprint(&dagConfigSeen),
+		)
+	}
+}
+
+func TestPutInvalidDag(t *testing.T) {
+	config := dagconfig.DAGConfig{
+		Name:          "test-dag-4.json",
+		Command:       []string{"echo", "1"},
+		StartDateTime: "2019-01-01",
+		EndDateTime:   "2020-01-01",
+		Schedule:      "* * * * *",
+	}
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		panic(err)
+	}
+	resp := put("dag", string(configBytes))
+	if !strings.Contains(string(resp), "DAG name must match") {
+		t.Error("Error response should have been raised!")
 	}
 }
