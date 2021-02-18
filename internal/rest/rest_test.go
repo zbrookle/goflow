@@ -61,37 +61,38 @@ func getURL(suffix string) string {
 	return fmt.Sprintf("http://%s:%d/%s", host, port, suffix)
 }
 
-func put(suffix string, content string) []byte {
+func put(suffix string, content string) *http.Response {
 	url := getURL(suffix)
 	reader := strings.NewReader(content)
 	resp, err := http.Post(url, "json", reader)
 	if err != nil {
 		panic(err)
 	}
-	readBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	return readBytes
+	return resp
 }
 
-func get(suffix string) []byte {
+func get(suffix string) *http.Response {
 	url := getURL(suffix)
 	resp, err := http.Get(url)
 	if err != nil {
 		panic(err)
 	}
-	readBytes, err := ioutil.ReadAll(resp.Body)
+	return resp
+}
+
+func readRespBytes(resp *http.Response) []byte {
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
-	return readBytes
+	return bodyBytes
 }
 
 func TestGetDags(t *testing.T) {
-	readBytes := get("dags")
+	resp := get("dags")
+	bodyBytes := readRespBytes(resp)
 	dagList := make([]dagtype.DAG, 0)
-	json.Unmarshal(readBytes, &dagList)
+	json.Unmarshal(bodyBytes, &dagList)
 	expectedDag := dagList[0]
 	if expectedDag.Config.Name != testDag.Config.Name {
 		t.Errorf("Expected dag not found!")
@@ -99,25 +100,28 @@ func TestGetDags(t *testing.T) {
 }
 
 func TestGetDag(t *testing.T) {
-	bytes := get(fmt.Sprintf("dag/%s", testDag.Config.Name))
+	resp := get(fmt.Sprintf("dag/%s", testDag.Config.Name))
+	bodyBytes := readRespBytes(resp)
 	dag := dagtype.DAG{}
-	json.Unmarshal(bytes, &dag)
+	json.Unmarshal(bodyBytes, &dag)
 	if dag.Config.Name != testDag.Config.Name {
 		t.Errorf("Expected dag with name %s", testDag.Config.Name)
 	}
 }
 
 func TestGetMissingDag(t *testing.T) {
-	bytes := get(fmt.Sprintf("dag/%s", "fake_dag"))
-	if string(bytes) != missingDagMsg {
+	resp := get(fmt.Sprintf("dag/%s", "fake_dag"))
+	bodyBytes := readRespBytes(resp)
+	if string(bodyBytes) != missingDagMsg {
 		t.Error("Message should indicate that DAG does not exist")
 	}
 }
 
 func TestGetDagRuns(t *testing.T) {
-	bytes := get(fmt.Sprintf("dag/%s/runs", testDag.Config.Name))
+	resp := get(fmt.Sprintf("dag/%s/runs", testDag.Config.Name))
+	bodyBytes := readRespBytes(resp)
 	dagRuns := make([]dagrun.DAGRun, 0)
-	json.Unmarshal(bytes, &dagRuns)
+	json.Unmarshal(bodyBytes, &dagRuns)
 	dagRun := dagRuns[0]
 	if dagRun.Name != testRun.Name {
 		t.Error("Expected dag run does not match")
@@ -136,7 +140,7 @@ func TestPutDag(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	put("dag", string(configBytes))
+	resp := put("dag", string(configBytes))
 	addedDagPath := path.Join(goflowConfig.DAGPath, fmt.Sprintf("%s.json", config.Name))
 	fileBytes, err := ioutil.ReadFile(addedDagPath)
 	if err != nil {
@@ -156,6 +160,13 @@ func TestPutDag(t *testing.T) {
 			fmt.Sprint(&dagConfigSeen),
 		)
 	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf(
+			"Should have received bad request error: %d, but received %d",
+			http.StatusOK,
+			resp.StatusCode,
+		)
+	}
 }
 
 func TestPutInvalidDag(t *testing.T) {
@@ -171,7 +182,19 @@ func TestPutInvalidDag(t *testing.T) {
 		panic(err)
 	}
 	resp := put("dag", string(configBytes))
-	if !strings.Contains(string(resp), "DAG name must match") {
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	if !strings.Contains(string(bodyBytes), "DAG name must match") {
 		t.Error("Error response should have been raised!")
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf(
+			"Should have received bad request error: %d, but received %d",
+			http.StatusBadRequest,
+			resp.StatusCode,
+		)
 	}
 }
