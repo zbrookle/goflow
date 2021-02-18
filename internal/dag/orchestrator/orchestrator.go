@@ -25,6 +25,7 @@ import (
 
 	"path"
 
+	"github.com/kennygrant/sanitize"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -232,13 +233,14 @@ func (orchestrator *Orchestrator) Stop() {
 // WriteDAGFile writes a new DAG to the dag file location
 func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) (int, error) {
 	if !config.IsNameValid() || !strings.Contains(config.Name, ".") ||
-		strings.Contains(config.Name, "/") {
+		strings.Contains(config.Name, "/") || strings.Contains(config.Name, "\\") {
 		return http.StatusBadRequest, fmt.Errorf(
 			"DAG name must match the pattern \"%s\"",
 			config.Pattern(),
 		)
 	}
-	pathToFile := path.Join(orchestrator.config.DAGPath, fmt.Sprintf("%s.json", config.Name))
+	cleanName := sanitize.Path(config.Name)
+	pathToFile := path.Join(orchestrator.config.DAGPath, fmt.Sprintf("%s.json", cleanName))
 	_, err := os.Stat(pathToFile)
 	if os.IsExist(err) {
 		return http.StatusConflict, fmt.Errorf("DAG with given name already present")
