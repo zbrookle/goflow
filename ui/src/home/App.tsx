@@ -3,6 +3,9 @@ import React from 'react';
 // import './App.css';
 import Navbar from 'react-bootstrap/Navbar'
 import Nav from 'react-bootstrap/Nav'
+import Container from 'react-bootstrap/Container'
+import Row from 'react-bootstrap/Row'
+import Col from 'react-bootstrap/Col'
 
 function Header() {
   return <div>
@@ -21,9 +24,22 @@ function Header() {
     </div>
 }
 
+function DAGContainer() {
+  return <Container>
+    <Row>
+      <Col>on/off</Col>
+      <Col>name</Col>
+      <Col>icon?</Col>
+      <Col>last runtime</Col>
+      <Col>Success/failures</Col>
+    </Row>
+  </Container>
+}
+
 function App() {
   return (
-    <Header />
+    <div><Header />
+    <DAGContainer /></div>
   );
 }
 
