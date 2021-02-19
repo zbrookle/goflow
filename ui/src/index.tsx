@@ -3,11 +3,13 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import 'bootstrap/dist/css/bootstrap.min.css'
+import {Head} from './bootstrap_cdn'
 
-// var test = React.createElement('h1', {className: 'test', })
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+      <Head />
+      <App />
   </React.StrictMode>,
   document.getElementById('root')
 );
