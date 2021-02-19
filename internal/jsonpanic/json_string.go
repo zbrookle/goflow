@@ -11,11 +11,17 @@ func JSONPanic(v interface{}) string {
 	return string(jsonString)
 }
 
-// JSONPanicFormat performances json.MarshalIndent with built in panic
-func JSONPanicFormat(v interface{}) string {
-	jsonString, err := json.MarshalIndent(v, "", "\t")
+// JSONPanicFormatBytes performs json.MarshalIndent
+func JSONPanicFormatBytes(v interface{}) []byte {
+	jsonPanic, err := json.MarshalIndent(v, "", "\t")
 	if err != nil {
 		panic(err)
 	}
+	return jsonPanic
+}
+
+// JSONPanicFormat performances json.MarshalIndent with built in panic and string conversion
+func JSONPanicFormat(v interface{}) string {
+	jsonString := JSONPanicFormatBytes(v)
 	return string(jsonString)
 }

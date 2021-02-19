@@ -3,9 +3,24 @@ package config
 import (
 	"encoding/json"
 	"goflow/internal/config"
+	"goflow/internal/jsonpanic"
+	"io/ioutil"
+	"regexp"
 
 	core "k8s.io/api/core/v1"
 )
+
+const validNameRegexString = "^[[:alpha:]][a-zA-Z0-9_-]+$"
+
+var validNameRegex *regexp.Regexp
+
+func init() {
+	compiledRegex, err := regexp.Compile(validNameRegexString)
+	if err != nil {
+		panic(err)
+	}
+	validNameRegex = compiledRegex
+}
 
 // DAGConfig is a struct storing the configurable values provided from the user in the DAG
 // definition file
@@ -82,4 +97,23 @@ func (config *DAGConfig) SetDefaults(goflowConfig config.GoFlowConfig) {
 	if config.MaxActiveRuns == 0 {
 		config.MaxActiveRuns = goflowConfig.MaxActiveRuns
 	}
+}
+
+// IsNameValid returns false if name does not match required DAG naming pattern
+func (config *DAGConfig) IsNameValid() bool {
+	return validNameRegex.Match([]byte(config.Name))
+}
+
+// WriteToFile writes a dag file to the given folder
+func (config *DAGConfig) WriteToFile(path string) error {
+	return ioutil.WriteFile(path, jsonpanic.JSONPanicFormatBytes(config), 0600)
+}
+
+func (config *DAGConfig) String() string {
+	return jsonpanic.JSONPanicFormat(config)
+}
+
+// Pattern returns the name pattern string that is used to determine valid names
+func (config *DAGConfig) Pattern() string {
+	return validNameRegexString
 }

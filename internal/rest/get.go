@@ -20,6 +20,7 @@ func getDagFromRequest(
 	dagName := vars["name"]
 	dag := orch.GetDag(dagName)
 	if dag == nil {
+		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, missingDagMsg)
 		return nil
 	}

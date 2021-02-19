@@ -1,11 +1,17 @@
 package orchestrator
 
 import (
+	"fmt"
+	dagconfig "goflow/internal/dag/config"
 	dagtype "goflow/internal/dag/dagtype"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/database"
 	"goflow/internal/jsonpanic"
 	"goflow/internal/logs"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +24,9 @@ import (
 	"goflow/internal/k8s/pod/utils"
 	"goflow/internal/k8s/serviceaccount"
 
+	"path"
+
+	"github.com/kennygrant/sanitize"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -220,4 +229,33 @@ func (orchestrator *Orchestrator) Wait() {
 // Stop terminates the orchestrators cycles
 func (orchestrator *Orchestrator) Stop() {
 	close(orchestrator.closingChannel)
+}
+
+// WriteDAGFile writes a new DAG to the dag file location
+func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) (int, error) {
+	if !config.IsNameValid() || strings.Contains(config.Name, ".") ||
+		strings.Contains(
+			config.Name,
+			"/",
+		) || strings.Contains(config.Name, "\\") || strings.Contains(config.Name, "..") {
+		return http.StatusBadRequest, fmt.Errorf(
+			"DAG name must match the pattern \"%s\"",
+			config.Pattern(),
+		)
+	}
+	cleanName := sanitize.Path(config.Name)
+	pathToFile := path.Join(orchestrator.config.DAGPath, fmt.Sprintf("%s.json", cleanName))
+	_, err := filepath.Rel(orchestrator.config.DAGPath, pathToFile)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+	_, err = os.Stat(pathToFile)
+	if os.IsExist(err) {
+		return http.StatusConflict, fmt.Errorf("DAG with given name already present")
+	}
+	err = config.WriteToFile(pathToFile)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, err
 }
