@@ -1,15 +1,10 @@
 import React from "react";
-// import logo from './logo.svg';
-// import './App.css';
 import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
+import {DAGContainer} from "./dags";
 
 function Header() {
   return (
-    <div>
       <Navbar bg="dark" variant="dark" expand="lg">
         <Navbar.Toggle aria-controls="basic-navbar-nav"></Navbar.Toggle>
         <Navbar.Brand href="#home">GoFlow</Navbar.Brand>
@@ -22,21 +17,6 @@ function Header() {
           </Nav>
         </Navbar.Collapse>
       </Navbar>
-    </div>
-  );
-}
-
-function DAGContainer() {
-  return (
-    <Container>
-      <Row>
-        <Col>on/off</Col>
-        <Col>name</Col>
-        <Col>icon?</Col>
-        <Col>last runtime</Col>
-        <Col>Success/failures</Col>
-      </Row>
-    </Container>
   );
 }
 
