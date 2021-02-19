@@ -142,7 +142,7 @@ func TestGetDagRuns(t *testing.T) {
 	errorCodeResponse(t, http.StatusOK, resp.StatusCode)
 }
 
-func TestPutDag(t *testing.T) {
+func TestPostDag(t *testing.T) {
 	config := dagconfig.DAGConfig{
 		Name:          "test-dag-4",
 		Command:       []string{"echo", "1"},
@@ -177,7 +177,7 @@ func TestPutDag(t *testing.T) {
 	errorCodeResponse(t, http.StatusOK, resp.StatusCode)
 }
 
-func TestPutInvalidDag(t *testing.T) {
+func TestPostInvalidDag(t *testing.T) {
 	config := dagconfig.DAGConfig{
 		Name:          "test-dag-4.json",
 		Command:       []string{"echo", "1"},
