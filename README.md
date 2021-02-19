@@ -5,9 +5,7 @@
 [![go report](https://goreportcard.com/badge/github.com/zbrookle/goflow)](https://goreportcard.com/report/github.com/zbrookle/goflow)
 
 GoFlow is a job scheduler inspired by Apache Airflow and is designed to be a more cohesive package,
-directly integrated with Kubernetes. GoFlow parses DAGS into Kubernetes CronJobs, to remove the complexity
-of scheduling from it's internal structure. Rather than run the jobs, GoFlow monitors them and ensures that
-all jobs run smoothly.
+directly integrated with Kubernetes.
 
 In GoFlow, DAGS are supported in the following formats:
 
