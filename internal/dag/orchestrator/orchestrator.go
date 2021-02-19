@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -233,11 +232,7 @@ func (orchestrator *Orchestrator) Stop() {
 
 // WriteDAGFile writes a new DAG to the dag file location
 func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) (int, error) {
-	if !config.IsNameValid() || strings.Contains(config.Name, ".") ||
-		strings.Contains(
-			config.Name,
-			"/",
-		) || strings.Contains(config.Name, "\\") || strings.Contains(config.Name, "..") {
+	if !config.IsNameValid() {
 		return http.StatusBadRequest, fmt.Errorf(
 			"DAG name must match the pattern \"%s\"",
 			config.Pattern(),
