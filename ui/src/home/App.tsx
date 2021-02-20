@@ -5,7 +5,7 @@ import { DAGContainer } from "./dags";
 
 function Header() {
   return (
-    <Navbar bg="dark" variant="dark" expand="lg">
+    <Navbar bg="dark" variant="dark" expand="lg" fixed="top">
       <Navbar.Toggle aria-controls="basic-navbar-nav"></Navbar.Toggle>
       <Navbar.Brand href="#home">GoFlow</Navbar.Brand>
       <Navbar.Collapse>
