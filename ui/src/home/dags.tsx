@@ -1,43 +1,40 @@
 import { useState } from "react";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
 import Table from "react-bootstrap/Table";
 import Switch from "bootstrap-switch-button-react";
+import CSS from 'csstype'
 
 const styles = {
-  row: {
-    // padding: 8,
-  },
-  col: {
-    padding: 3,
+  table: {
+    marginLeft: "1%",
+    width: '98%'
   },
 };
 
-const ColOffsets = {
-  Status: 0,
-  Name: 0,
-  RunTime: 0,
-  Successes: 0,
-};
+const tdStyles: CSS.Properties = {
+  wordWrap: 'normal',
+  margin: 0,
+  whiteSpace: 'pre-line'
+}
 
 type DAGProps = {
   Name: string;
+  Schedule: string;
 };
 
 function CenterColHead(props: any) {
-    return <th className="my-auto">{props.children}</th>
+    return <th className="my-auto" style={tdStyles}>{props.children}</th>
 }
 
 function CenteredCol(props: any) {
-  return <td className="my-auto">{props.children}</td>;
+  return <td className="my-auto" style={tdStyles}>{props.children}</td>;
 }
 
 function DAGColumnHeaders() {
   return (
     <thead>
-      <tr style={styles.row}>
+      <tr>
         <CenterColHead>Status</CenterColHead>
+        <CenterColHead>Schedule</CenterColHead>
         <CenterColHead>Name</CenterColHead>
         <CenterColHead>Last Run Time</CenterColHead>
         <CenterColHead>Success/Failures</CenterColHead>
@@ -52,13 +49,14 @@ function DAG(props: DAGProps) {
   const [lastRunTime] = useState(date.toISOString());
 
   return (
-    <tr style={styles.row}>
-      <CenteredCol colOffset={ColOffsets.Status}>
-        <Switch checked={dagActive} onChange={() => switchDag(!dagActive)} />
+    <tr>
+      <CenteredCol>
+        <Switch size="sm" checked={dagActive} onChange={() => switchDag(!dagActive)} />
       </CenteredCol>
-      <CenteredCol xs={ColOffsets.Name}>{props.Name}</CenteredCol>
-      <CenteredCol xs={ColOffsets.RunTime}>{lastRunTime}</CenteredCol>
-      <CenteredCol xs={ColOffsets.Successes}>Success/failures</CenteredCol>
+      <CenteredCol>{props.Schedule}</CenteredCol>
+      <CenteredCol>{props.Name}</CenteredCol>
+      <CenteredCol>{lastRunTime}</CenteredCol>
+      <CenteredCol>Success/failures</CenteredCol>
     </tr>
   );
 }
@@ -70,14 +68,13 @@ function DAGContainer() {
   }
   return (
     <div>
-      My DAGs
-      <p />
-      (Dag Search Bar Here)
-      <Table bordered variant="dark">
+      <h1>My DAGs</h1>
+      <h2>(Dag Search Bar Here)</h2>
+      <Table responsive bordered variant="dark" style={styles.table} size="2">
         <DAGColumnHeaders />
         <tbody>
           {Object.entries(dags).map((t, k) => (
-            <DAG Name={t[1]} />
+            <DAG Name={t[1]} Schedule="* * * * *" />
           ))}
         </tbody>
       </Table>
