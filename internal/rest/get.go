@@ -24,12 +24,19 @@ func getDagFromRequest(
 		fmt.Fprintf(w, missingDagMsg)
 		return nil
 	}
+	setHeaders(w)
 	return dag
+}
+
+func setHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 
-	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {		
+		setHeaders(w)
 		fmt.Fprint(w, orch.DAGs())
 	})
 
