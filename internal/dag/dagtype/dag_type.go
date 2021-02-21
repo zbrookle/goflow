@@ -329,3 +329,17 @@ func (dag *DAG) Marshal() []byte {
 func (dag *DAG) String() string {
 	return jsonpanic.JSONPanicFormat(dag)
 }
+
+// DAGList is a list of dags
+type DAGList []*DAG
+
+func (dagList DAGList) String() string {
+	outputString := ""
+	for i, dag := range dagList {
+		outputString += dag.String()
+		if i != len(dagList)-1 {
+			outputString += ", "
+		}
+	}
+	return fmt.Sprintf("[%s]", outputString)
+}
