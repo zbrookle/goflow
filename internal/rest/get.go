@@ -5,6 +5,7 @@ import (
 	"goflow/internal/dag/dagtype"
 	"goflow/internal/dag/orchestrator"
 	"net/http"
+	"sort"
 
 	"github.com/gorilla/mux"
 )
@@ -37,7 +38,9 @@ func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 
 	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {
 		setHeaders(w)
-		fmt.Fprint(w, orch.DAGs())
+		dags := orch.DAGs()
+		sort.Sort(dagtype.ByName(dags))
+		fmt.Fprint(w, dags)
 	})
 
 	router.HandleFunc("/dag/{name}", func(w http.ResponseWriter, r *http.Request) {
