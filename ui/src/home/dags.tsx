@@ -19,6 +19,7 @@ const tdStyles: CSS.Properties = {
 type DAGProps = {
   Name: string;
   Schedule: string;
+  LastRunTime: string;
 };
 
 function CenterColHead(props: any) {
@@ -46,6 +47,7 @@ function DAGColumnHeaders() {
         <CenterColHead>Name</CenterColHead>
         <CenterColHead>Last Run Time</CenterColHead>
         <CenterColHead>Success/Failures</CenterColHead>
+        <CenterColHead>Actions</CenterColHead>
       </tr>
     </thead>
   );
@@ -74,26 +76,24 @@ function DAG(props: DAGProps) {
 }
 
 function DAGContainer() {
-  // let dags: Record<number, string> = { 1: "test" };
-  // for (var i = 0; i < 40; i++) {
-  //   dags[i] = "test" + i.toString();
-  // }
   const [dags, setDAGs] = useState<Record<string, DAGProps>>({});
-  // const requestBody: RequestInit = {mode: 'no-cors'}
   useEffect(() => {
-    fetch("http://localhost:8080/dags")
-      .then((res) => res.json())
-      .then((data) => {
-        var record: Record<string, DAGProps> = {};
-        data.forEach((dag: any) => {
-          record[dag.Config.Name] = {
-            Name: dag.Config.Name,
-            Schedule: dag.Config.Schedule,
-          };
+    const intervalId = setInterval(() => {
+      fetch("http://localhost:8080/dags")
+        .then((res) => res.json())
+        .then((data) => {
+          var record: Record<string, DAGProps> = {};
+          data.forEach((dag: any) => {
+            record[dag.Config.Name] = {
+              Name: dag.Config.Name,
+              Schedule: dag.Config.Schedule,
+              LastRunTime: dag.MostRecentExecution,
+            };
+          });
+          setDAGs(record);
         });
-        console.log(record);
-        setDAGs(record);
-      });
+    }, 5000); // TODO Make this number changeable in the UI
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
@@ -104,7 +104,12 @@ function DAGContainer() {
         <DAGColumnHeaders />
         <tbody>
           {Object.entries(dags).map((t, k) => (
-            <DAG Name={t[0]} Schedule="* * * * *" />
+            <DAG
+              key={t[1].Name}
+              Name={t[1].Name}
+              Schedule={t[1].Schedule}
+              LastRunTime={t[1].LastRunTime}
+            />
           ))}
         </tbody>
       </Table>
