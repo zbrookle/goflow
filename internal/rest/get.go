@@ -35,7 +35,7 @@ func setHeaders(w http.ResponseWriter) {
 
 func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 
-	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {		
+	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {
 		setHeaders(w)
 		fmt.Fprint(w, orch.DAGs())
 	})

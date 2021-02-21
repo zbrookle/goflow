@@ -1,20 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Table from "react-bootstrap/Table";
 import Switch from "bootstrap-switch-button-react";
-import CSS from 'csstype'
+import CSS from "csstype";
 
 const styles = {
   table: {
     marginLeft: "1%",
-    width: '98%'
+    width: "98%",
   },
 };
 
 const tdStyles: CSS.Properties = {
-  wordWrap: 'normal',
+  wordWrap: "normal",
   margin: 0,
-  whiteSpace: 'pre-line'
-}
+  whiteSpace: "pre-line",
+};
 
 type DAGProps = {
   Name: string;
@@ -22,11 +22,19 @@ type DAGProps = {
 };
 
 function CenterColHead(props: any) {
-    return <th className="my-auto" style={tdStyles}>{props.children}</th>
+  return (
+    <th className="my-auto" style={tdStyles}>
+      {props.children}
+    </th>
+  );
 }
 
 function CenteredCol(props: any) {
-  return <td className="my-auto" style={tdStyles}>{props.children}</td>;
+  return (
+    <td className="my-auto" style={tdStyles}>
+      {props.children}
+    </td>
+  );
 }
 
 function DAGColumnHeaders() {
@@ -51,7 +59,11 @@ function DAG(props: DAGProps) {
   return (
     <tr>
       <CenteredCol>
-        <Switch size="sm" checked={dagActive} onChange={() => switchDag(!dagActive)} />
+        <Switch
+          size="sm"
+          checked={dagActive}
+          onChange={() => switchDag(!dagActive)}
+        />
       </CenteredCol>
       <CenteredCol>{props.Schedule}</CenteredCol>
       <CenteredCol>{props.Name}</CenteredCol>
@@ -62,10 +74,28 @@ function DAG(props: DAGProps) {
 }
 
 function DAGContainer() {
-  let dags: Record<number, string> = { 1: "test" };
-  for (var i = 0; i < 40; i++) {
-    dags[i] = "test" + i.toString();
-  }
+  // let dags: Record<number, string> = { 1: "test" };
+  // for (var i = 0; i < 40; i++) {
+  //   dags[i] = "test" + i.toString();
+  // }
+  const [dags, setDAGs] = useState<Record<string, DAGProps>>({});
+  // const requestBody: RequestInit = {mode: 'no-cors'}
+  useEffect(() => {
+    fetch("http://localhost:8080/dags")
+      .then((res) => res.json())
+      .then((data) => {
+        var record: Record<string, DAGProps> = {};
+        data.forEach((dag: any) => {
+          record[dag.Config.Name] = {
+            Name: dag.Config.Name,
+            Schedule: dag.Config.Schedule,
+          };
+        });
+        console.log(record);
+        setDAGs(record);
+      });
+  }, []);
+
   return (
     <div>
       <h1>My DAGs</h1>
@@ -74,7 +104,7 @@ function DAGContainer() {
         <DAGColumnHeaders />
         <tbody>
           {Object.entries(dags).map((t, k) => (
-            <DAG Name={t[1]} Schedule="* * * * *" />
+            <DAG Name={t[0]} Schedule="* * * * *" />
           ))}
         </tbody>
       </Table>

@@ -1,4 +1,3 @@
-
 # GoFlow
 
 [![CI](https://github.com/zbrookle/goflow/workflows/CI/badge.svg?branch=master)](https://github.com/zbrookle/goflow/actions)
@@ -17,16 +16,16 @@ In GoFlow, DAGS are supported in the following formats:
 GoFlow has the potential to surpass Apache Airflow in terms of design and scalability for a few key reasons:
 
 1. GoFlow is written in Golang, a language that is compiled and has native support for multithreading. This
-removes the dependency that Airflow has traditionally had on Redis, for scalability and drastically removes
-the CPU footprint of running separate Python processes.
+   removes the dependency that Airflow has traditionally had on Redis, for scalability and drastically removes
+   the CPU footprint of running separate Python processes.
 
 1. GoFlow is designed to be cohesive and less flexible than Airflow. Airflow has grown in complexity over the
-years and suits a great number of use cases. However, it is very difficult to set up because of this flexibility.
-GoFlow only will run on Kubernetes, meaning that it will require less configuration and gives developers back the
-time they need to focus on code rather than infrastructure.
+   years and suits a great number of use cases. However, it is very difficult to set up because of this flexibility.
+   GoFlow only will run on Kubernetes, meaning that it will require less configuration and gives developers back the
+   time they need to focus on code rather than infrastructure.
 
 1. Because Golang is statically typed, it is much less prone to typing errors than Apache Airflow's language Python
-which is dynamically typed.
+   which is dynamically typed.
 
 1. GoFlow will have built in support for ElasticSearch logging. (Coming soon...)
 
