@@ -1,4 +1,4 @@
-nohup go run goflow.go &
+nohup go run goflow.go -T &
 cd ui
 nohup yarn start &
 cd ..
