@@ -20,6 +20,7 @@ type DAGProps = {
   Name: string;
   Schedule: string;
   LastRunTime: string;
+  IsOn: boolean;
 };
 
 function CenterColHead(props: any) {
@@ -54,17 +55,28 @@ function DAGColumnHeaders() {
 }
 
 function DAG(props: DAGProps) {
-  const [dagActive, switchDag] = useState(false);
   var date = new Date();
   const [lastRunTime] = useState(date.toISOString());
-
+  // Add update DAG toggle here!
+  const toggleRequestOptions = {
+    method: "PUT",
+    // headers: {
+    //   "Access-Control-Request-Method": "PUT",
+    //   "Access-Control-Request-Headers": "X-Custom-Header",
+    // },
+  };
   return (
     <tr>
       <CenteredCol>
         <Switch
           size="sm"
-          checked={dagActive}
-          onChange={() => switchDag(!dagActive)}
+          checked={props.IsOn}
+          onChange={() => {
+            fetch(
+              `http://localhost:8080/dag/${props.Name}/toggle`,
+              toggleRequestOptions
+            )
+          }}
         />
       </CenteredCol>
       <CenteredCol>{props.Schedule}</CenteredCol>
@@ -88,6 +100,7 @@ function DAGContainer() {
               Name: dag.Config.Name,
               Schedule: dag.Config.Schedule,
               LastRunTime: dag.MostRecentExecution,
+              IsOn: dag.IsOn,
             };
           });
           setDAGs(record);
@@ -109,6 +122,7 @@ function DAGContainer() {
               Name={t[1].Name}
               Schedule={t[1].Schedule}
               LastRunTime={t[1].LastRunTime}
+              IsOn={t[1].IsOn}
             />
           ))}
         </tbody>

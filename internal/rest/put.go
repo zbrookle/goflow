@@ -10,19 +10,22 @@ import (
 )
 
 func registerPutHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
+
 	router.HandleFunc(
 		"/dag/{name}/toggle",
 		func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 			name := vars["name"]
 			dag := orch.GetDag(name)
+			setHeaders(w)
 			if dag == nil {
 				w.WriteHeader(http.StatusNotFound)
 				fmt.Fprint(w, "DAG not found!")
 				return
 			}
 			dag.ToggleOnOff()
-			fmt.Fprint(w, "DAG toggle success")
+			fmt.Println(fmt.Sprintf("%t", dag.IsOn))
+			fmt.Fprintf(w, "%t", dag.IsOn)
 		},
 	).Methods(
 		http.MethodPut,
