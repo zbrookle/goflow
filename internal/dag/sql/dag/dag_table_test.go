@@ -114,7 +114,7 @@ func TestUpsertDagTable(t *testing.T) {
 		LastUpdatedDate: time.Time{},
 	}
 
-	tableClient.UpsertDag(expectedRow)
+	tableClient.UpsertDAG(expectedRow)
 
 	rows := getTestRows()
 	rowCount := len(rows)
@@ -131,7 +131,7 @@ func TestUpsertDagTable(t *testing.T) {
 	}
 
 	expectedRow.Version = "0.2.0"
-	tableClient.UpsertDag(expectedRow)
+	tableClient.UpsertDAG(expectedRow)
 
 	rows = getTestRows()
 	if rowCount != 1 {

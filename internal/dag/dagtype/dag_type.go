@@ -99,19 +99,23 @@ func CreateDAG(
 	if dag.Config.MaxActiveRuns < 1 {
 		panic("MaxActiveRuns must be greater than 0!")
 	}
-	row := dag.UpsertDag(
-		dagtable.NewRow(
-			0,
-			false,
-			dag.Config.Name,
-			dag.Config.Namespace,
-			"dag.Config.Version",
-			dag.filePath,
-			path.Ext(dag.filePath),
-		),
+	row := dag.UpsertDAG(
+		newDagRow(&dag),
 	)
 	dag.ID = row.ID
 	return dag
+}
+
+func newDagRow(dag *DAG) dagtable.Row {
+	return dagtable.NewRow(
+		0,
+		false,
+		dag.Config.Name,
+		dag.Config.Namespace,
+		"dag.Config.Version",
+		dag.filePath,
+		path.Ext(dag.filePath),
+	)
 }
 
 func createDAGFromJSONBytes(
@@ -331,6 +335,7 @@ func (dag *DAG) Marshal() []byte {
 func (dag *DAG) ToggleOnOff() {
 	dag.timeLock.Lock()
 	dag.IsOn = !dag.IsOn
+	dag.UpdateDAGToggle(dag.ID, dag.IsOn)
 	dag.timeLock.Unlock()
 }
 

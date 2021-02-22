@@ -24,6 +24,8 @@ type Row struct {
 // IDName is the column name for the primary id column
 const IDName = "id"
 
+const isOnName = "is_on"
+
 // NewRow returns a new row with the appropriate update and create time stamps
 func NewRow(id int, isOn bool, name, namespace, version, filePath, fileFormat string) Row {
 	creationTime := dateutils.GetDateTimeNowMilliSecond()
@@ -70,7 +72,7 @@ func newRowResult(n int) dagRowResult {
 func (row Row) columnar() database.ColumnWithValueSlice {
 	return []database.ColumnWithValue{
 		{Column: database.Column{Name: IDName, DType: database.Int{Val: row.ID}}},
-		{Column: database.Column{Name: "is_on", DType: database.Bool{Val: row.IsOn}}},
+		{Column: database.Column{Name: isOnName, DType: database.Bool{Val: row.IsOn}}},
 		{Column: database.Column{Name: nameName, DType: database.String{Val: row.Name}}},
 		{
 			Column: database.Column{

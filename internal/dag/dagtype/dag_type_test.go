@@ -180,7 +180,6 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 
 func getTestDAGFakeClient(client kubernetes.Interface) *DAG {
 	dag := getTestDAG(client)
-	dag.IsOn = true
 	return dag
 }
 
@@ -200,6 +199,33 @@ func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag 
 			foundCount,
 		)
 		t.Error("Found dags:", testDag.DAGRuns)
+	}
+}
+
+func getDAGRecordDAG(dag *DAG) dagtable.Row {
+	return TABLECLIENT.GetDagRecord(dag.Config.Name, dag.Config.Namespace)
+}
+
+func TestToggleOnOff(t *testing.T) {
+	defer database.PurgeDB(SQLCLIENT)
+	setUpDatabase()
+	testDAG := getTestDAGFakeClient(getNewTestClient())
+
+	testDAG.ToggleOnOff()
+	if !testDAG.IsOn {
+		t.Error("DAG should be on!")
+	}
+	record := getDAGRecordDAG(testDAG)
+	if !record.IsOn {
+		t.Error("DB should reflect DAG is on")
+	}
+	testDAG.ToggleOnOff()
+	if testDAG.IsOn {
+		t.Error("DAG should be off!")
+	}
+	record = getDAGRecordDAG(testDAG)
+	if record.IsOn {
+		t.Error("DB should reflect DAG is off")
 	}
 }
 
@@ -233,6 +259,7 @@ func TestAddDagRunIfReady(t *testing.T) {
 		func() {
 			client := getNewTestClient()
 			testDAG := getTestDAGFakeClient(client)
+			testDAG.IsOn = true // Turn on DAG
 			channelHolder := holder.New()
 			testDAG.AddNextDagRunIfReady(channelHolder)
 			action.actionFunc(testDAG)

@@ -101,9 +101,22 @@ func (client *TableClient) GetMostRecentID() int {
 	return rowNumber + 1
 }
 
-// UpsertDag inserts a new dag if it does not exist or updates
+// UpdateDAGToggle updates the on/off status of the DAG in the DB
+func (client *TableClient) UpdateDAGToggle(dagID int, newState bool) {
+	client.sqlClient.Update(
+		TableName,
+		database.ColumnWithValueSlice{
+			{Column: database.Column{Name: isOnName, DType: database.Bool{Val: newState}}},
+		},
+		database.ColumnWithValueSlice{
+			{Column: database.Column{Name: IDName, DType: database.Int{Val: dagID}}},
+		},
+	)
+}
+
+// UpsertDAG inserts a new dag if it does not exist or updates
 // an existing dag record
-func (client *TableClient) UpsertDag(dagRow Row) Row {
+func (client *TableClient) UpsertDAG(dagRow Row) Row {
 	dagPresent := client.IsDagPresent(dagRow.Name, dagRow.Namespace)
 	switch dagPresent {
 	case false:

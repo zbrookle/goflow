@@ -19,7 +19,7 @@ var testDagRow = dagtable.NewRow(0, true, "dag_num_1", "default", "v1", "/my/pat
 func setUpDagTable() {
 	dagTableClient := dagtable.NewTableClient(sqlClient)
 	dagTableClient.CreateTable()
-	dagTableClient.UpsertDag(testDagRow)
+	dagTableClient.UpsertDAG(testDagRow)
 }
 
 func TestMain(m *testing.M) {
