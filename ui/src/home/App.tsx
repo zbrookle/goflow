@@ -13,7 +13,7 @@ function Header() {
           <Nav.Link href="#home">Home</Nav.Link>
           <Nav.Link href="#metrics">Metrics</Nav.Link>
           <Nav.Link href="">Settings</Nav.Link>
-          <Nav.Link href="">Documentation</Nav.Link>
+          <Nav.Link href="https://github.com/zbrookle/goflow">Documentation</Nav.Link>
         </Nav>
       </Navbar.Collapse>
     </Navbar>
