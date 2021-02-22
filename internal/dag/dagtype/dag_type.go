@@ -102,7 +102,7 @@ func CreateDAG(
 	row := dag.UpsertDag(
 		dagtable.NewRow(
 			0,
-			true,
+			false,
 			dag.Config.Name,
 			dag.Config.Namespace,
 			"dag.Config.Version",
