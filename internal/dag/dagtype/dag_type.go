@@ -315,7 +315,7 @@ func (dag *DAG) Ready() bool {
 	scheduleReady := (dag.MostRecentExecution.Before(currentTime) ||
 		dag.MostRecentExecution.Equal(currentTime) && dag.MostRecentExecution.Before(dag.EndDateTime))
 	logs.InfoLogger.Printf("dag %s is ready: %v\n", dag.Config.Name, scheduleReady)
-	return (dag.ActiveRuns.Get() < dag.Config.MaxActiveRuns) && scheduleReady
+	return (dag.ActiveRuns.Get() < dag.Config.MaxActiveRuns) && scheduleReady && dag.IsOn
 }
 
 // Marshal returns the JSON byte slice representation of the DAG

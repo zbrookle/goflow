@@ -135,7 +135,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 	if expectedJSONString != marshaledJSON {
 		t.Error("DAG struct does not match up with expected values")
 		t.Error("Found:", dag)
-		t.Error("Expec:", expectedDAG)
+		t.Error("Expected:", expectedDAG)
 	}
 }
 
@@ -179,7 +179,9 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 }
 
 func getTestDAGFakeClient(client kubernetes.Interface) *DAG {
-	return getTestDAG(client)
+	dag := getTestDAG(client)
+	dag.IsOn = true
+	return dag
 }
 
 func getTestDAGRealClient() *DAG {
