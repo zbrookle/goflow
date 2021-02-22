@@ -28,6 +28,7 @@ func TestReadConfig(t *testing.T) {
 		DAGPath:              "path",
 		DateFormat:           "2019-01-01",
 		DatabaseDNS:          "goflow.sqlite3",
+		DAGsOn:               true,
 	}
 	if *foundConfig != expectedConfig {
 		t.Error("Configs do not match")

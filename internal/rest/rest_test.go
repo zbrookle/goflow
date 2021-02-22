@@ -60,7 +60,7 @@ func TestMain(m *testing.M) {
 		Name:          "test",
 		StartDateTime: "2019-01-01",
 		MaxActiveRuns: 1,
-	}, "", fake.NewSimpleClientset(), dagtype.ScheduleCache{}, dagTableClient, "", dagRunTableClient)
+	}, "", fake.NewSimpleClientset(), dagtype.ScheduleCache{}, dagTableClient, "", dagRunTableClient, false)
 	testTime = time.Now()
 	orch.AddDAG(&testDag)
 	testDAG2 := copyDAG(testDag)

@@ -73,6 +73,7 @@ func CreateDAG(
 	tableClient *dagtable.TableClient,
 	filePath string,
 	dagRunTableClient *dagruntable.TableClient,
+	defaultIsOn bool,
 ) DAG {
 	if config.Annotations == nil {
 		config.Annotations = make(map[string]string)
@@ -80,6 +81,7 @@ func CreateDAG(
 	if config.Labels == nil {
 		config.Labels = make(map[string]string)
 	}
+	// TODO: Restore these from database table on restart
 	dag := DAG{
 		Config:            config,
 		Code:              code,
@@ -91,6 +93,7 @@ func CreateDAG(
 		TableClient:       tableClient,
 		filePath:          filePath,
 		dagRunTableClient: dagRunTableClient,
+		IsOn:              defaultIsOn,
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -154,6 +157,7 @@ func createDAGFromJSONBytes(
 		tableClient,
 		filePath,
 		dagRunTableClient,
+		goflowConfig.DAGsOn,
 	)
 	return dag, nil
 }

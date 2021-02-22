@@ -52,7 +52,7 @@ func TestRegisterDAG(t *testing.T) {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", orch.kubeClient, make(dagtype.ScheduleCache), orch.dagTableClient, "path", orch.dagrunTableClient)
+	}, "", orch.kubeClient, make(dagtype.ScheduleCache), orch.dagTableClient, "path", orch.dagrunTableClient, true)
 	const expectedLength = 1
 	orch.AddDAG(&dag)
 	if orch.dagMap[dag.Config.Name] != &dag {

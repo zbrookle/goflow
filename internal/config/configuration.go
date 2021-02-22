@@ -21,6 +21,7 @@ type GoFlowConfig struct {
 	DAGPath              string
 	DateFormat           string
 	DatabaseDNS          string
+	DAGsOn               bool
 }
 
 func readConfig(filePath string) []byte {

@@ -174,7 +174,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client, make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT)
+	}, "", client, make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT, false)
 	return &dag
 }
 
