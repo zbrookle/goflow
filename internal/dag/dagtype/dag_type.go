@@ -327,7 +327,13 @@ func (dag *DAG) Marshal() []byte {
 	return jsonString
 }
 
-// String returns a nice JSON representation of the dag
+// ToggleOnOff switches the internal on/off state of the DAG
+func (dag *DAG) ToggleOnOff() {
+	dag.timeLock.Lock()
+	dag.IsOn = !dag.IsOn
+	dag.timeLock.Unlock()
+}
+
 func (dag *DAG) String() string {
 	return jsonpanic.JSONPanicFormat(dag)
 }
