@@ -1,32 +1,30 @@
 package rest
 
 import (
-	"encoding/json"
 	"fmt"
-	dagconfig "goflow/internal/dag/config"
 	"goflow/internal/dag/orchestrator"
-	"io/ioutil"
+
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
 func registerPutHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
-	router.HandleFunc("/dag", func(w http.ResponseWriter, r *http.Request) {
-		dagConfig := &dagconfig.DAGConfig{}
-		requestBytes := make([]byte, 0)
-		requestBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, err.Error())
-		}
-		json.Unmarshal(requestBytes, dagConfig)
-		status, err := orch.WriteDAGFile(dagConfig)
-		if err != nil {
-			w.WriteHeader(status)
-			fmt.Fprint(w, err.Error())
-			return
-		}
-		fmt.Fprint(w, "DAG write success")
-	}).Methods("POST")
+	router.HandleFunc(
+		"/dag/{name}/toggle",
+		func(w http.ResponseWriter, r *http.Request) {
+			vars := mux.Vars(r)
+			name := vars["name"]
+			dag := orch.GetDag(name)
+			if dag == nil {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprint(w, "DAG not found!")
+				return
+			}
+			dag.ToggleOnOff()
+			fmt.Fprint(w, "DAG toggle success")
+		},
+	).Methods(
+		http.MethodPut,
+	)
 }

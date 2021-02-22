@@ -12,6 +12,7 @@ import (
 func Serve(host string, port int, orchestrator *orchestrator.Orchestrator) {
 	router := mux.NewRouter()
 	registerGetHandles(orchestrator, router)
+	registerPostHandles(orchestrator, router)
 	registerPutHandles(orchestrator, router)
 	http.Handle("/", router)
 	http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)

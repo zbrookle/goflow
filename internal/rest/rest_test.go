@@ -8,6 +8,9 @@ import (
 	"goflow/internal/dag/dagtype"
 	"goflow/internal/dag/orchestrator"
 	dagrun "goflow/internal/dag/run"
+	dagtable "goflow/internal/dag/sql/dag"
+	dagruntable "goflow/internal/dag/sql/dagrun"
+	"goflow/internal/database"
 	"goflow/internal/testutils"
 	"io/ioutil"
 	"os"
@@ -48,11 +51,16 @@ func TestMain(m *testing.M) {
 	port = 8080
 	testutils.RemoveSQLiteDB()
 	orch = getTestOrchestrator(goflowConfig)
-	testDag = dagtype.DAG{
-		Config: &dagconfig.DAGConfig{
-			Name: "test",
-		},
-	}
+	SQLCLIENT := database.NewSQLiteClient(testutils.GetSQLiteLocation())
+	dagTableClient := dagtable.NewTableClient(SQLCLIENT)
+	dagRunTableClient := dagruntable.NewTableClient(SQLCLIENT)
+	dagTableClient.CreateTable()
+	dagRunTableClient.CreateTable()
+	testDag = dagtype.CreateDAG(&dagconfig.DAGConfig{
+		Name:          "test",
+		StartDateTime: "2019-01-01",
+		MaxActiveRuns: 1,
+	}, "", fake.NewSimpleClientset(), dagtype.ScheduleCache{}, dagTableClient, "", dagRunTableClient)
 	testTime = time.Now()
 	orch.AddDAG(&testDag)
 	testDAG2 := copyDAG(testDag)
@@ -68,7 +76,7 @@ func getURL(suffix string) string {
 	return fmt.Sprintf("http://%s:%d/%s", host, port, suffix)
 }
 
-func put(suffix string, content string) *http.Response {
+func post(suffix string, content string) *http.Response {
 	url := getURL(suffix)
 	reader := strings.NewReader(content)
 	resp, err := http.Post(url, "json", reader)
@@ -81,6 +89,20 @@ func put(suffix string, content string) *http.Response {
 func get(suffix string) *http.Response {
 	url := getURL(suffix)
 	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func put(suffix string) *http.Response {
+	url := getURL(suffix)
+	client := &http.Client{}
+	request, err := http.NewRequest("PUT", url, strings.NewReader(""))
+	if err != nil {
+		panic(err)
+	}
+	resp, err := client.Do(request)
 	if err != nil {
 		panic(err)
 	}
@@ -164,7 +186,7 @@ func TestPostDag(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	resp := put("dag", string(configBytes))
+	resp := post("dag", string(configBytes))
 	addedDagPath := path.Join(goflowConfig.DAGPath, fmt.Sprintf("%s.json", config.Name))
 	fileBytes, err := ioutil.ReadFile(addedDagPath)
 	if err != nil {
@@ -199,7 +221,7 @@ func TestPostInvalidDag(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	resp := put("dag", string(configBytes))
+	resp := post("dag", string(configBytes))
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -209,4 +231,17 @@ func TestPostInvalidDag(t *testing.T) {
 		t.Error("Error response should have been raised!")
 	}
 	errorCodeResponse(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestToggleDag(t *testing.T) {
+	orch.AddDAG(&testDag)
+	path := fmt.Sprintf("dag/%s/toggle", testDag.Config.Name)
+	put(path)
+	if !testDag.IsOn {
+		t.Error("DAG should be on!")
+	}
+	put(path)
+	if testDag.IsOn {
+		t.Error("DAG should be off!")
+	}
 }
