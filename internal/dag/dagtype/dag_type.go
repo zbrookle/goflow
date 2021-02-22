@@ -45,6 +45,7 @@ type DAG struct {
 	filePath          string
 	dagRunTableClient *dagruntable.TableClient
 	ID                int
+	IsOn              bool
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -101,6 +102,7 @@ func CreateDAG(
 	row := dag.UpsertDag(
 		dagtable.NewRow(
 			0,
+			true,
 			dag.Config.Name,
 			dag.Config.Namespace,
 			"dag.Config.Version",

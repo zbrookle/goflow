@@ -193,7 +193,7 @@ func TestDeletePod(t *testing.T) {
 func setupDatabase() {
 	DAGTABLECLIENT.CreateTable()
 	TABLECLIENT.CreateTable()
-	DAGTABLECLIENT.UpsertDag(dagtable.NewRow(0, "test", "default", "0.0.0", "test", "json"))
+	DAGTABLECLIENT.UpsertDag(dagtable.NewRow(0, true, "test", "default", "0.0.0", "test", "json"))
 }
 
 func TestStart(t *testing.T) {
