@@ -37,6 +37,10 @@ func getTestOrchestrator(configuration *config.GoFlowConfig) *orchestrator.Orche
 	return orchestrator.NewOrchestratorFromClientAndConfig(kubeClient, configuration)
 }
 
+func copyDAG(dag dagtype.DAG) dagtype.DAG {
+	return dag
+}
+
 func TestMain(m *testing.M) {
 	configPath := testutils.GetConfigPath()
 	goflowConfig = config.CreateConfig(configPath)
@@ -51,6 +55,9 @@ func TestMain(m *testing.M) {
 	}
 	testTime = time.Now()
 	orch.AddDAG(&testDag)
+	testDAG2 := copyDAG(testDag)
+	testDAG2.Config.Name = "test2"
+	orch.AddDAG(&testDAG2)
 	orch.GetDag(testDag.Config.Name).AddDagRun(testTime, false, nil)
 	testRun = orch.GetDag(testDag.Config.Name).DAGRuns[0]
 	go Serve(host, port, orch)
@@ -102,7 +109,10 @@ func TestGetDags(t *testing.T) {
 	resp := get("dags")
 	bodyBytes := readRespBytes(resp)
 	dagList := make([]dagtype.DAG, 0)
-	json.Unmarshal(bodyBytes, &dagList)
+	err := json.Unmarshal(bodyBytes, &dagList)
+	if err != nil {
+		panic(err)
+	}
 	expectedDag := dagList[0]
 	if expectedDag.Config.Name != testDag.Config.Name {
 		t.Errorf("Expected dag not found!")

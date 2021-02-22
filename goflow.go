@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"goflow/internal/config"
 	"goflow/internal/dag/orchestrator"
 	"goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/utils"
@@ -11,6 +12,8 @@ import (
 	"goflow/internal/termination"
 	"io/ioutil"
 	"time"
+
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var host string
@@ -26,13 +29,22 @@ func main() {
 	host := flag.String("host", "localhost", "Host IP to serve REST api on")
 	port := flag.Int("port", 8080, "Port to serve REST API on")
 	verbosePtr := flag.Bool("V", false, "Verbose logging")
+	testMode := flag.Bool("T", false, "Uses test mode which leverage a mocked kubernetes client")
 	flag.Parse()
 
 	if !*verbosePtr {
 		logs.InfoLogger.SetOutput(ioutil.Discard)
 	}
 
-	orch := orchestrator.NewOrchestrator(*configPath)
+	var orch *orchestrator.Orchestrator
+	if *testMode {
+		orch = orchestrator.NewOrchestratorFromClientAndConfig(
+			fake.NewSimpleClientset(),
+			config.CreateConfig(*configPath),
+		)
+	} else {
+		orch = orchestrator.NewOrchestrator(*configPath)
+	}
 	orch.Start(1 * time.Second)
 	go termination.Handle(func() {
 		orch.Stop()

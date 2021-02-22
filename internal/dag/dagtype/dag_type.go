@@ -329,3 +329,31 @@ func (dag *DAG) Marshal() []byte {
 func (dag *DAG) String() string {
 	return jsonpanic.JSONPanicFormat(dag)
 }
+
+// DAGList is a list of dags
+type DAGList []*DAG
+
+func (dagList DAGList) String() string {
+	outputString := ""
+	for i, dag := range dagList {
+		outputString += dag.String()
+		if i != len(dagList)-1 {
+			outputString += ", "
+		}
+	}
+	return fmt.Sprintf("[%s]", outputString)
+}
+
+// ByName implements sort.Interface for DAGList based
+// on the name field
+type ByName DAGList
+
+func (dags ByName) Len() int {
+	return len(dags)
+}
+func (dags ByName) Swap(i, j int) {
+	dags[i], dags[j] = dags[j], dags[i]
+}
+func (dags ByName) Less(i, j int) bool {
+	return dags[i].Config.Name < dags[j].Config.Name
+}

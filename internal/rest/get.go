@@ -5,6 +5,7 @@ import (
 	"goflow/internal/dag/dagtype"
 	"goflow/internal/dag/orchestrator"
 	"net/http"
+	"sort"
 
 	"github.com/gorilla/mux"
 )
@@ -24,13 +25,22 @@ func getDagFromRequest(
 		fmt.Fprintf(w, missingDagMsg)
 		return nil
 	}
+	setHeaders(w)
 	return dag
+}
+
+func setHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 
 	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, orch.DAGs())
+		setHeaders(w)
+		dags := orch.DAGs()
+		sort.Sort(dagtype.ByName(dags))
+		fmt.Fprint(w, dags)
 	})
 
 	router.HandleFunc("/dag/{name}", func(w http.ResponseWriter, r *http.Request) {
