@@ -45,6 +45,7 @@ type DAG struct {
 	filePath          string
 	dagRunTableClient *dagruntable.TableClient
 	ID                int
+	IsOn              bool
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -72,6 +73,7 @@ func CreateDAG(
 	tableClient *dagtable.TableClient,
 	filePath string,
 	dagRunTableClient *dagruntable.TableClient,
+	defaultIsOn bool,
 ) DAG {
 	if config.Annotations == nil {
 		config.Annotations = make(map[string]string)
@@ -79,6 +81,7 @@ func CreateDAG(
 	if config.Labels == nil {
 		config.Labels = make(map[string]string)
 	}
+	// TODO: Restore these from database table on restart
 	dag := DAG{
 		Config:            config,
 		Code:              code,
@@ -90,6 +93,7 @@ func CreateDAG(
 		TableClient:       tableClient,
 		filePath:          filePath,
 		dagRunTableClient: dagRunTableClient,
+		IsOn:              defaultIsOn,
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -98,18 +102,23 @@ func CreateDAG(
 	if dag.Config.MaxActiveRuns < 1 {
 		panic("MaxActiveRuns must be greater than 0!")
 	}
-	row := dag.UpsertDag(
-		dagtable.NewRow(
-			0,
-			dag.Config.Name,
-			dag.Config.Namespace,
-			"dag.Config.Version",
-			dag.filePath,
-			path.Ext(dag.filePath),
-		),
+	row := dag.UpsertDAG(
+		newDagRow(&dag),
 	)
 	dag.ID = row.ID
 	return dag
+}
+
+func newDagRow(dag *DAG) dagtable.Row {
+	return dagtable.NewRow(
+		0,
+		false,
+		dag.Config.Name,
+		dag.Config.Namespace,
+		"dag.Config.Version",
+		dag.filePath,
+		path.Ext(dag.filePath),
+	)
 }
 
 func createDAGFromJSONBytes(
@@ -148,6 +157,7 @@ func createDAGFromJSONBytes(
 		tableClient,
 		filePath,
 		dagRunTableClient,
+		goflowConfig.DAGsOn,
 	)
 	return dag, nil
 }
@@ -313,7 +323,7 @@ func (dag *DAG) Ready() bool {
 	scheduleReady := (dag.MostRecentExecution.Before(currentTime) ||
 		dag.MostRecentExecution.Equal(currentTime) && dag.MostRecentExecution.Before(dag.EndDateTime))
 	logs.InfoLogger.Printf("dag %s is ready: %v\n", dag.Config.Name, scheduleReady)
-	return (dag.ActiveRuns.Get() < dag.Config.MaxActiveRuns) && scheduleReady
+	return (dag.ActiveRuns.Get() < dag.Config.MaxActiveRuns) && scheduleReady && dag.IsOn
 }
 
 // Marshal returns the JSON byte slice representation of the DAG
@@ -325,7 +335,14 @@ func (dag *DAG) Marshal() []byte {
 	return jsonString
 }
 
-// String returns a nice JSON representation of the dag
+// ToggleOnOff switches the internal on/off state of the DAG
+func (dag *DAG) ToggleOnOff() {
+	dag.timeLock.Lock()
+	dag.IsOn = !dag.IsOn
+	dag.UpdateDAGToggle(dag.ID, dag.IsOn)
+	dag.timeLock.Unlock()
+}
+
 func (dag *DAG) String() string {
 	return jsonpanic.JSONPanicFormat(dag)
 }

@@ -29,11 +29,6 @@ func getDagFromRequest(
 	return dag
 }
 
-func setHeaders(w http.ResponseWriter) {
-	w.Header().Set("Content-type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-}
-
 func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 
 	router.HandleFunc("/dags", func(w http.ResponseWriter, r *http.Request) {

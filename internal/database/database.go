@@ -42,7 +42,7 @@ func queryErrorMessage(query string, err error) string {
 	return fmt.Sprintf("for query: '%s': %s", query, err.Error())
 }
 
-// PutNRowValues puts the first RowResult.Length rows into row result
+// PutNRowValues puts the first QueryResult.Capacity() rows into row result
 func PutNRowValues(result QueryResult, rows *sql.Rows) {
 	defer rows.Close()
 	i := 0

@@ -14,12 +14,12 @@ var sqlClient *database.SQLClient
 var tableClient *TableClient
 
 var databaseFile = path.Join(testutils.GetTestFolder(), "test.sqlite3")
-var testDagRow = dagtable.NewRow(0, "dag_num_1", "default", "v1", "/my/path", "json")
+var testDagRow = dagtable.NewRow(0, true, "dag_num_1", "default", "v1", "/my/path", "json")
 
 func setUpDagTable() {
 	dagTableClient := dagtable.NewTableClient(sqlClient)
 	dagTableClient.CreateTable()
-	dagTableClient.UpsertDag(testDagRow)
+	dagTableClient.UpsertDAG(testDagRow)
 }
 
 func TestMain(m *testing.M) {

@@ -135,7 +135,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 	if expectedJSONString != marshaledJSON {
 		t.Error("DAG struct does not match up with expected values")
 		t.Error("Found:", dag)
-		t.Error("Expec:", expectedDAG)
+		t.Error("Expected:", expectedDAG)
 	}
 }
 
@@ -174,12 +174,13 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client, make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT)
+	}, "", client, make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT, false)
 	return &dag
 }
 
 func getTestDAGFakeClient(client kubernetes.Interface) *DAG {
-	return getTestDAG(client)
+	dag := getTestDAG(client)
+	return dag
 }
 
 func getTestDAGRealClient() *DAG {
@@ -198,6 +199,33 @@ func reportErrorCounts(t *testing.T, foundCount int, expectedCount int, testDag 
 			foundCount,
 		)
 		t.Error("Found dags:", testDag.DAGRuns)
+	}
+}
+
+func getDAGRecordDAG(dag *DAG) dagtable.Row {
+	return TABLECLIENT.GetDagRecord(dag.Config.Name, dag.Config.Namespace)
+}
+
+func TestToggleOnOff(t *testing.T) {
+	defer database.PurgeDB(SQLCLIENT)
+	setUpDatabase()
+	testDAG := getTestDAGFakeClient(getNewTestClient())
+
+	testDAG.ToggleOnOff()
+	if !testDAG.IsOn {
+		t.Error("DAG should be on!")
+	}
+	record := getDAGRecordDAG(testDAG)
+	if !record.IsOn {
+		t.Error("DB should reflect DAG is on")
+	}
+	testDAG.ToggleOnOff()
+	if testDAG.IsOn {
+		t.Error("DAG should be off!")
+	}
+	record = getDAGRecordDAG(testDAG)
+	if record.IsOn {
+		t.Error("DB should reflect DAG is off")
 	}
 }
 
@@ -231,6 +259,7 @@ func TestAddDagRunIfReady(t *testing.T) {
 		func() {
 			client := getNewTestClient()
 			testDAG := getTestDAGFakeClient(client)
+			testDAG.IsOn = true // Turn on DAG
 			channelHolder := holder.New()
 			testDAG.AddNextDagRunIfReady(channelHolder)
 			action.actionFunc(testDAG)
