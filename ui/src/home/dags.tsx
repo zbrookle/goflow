@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Table from "react-bootstrap/Table";
 import Switch from "bootstrap-switch-button-react";
 import CSS from "csstype";
+import { DAGProps } from "../typing/dag_types"
 
 const styles = {
   table: {
@@ -14,13 +15,6 @@ const tdStyles: CSS.Properties = {
   wordWrap: "normal",
   margin: 0,
   whiteSpace: "pre-line",
-};
-
-type DAGProps = {
-  Name: string;
-  Schedule: string;
-  LastRunTime: string;
-  IsOn: boolean;
 };
 
 function CenterColHead(props: any) {
@@ -75,7 +69,7 @@ function DAG(props: DAGProps) {
             fetch(
               `http://localhost:8080/dag/${props.Name}/toggle`,
               toggleRequestOptions
-            )
+            );
           }}
         />
       </CenteredCol>
