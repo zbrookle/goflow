@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import Table from "react-bootstrap/Table";
-import Switch from "bootstrap-switch-button-react";
+import { OnOffButton } from "../buttons/on_off_button";
 import CSS from "csstype";
-import { DAGProps } from "../typing/dag_types"
+import { DAGProps } from "../typing/dag_types";
 
 const styles = {
   table: {
@@ -51,27 +51,11 @@ function DAGColumnHeaders() {
 function DAG(props: DAGProps) {
   var date = new Date();
   const [lastRunTime] = useState(date.toISOString());
-  // Add update DAG toggle here!
-  const toggleRequestOptions = {
-    method: "PUT",
-    // headers: {
-    //   "Access-Control-Request-Method": "PUT",
-    //   "Access-Control-Request-Headers": "X-Custom-Header",
-    // },
-  };
+
   return (
     <tr>
       <CenteredCol>
-        <Switch
-          size="sm"
-          checked={props.IsOn}
-          onChange={() => {
-            fetch(
-              `http://localhost:8080/dag/${props.Name}/toggle`,
-              toggleRequestOptions
-            );
-          }}
-        />
+        <OnOffButton Name={props.Name} IsOn={props.IsOn} />
       </CenteredCol>
       <CenteredCol>{props.Schedule}</CenteredCol>
       <CenteredCol>{props.Name}</CenteredCol>
