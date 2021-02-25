@@ -7,8 +7,8 @@ import { LinkContainer } from "react-router-bootstrap";
 import { DagInfo } from "./dag/dag_page";
 
 type RouterNavLinkProps = {
-  link: string,
-  text: string
+  link: string;
+  text: string;
 };
 
 function RouterNavLink(props: RouterNavLinkProps) {
@@ -23,8 +23,8 @@ function Header() {
   return (
     <Navbar bg="dark" variant="dark" expand="lg" sticky="top">
       <Navbar.Toggle aria-controls="basic-navbar-nav"></Navbar.Toggle>
-       <LinkContainer to={"/home"}>
-          <Navbar.Brand>GoFlow</Navbar.Brand>
+      <LinkContainer to={"/home"}>
+        <Navbar.Brand>GoFlow</Navbar.Brand>
       </LinkContainer>
       <Navbar.Collapse>
         <Nav>
@@ -47,12 +47,12 @@ function App() {
       <div>
         <Header />
         <Switch>
-          <Route path="/">
+          <Route path="/home">
             <DAGContainer />
           </Route>
           <Route path="/">
             <DagInfo
-              Name="test"
+              Name="test-dag"
               Schedule="* * * *"
               LastRunTime="Never"
               IsOn={false}
