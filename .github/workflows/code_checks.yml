@@ -7,8 +7,8 @@ on:
     branches: master
 
 jobs:
-  checks:
-    name: Checks
+  go_checks:
+    name: GO Checks
     runs-on: ubuntu-latest
     steps:
 
@@ -61,9 +61,9 @@ jobs:
 
     - name: Integration test
       run: go run internal/integration/run_integrations.go
-  ui_checks:
+  js_checks:
     runs-on: ubuntu-latest
-    name: UI Checks
+    name: JS Checks
     defaults:
       run:
         working-directory: ui
