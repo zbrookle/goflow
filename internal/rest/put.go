@@ -24,7 +24,6 @@ func registerPutHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 				return
 			}
 			dag.ToggleOnOff()
-			fmt.Println(fmt.Sprintf("%t", dag.IsOn))
 			fmt.Fprintf(w, "%t", dag.IsOn)
 		},
 	).Methods(
