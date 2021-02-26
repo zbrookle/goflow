@@ -85,6 +85,8 @@ jobs:
             ${{ runner.os }}-yarn-
       - name: Install modules
         run: yarn --frozen-lockfile
+      - name: Install linting
+        run: yarn add eslint prettier
       - name: Run ESLint
         run: eslint --ext .tsx
       - name: Check formatting
