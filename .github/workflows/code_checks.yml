@@ -7,8 +7,8 @@ on:
     branches: master
 
 jobs:
-  checks:
-    name: Checks
+  go_checks:
+    name: GO Checks
     runs-on: ubuntu-latest
     steps:
 
@@ -61,3 +61,33 @@ jobs:
 
     - name: Integration test
       run: go run internal/integration/run_integrations.go
+  js_checks:
+    runs-on: ubuntu-latest
+    name: JS Checks
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: actions/cache@v1
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Install modules
+        run: yarn --frozen-lockfile
+      - name: Install linting
+        run: yarn add eslint prettier
+      - name: Run ESLint
+        run: yarn eslint --ext .tsx
+      - name: Check formatting
+        run: yarn prettier --check .

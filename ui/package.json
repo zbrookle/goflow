@@ -15,7 +15,6 @@
     "@types/react-router-dom": "^5.1.7",
     "bootstrap": "^4.6.0",
     "bootstrap-switch-button-react": "^1.2.0",
-    "husky": "^5.0.9",
     "lint-staged": "^10.5.4",
     "prettier": "^2.2.1",
     "react": "^17.0.1",
@@ -32,7 +31,9 @@
     "start": "BROWSER='safari' react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "prettier --check .",
+    "format": "prettier --write ."
   },
   "eslintConfig": {
     "extends": [
@@ -42,7 +43,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged"
+      "pre-commit": "yarn lint"
     }
   },
   "lint-staged": {
