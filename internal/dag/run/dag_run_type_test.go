@@ -233,7 +233,9 @@ func TestStart(t *testing.T) {
 			go dagRun.Start()
 
 			for {
-				if dagRun.holder.Contains(dagRun.Name) {
+				// Need to make sure that dag is actually totally ready before
+				// moving on with test
+				if dagRun.holder.Contains(dagRun.Name) && dagRun.pod != nil {
 					break
 				}
 				time.Sleep(1 * time.Millisecond)
