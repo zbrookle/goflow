@@ -88,6 +88,6 @@ jobs:
       - name: Install linting
         run: yarn add eslint prettier
       - name: Run ESLint
-        run: eslint --ext .tsx
+        run: yarn eslint --ext .tsx
       - name: Check formatting
-        run: prettier --check
+        run: yarn prettier --check .
