@@ -12,7 +12,7 @@ export function OnOffButton(props: OnOffButtonProps) {
   };
   const [isOn, setButtonOn] = useState(false);
   function getDAGIsOn() {
-    const fetchURL = `http://localhost:8080/dag/${props.Name}`
+    const fetchURL = `http://localhost:8080/dag/${props.Name}`;
     fetch(fetchURL)
       .then((resp) => resp.json())
       .then((data) => setButtonOn(data.IsOn));
@@ -26,11 +26,9 @@ export function OnOffButton(props: OnOffButtonProps) {
         fetch(
           `http://localhost:8080/dag/${props.Name}/toggle`,
           toggleRequestOptions
-        ).then(
-          resp => resp.json()
-        ).then(
-          (data) => setButtonOn(data.IsOn)
-        );
+        )
+          .then((resp) => resp.json())
+          .then((data) => setButtonOn(data.IsOn));
       }}
     />
   );
