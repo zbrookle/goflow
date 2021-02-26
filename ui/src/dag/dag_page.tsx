@@ -1,7 +1,7 @@
 import type { DAGProps } from "../typing/dag_types";
 import { Container, Row, Col, Card, Nav } from "react-bootstrap";
 import { OnOffButton } from "../buttons/on_off_button";
-import { Switch, Route, useRouteMatch } from "react-router-dom";
+import { Switch, Route, useRouteMatch, useParams } from "react-router-dom";
 import { RouterNavLink } from "../routing/router_nav";
 import { fetchDAG } from "../backend/fetch_calls"
 
@@ -32,12 +32,17 @@ function CardTab(props: CardTabProps) {
   );
 }
 
+type DagPropName = {
+  name: string
+}
+
 function DagInfo(props: DagInfoProps) {
   let { path, url } = useRouteMatch();
   path += `/${props.Name}`
   url += `/${props.Name}`
+  let { name } = useParams<DagPropName>()
 
-  fetchDAG(props.Name).then(
+  fetchDAG(name).then(
     (data) => console.log(data)
   )
 
@@ -52,10 +57,10 @@ function DagInfo(props: DagInfoProps) {
             display: "flex",
           }}
         >
-          <OnOffButton Name={props.Name} IsOn={props.IsOn} />
+          <OnOffButton Name={name} IsOn={props.IsOn} />
         </div>
         <Col>
-          <h1>{props.Name}</h1>
+          <h1>{name}</h1>
         </Col>
       </Row>
       <Row>
