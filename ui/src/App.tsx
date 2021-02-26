@@ -1,7 +1,7 @@
 import React from "react";
 import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
-import { DAGContainer } from "./home/dags";
+import { DAGContainer } from "./home/dag_list";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 import { LinkContainer } from "react-router-bootstrap";
 import { DagInfo } from "./dag/dag_page";
