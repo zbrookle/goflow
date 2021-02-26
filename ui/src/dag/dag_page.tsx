@@ -1,6 +1,8 @@
 import type { DAGProps } from "../typing/dag_types";
 import { Container, Row, Col, Card, Nav } from "react-bootstrap";
 import { OnOffButton } from "../buttons/on_off_button";
+import { BrowserRouter, Switch, Route } from "react-router-dom";
+import { RouterNavLink } from "../routing/router_nav";
 
 type DagInfoProps = DAGProps & {
   JobName: string;
@@ -17,7 +19,7 @@ type CardTabProps = {
 function CardTab(props: CardTabProps) {
   return (
     <Nav.Item>
-      <Nav.Link href={props.Ref}>{props.Label}</Nav.Link>
+      <RouterNavLink link={props.Ref} text={props.Label} />
     </Nav.Item>
   );
 }

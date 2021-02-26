@@ -5,19 +5,7 @@ import { DAGContainer } from "./home/dags";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 import { LinkContainer } from "react-router-bootstrap";
 import { DagInfo } from "./dag/dag_page";
-
-type RouterNavLinkProps = {
-  link: string;
-  text: string;
-};
-
-function RouterNavLink(props: RouterNavLinkProps) {
-  return (
-    <LinkContainer to={props.link}>
-      <Nav.Link>{props.text}</Nav.Link>
-    </LinkContainer>
-  );
-}
+import { RouterNavLink } from "./routing/router_nav";
 
 function Header() {
   return (
