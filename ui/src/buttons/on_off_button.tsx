@@ -1,5 +1,6 @@
 import Switch from "bootstrap-switch-button-react";
 import { useLayoutEffect, useState } from "react";
+import { fetchDAG } from "../backend/fetch_calls";
 
 type OnOffButtonProps = {
   Name: string;
@@ -12,9 +13,7 @@ export function OnOffButton(props: OnOffButtonProps) {
   };
   const [isOn, setButtonOn] = useState(false);
   function getDAGIsOn() {
-    const fetchURL = `http://localhost:8080/dag/${props.Name}`;
-    fetch(fetchURL)
-      .then((resp) => resp.json())
+    fetchDAG(props.Name)
       .then((data) => setButtonOn(data.IsOn));
   }
   useLayoutEffect(getDAGIsOn, [props.Name]);

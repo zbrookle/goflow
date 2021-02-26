@@ -3,6 +3,7 @@ import Table from "react-bootstrap/Table";
 import { OnOffButton } from "../buttons/on_off_button";
 import CSS from "csstype";
 import { DAGProps } from "../typing/dag_types";
+import { fetchDAGs } from "../backend/fetch_calls";
 
 const styles = {
   table: {
@@ -69,8 +70,7 @@ function DAGContainer() {
   const [dags, setDAGs] = useState<Record<string, DAGProps>>({});
   useEffect(() => {
     const intervalId = setInterval(() => {
-      fetch("http://localhost:8080/dags")
-        .then((res) => res.json())
+      fetchDAGs()
         .then((data) => {
           var record: Record<string, DAGProps> = {};
           data.forEach((dag: any) => {
