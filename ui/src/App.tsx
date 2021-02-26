@@ -38,7 +38,7 @@ function App() {
           <Route path="/home">
             <DAGContainer />
           </Route>
-          <Route path="/">
+          <Route path="/dag">
             <DagInfo
               Name="test-dag"
               Schedule="* * * *"
