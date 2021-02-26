@@ -64,12 +64,18 @@ jobs:
   ui_checks:
     runs-on: ubuntu-latest
     name: UI Checks
+    defaults:
+      run:
+        working-directory: ui
     steps:
       - uses: actions/checkout@v2
-      - name: Linting
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
       - name: Install modules
-        run: yarn
+        run: yarn --frozen-lockfile
       - name: Run ESLint
-        run: eslint ui/ --ext .tsx
+        run: eslint --ext .tsx
       - name: Check formatting
-        run: prettier --check ui/
+        run: prettier --check
