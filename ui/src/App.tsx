@@ -19,7 +19,6 @@ function Header() {
           <RouterNavLink link={"/home"} text="Home" />
           <RouterNavLink link={"/metrics"} text="Metrics" />
           <RouterNavLink link={"/settings"} text="Settings" />
-          <RouterNavLink link={"/dag/metrics"} text="DAG" />
           <Nav.Link href="https://github.com/zbrookle/goflow">
             Documentation
           </Nav.Link>
@@ -38,7 +37,7 @@ function App() {
           <Route path="/home">
             <DAGContainer />
           </Route>
-          <Route path="/dag">
+          <Route path="/dag/:name">
             <DagInfo
               Namespace="default"
               Name="test-dag"
