@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Nav } from "react-bootstrap";
 import { OnOffButton } from "../buttons/on_off_button";
 import { Switch, Route, useRouteMatch } from "react-router-dom";
 import { RouterNavLink } from "../routing/router_nav";
+import { fetchDAG } from "../backend/fetch_calls"
 
 type DagInfoProps = DAGProps & {
   JobName: string;
@@ -35,6 +36,10 @@ function DagInfo(props: DagInfoProps) {
   let { path, url } = useRouteMatch();
   path += `/${props.Name}`
   url += `/${props.Name}`
+
+  fetchDAG(props.Name).then(
+    (data) => console.log(data)
+  )
 
   return (
     <Container style={{ marginTop: "1%" }}>

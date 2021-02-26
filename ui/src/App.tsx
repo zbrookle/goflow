@@ -40,6 +40,7 @@ function App() {
           </Route>
           <Route path="/dag">
             <DagInfo
+              Namespace="default"
               Name="test-dag"
               Schedule="* * * *"
               LastRunTime="Never"

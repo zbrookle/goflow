@@ -59,6 +59,7 @@ function DAG(props: DAGProps) {
       <CenteredCol>
         <OnOffButton Name={props.Name} IsOn={props.IsOn} />
       </CenteredCol>
+      <CenteredCol>{props.Namespace}</CenteredCol>
       <CenteredCol>{props.Schedule}</CenteredCol>
       <CenteredCol>
         <RouterNavLink link={`/dag/${props.Name}/metrics`} text={props.Name} />
@@ -77,6 +78,7 @@ function DAGContainer() {
         var record: Record<string, DAGProps> = {};
         data.forEach((dag: any) => {
           record[dag.Config.Name] = {
+            Namespace: dag.Config.Namespace,
             Name: dag.Config.Name,
             Schedule: dag.Config.Schedule,
             LastRunTime: dag.MostRecentExecution,
@@ -85,7 +87,7 @@ function DAGContainer() {
         });
         setDAGs(record);
       });
-    }, 5000); // TODO Make this number changeable in the UI
+    }, 10); // TODO Make this number changeable in the UI
     return () => clearInterval(intervalId);
   }, []);
 
@@ -100,6 +102,7 @@ function DAGContainer() {
             <DAG
               key={t[1].Name}
               Name={t[1].Name}
+              Namespace={t[1].Namespace}
               Schedule={t[1].Schedule}
               LastRunTime={t[1].LastRunTime}
               IsOn={t[1].IsOn}
