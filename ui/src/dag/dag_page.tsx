@@ -33,6 +33,8 @@ function CardTab(props: CardTabProps) {
 
 function DagInfo(props: DagInfoProps) {
   let { path, url } = useRouteMatch();
+  path += `/${props.Name}`
+  url += `/${props.Name}`
 
   return (
     <Container style={{ marginTop: "1%" }}>
@@ -63,7 +65,13 @@ function DagInfo(props: DagInfoProps) {
           </Card.Header>
           <Switch>
             <Route exact path={getPath(path, "metrics")}>
-              <Card.Body>Metrics!</Card.Body>
+              <Card.Body>
+                <p>Current Job Name: {props.JobName}</p>
+                <p>Successes: {props.Successes}</p>
+                <p>Failures: {props.Failures}</p>
+                <p>Max Memory Usage: {props.MaxMemoryUsage}</p>
+                <p>Logs</p>
+              </Card.Body>
             </Route>
             <Route path={getPath(path, "timeline")}>
               <Card.Body>Timeline!</Card.Body>

@@ -4,6 +4,7 @@ import { OnOffButton } from "../buttons/on_off_button";
 import CSS from "csstype";
 import { DAGProps } from "../typing/dag_types";
 import { fetchDAGs } from "../backend/fetch_calls";
+import { RouterNavLink } from "../routing/router_nav";
 
 const styles = {
   table: {
@@ -59,7 +60,9 @@ function DAG(props: DAGProps) {
         <OnOffButton Name={props.Name} IsOn={props.IsOn} />
       </CenteredCol>
       <CenteredCol>{props.Schedule}</CenteredCol>
-      <CenteredCol>{props.Name}</CenteredCol>
+      <CenteredCol>
+        <RouterNavLink link={`/dag/${props.Name}/metrics`} text={props.Name} />
+      </CenteredCol>
       <CenteredCol>{lastRunTime}</CenteredCol>
       <CenteredCol>Success/failures</CenteredCol>
     </tr>
