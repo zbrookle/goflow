@@ -44,10 +44,10 @@ function DagInfo(props: DagInfoProps) {
         <Card>
           <Card.Header>
             <Nav variant="tabs" defaultActiveKey="#metrics">
-              <CardTab Ref="#metrics" Label="Metrics"/>
-              <CardTab Ref="#timeline" Label="Timeline"/>
-              <CardTab Ref="#runtimes" Label="Run Times"/>
-              <CardTab Ref="#resources" Label="Resource Usage"/>
+              <CardTab Ref="#metrics" Label="Metrics" />
+              <CardTab Ref="#timeline" Label="Timeline" />
+              <CardTab Ref="#runtimes" Label="Run Times" />
+              <CardTab Ref="#resources" Label="Resource Usage" />
             </Nav>
           </Card.Header>
           <Card.Body>Hello!</Card.Body>
