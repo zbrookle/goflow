@@ -13,8 +13,7 @@ export function OnOffButton(props: OnOffButtonProps) {
   };
   const [isOn, setButtonOn] = useState(false);
   function getDAGIsOn() {
-    fetchDAG(props.Name)
-      .then((data) => setButtonOn(data.IsOn));
+    fetchDAG(props.Name).then((data) => setButtonOn(data.IsOn));
   }
   useLayoutEffect(getDAGIsOn, [props.Name]);
   return (

@@ -70,19 +70,18 @@ function DAGContainer() {
   const [dags, setDAGs] = useState<Record<string, DAGProps>>({});
   useEffect(() => {
     const intervalId = setInterval(() => {
-      fetchDAGs()
-        .then((data) => {
-          var record: Record<string, DAGProps> = {};
-          data.forEach((dag: any) => {
-            record[dag.Config.Name] = {
-              Name: dag.Config.Name,
-              Schedule: dag.Config.Schedule,
-              LastRunTime: dag.MostRecentExecution,
-              IsOn: dag.IsOn,
-            };
-          });
-          setDAGs(record);
+      fetchDAGs().then((data) => {
+        var record: Record<string, DAGProps> = {};
+        data.forEach((dag: any) => {
+          record[dag.Config.Name] = {
+            Name: dag.Config.Name,
+            Schedule: dag.Config.Schedule,
+            LastRunTime: dag.MostRecentExecution,
+            IsOn: dag.IsOn,
+          };
         });
+        setDAGs(record);
+      });
     }, 5000); // TODO Make this number changeable in the UI
     return () => clearInterval(intervalId);
   }, []);

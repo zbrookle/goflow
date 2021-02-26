@@ -19,7 +19,7 @@ function Header() {
           <RouterNavLink link={"/home"} text="Home" />
           <RouterNavLink link={"/metrics"} text="Metrics" />
           <RouterNavLink link={"/settings"} text="Settings" />
-          <RouterNavLink link={"/dag"} text="DAG" />
+          <RouterNavLink link={"/dag/metrics"} text="DAG" />
           <Nav.Link href="https://github.com/zbrookle/goflow">
             Documentation
           </Nav.Link>
