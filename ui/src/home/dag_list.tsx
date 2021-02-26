@@ -40,6 +40,7 @@ function DAGColumnHeaders() {
     <thead>
       <tr>
         <CenterColHead>Status</CenterColHead>
+        <CenterColHead>Namespace</CenterColHead>
         <CenterColHead>Schedule</CenterColHead>
         <CenterColHead>Name</CenterColHead>
         <CenterColHead>Last Run Time</CenterColHead>
