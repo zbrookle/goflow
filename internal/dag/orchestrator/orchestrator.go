@@ -82,6 +82,21 @@ func (orchestrator *Orchestrator) AddDAG(dag *dagtype.DAG) {
 	orchestrator.dagMapLock.Unlock()
 }
 
+// UpdateDag updates a DAG to the most recently found configuration
+func (orchestrator *Orchestrator) UpdateDag(dag *dagtype.DAG) {
+	orchestrator.dagMapLock.Lock()
+	dagRef := orchestrator.dagMap[dag.Config.Name]
+	logs.InfoLogger.Printf(
+		"Updating DAG '%s' from namespace '%s', from configuration %s to configuration %s",
+		dag.Config.Name,
+		dag.Config.Namespace,
+		dagRef.Config,
+		dag.Config,
+	)
+	dagRef.Config = dag.Config
+	orchestrator.dagMapLock.Unlock()
+}
+
 func (orchestrator *Orchestrator) addDAGServiceAccount(dag *dagtype.DAG) {
 	serviceAccountHandler := serviceaccount.New(
 		utils.AppName,
@@ -141,6 +156,19 @@ func (orchestrator Orchestrator) DagRuns() []dagrun.DAGRun {
 	return runs
 }
 
+func (orchestrator *Orchestrator) collectDAG(dag *dagtype.DAG) {
+	dagPresent := orchestrator.isDagPresent(*dag)
+	if !dagPresent {
+		orchestrator.addDAGServiceAccount(dag)
+		orchestrator.AddDAG(dag)
+	} else if dagPresent && orchestrator.isStoredDagDifferent(*dag) {
+		logs.InfoLogger.Printf("Updating DAG %s which will run in namespace %s", dag.Config.Name, dag.Config.Namespace)
+		logs.InfoLogger.Printf("Old DAG code: %s\n", orchestrator.GetDag(dag.Config.Name).Code)
+		logs.InfoLogger.Printf("New DAG code: %s\n", dag.Code)
+		orchestrator.UpdateDag(dag)
+	}
+}
+
 // CollectDAGs fills up the dag map with existing dags
 func (orchestrator *Orchestrator) CollectDAGs() {
 	dagSlice := dagtype.GetDAGSFromFolder(
@@ -152,16 +180,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 		orchestrator.dagrunTableClient,
 	)
 	for _, dag := range dagSlice {
-		dagPresent := orchestrator.isDagPresent(*dag)
-		if !dagPresent {
-			orchestrator.addDAGServiceAccount(dag)
-			orchestrator.AddDAG(dag)
-		} else if dagPresent && orchestrator.isStoredDagDifferent(*dag) {
-			logs.InfoLogger.Printf("Updating DAG %s which will run in namespace %s", dag.Config.Name, dag.Config.Namespace)
-			logs.InfoLogger.Printf("Old DAG code: %s\n", orchestrator.GetDag(dag.Config.Name).Code)
-			logs.InfoLogger.Printf("New DAG code: %s\n", dag.Code)
-			// orchestrator.UpdateDag(&dag)
-		}
+		orchestrator.collectDAG(dag)
 	}
 }
 

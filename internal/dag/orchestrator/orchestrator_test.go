@@ -37,11 +37,8 @@ func testOrchestrator() *Orchestrator {
 	return NewOrchestratorFromClientAndConfig(kubeClient, configuration)
 }
 
-func TestRegisterDAG(t *testing.T) {
-	defer database.PurgeDB(sqlClient)
-	orch := testOrchestrator()
-	orch.dagTableClient.CreateTable()
-	dag := dagtype.CreateDAG(&dagconfig.DAGConfig{
+func getTestDAG(orch *Orchestrator) dagtype.DAG {
+	config := &dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
 		Schedule:      "* * * * *",
@@ -52,7 +49,24 @@ func TestRegisterDAG(t *testing.T) {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", orch.kubeClient, make(dagtype.ScheduleCache), orch.dagTableClient, "path", orch.dagrunTableClient, true)
+	}
+	return dagtype.CreateDAG(
+		config,
+		config.String(),
+		orch.kubeClient,
+		make(dagtype.ScheduleCache),
+		orch.dagTableClient,
+		"path",
+		orch.dagrunTableClient,
+		true,
+	)
+}
+
+func TestRegisterDAG(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	dag := getTestDAG(orch)
 	const expectedLength = 1
 	orch.AddDAG(&dag)
 	if orch.dagMap[dag.Config.Name] != &dag {
@@ -60,6 +74,24 @@ func TestRegisterDAG(t *testing.T) {
 	}
 	if len(orch.dagMap) != expectedLength {
 		t.Errorf("DAG map should have length %d", expectedLength)
+	}
+}
+
+func TestDAGUpdate(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	dag := getTestDAG(orch)
+	orch.AddDAG(&dag)
+	updatedDAG := getTestDAG(orch)
+	newConfig := updatedDAG.Config.Copy()
+	const newImageName = "differentImage"
+	newConfig.DockerImage = newImageName
+	updatedDAG.Config = &newConfig
+	updatedDAG.Code = newConfig.String()
+	orch.UpdateDag(&updatedDAG)
+	if orch.dagMap[dag.Config.Name].Config.DockerImage != newImageName {
+		t.Errorf("Expected image name to be updated to \"%s\"", newImageName)
 	}
 }
 

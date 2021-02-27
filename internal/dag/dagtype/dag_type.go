@@ -46,7 +46,13 @@ type DAG struct {
 	dagRunTableClient *dagruntable.TableClient
 	ID                int
 	IsOn              bool
+	LastUpdated       time.Time
 }
+
+// type DAGMetrics struct {
+// 	Successes int;
+// 	Failures int;
+// }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(dagFilePath)
@@ -189,6 +195,7 @@ func getDAGFromJSON(
 		return DAG{}, err
 	}
 	dagJSON.Code = string(dagBytes)
+	dagJSON.LastUpdated = time.Now()
 	return dagJSON, nil
 }
 
