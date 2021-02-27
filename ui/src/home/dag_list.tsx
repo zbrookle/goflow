@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
-import Table from "react-bootstrap/Table";
 import { OnOffButton } from "../buttons/on_off_button";
 import CSS from "csstype";
 import { DAGProps } from "../typing/dag_types";
 import { fetchDAGs } from "../backend/fetch_calls";
 import { DAG } from "../typing/dag_types"
 import { RouterNavLink } from "../routing/router_nav";
-
-const styles = {
-  table: {
-    marginLeft: "1%",
-    width: "98%",
-  },
-};
+import { AppTable } from "../tables/table"
 
 const tdStyles: CSS.Properties = {
   wordWrap: "normal",
@@ -96,14 +89,14 @@ function DAGContainer() {
     <div>
       <h1>My DAGs</h1>
       <h2>(Dag Search Bar Here)</h2>
-      <Table responsive bordered variant="dark" style={styles.table} size="2">
+      <AppTable>
         <DAGColumnHeaders />
         <tbody>
           {Object.entries(dags).map((t, k) => {
             return <DAGRow key={t[1].config.Name} dag={t[1]} />;
           })}
         </tbody>
-      </Table>
+      </AppTable>
     </div>
   );
 }
