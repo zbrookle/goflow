@@ -26,7 +26,6 @@ function Header() {
       <Navbar.Collapse>
         <Nav>
           <HeaderNavLink link={"/home"} text="Home" />
-          <HeaderNavLink link={"/metrics"} text="Metrics" />
           <HeaderNavLink link={"/settings"} text="Settings" />
           <Nav.Link href="https://github.com/zbrookle/goflow">
             Documentation

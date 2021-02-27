@@ -27,6 +27,7 @@ export function RouterNavLink(props: RouterNavLinkProps) {
       onMouseLeave={() => setStyle(defaultStyle)}
       style={style}
       to={props.link}
+      
     >
       <Nav.Link>{props.text}</Nav.Link>
     </LinkContainer>
