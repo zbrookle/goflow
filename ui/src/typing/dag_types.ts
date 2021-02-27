@@ -25,5 +25,5 @@ export type DAGProps = {
 };
 
 export type DAGConfigProps = {
-  config: DAGConfig
-}
+  config: DAGConfig;
+};

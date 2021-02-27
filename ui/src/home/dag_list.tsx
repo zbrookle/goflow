@@ -3,9 +3,9 @@ import { OnOffButton } from "../buttons/on_off_button";
 import CSS from "csstype";
 import { DAGProps } from "../typing/dag_types";
 import { fetchDAGs } from "../backend/fetch_calls";
-import { DAG } from "../typing/dag_types"
+import { DAG } from "../typing/dag_types";
 import { RouterNavLink } from "../routing/router_nav";
-import { AppTable } from "../tables/table"
+import { AppTable } from "../tables/table";
 
 const tdStyles: CSS.Properties = {
   wordWrap: "normal",

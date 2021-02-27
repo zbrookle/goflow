@@ -1,4 +1,4 @@
-import { DAG } from "../typing/dag_types"
+import { DAG } from "../typing/dag_types";
 
 const hostName = "http://localhost:8080";
 
