@@ -126,9 +126,11 @@ func TestUpdateDAGWhileRunning(t *testing.T) {
 	orch.dagTableClient.CreateTable()
 	orch.dagrunTableClient.CreateTable()
 	dag := getTestDAG(orch)
+	dag.IsOn = true
 	orch.collectDAG(&dag)
 	dag.AddNextDagRunIfReady(orch.channelHolder)
 	updatedDAG := getDagWithDifferentDockerImage(orch)
+	updatedDAG.IsOn = true
 	orch.collectDAG(&updatedDAG)
 	retrievedDAG := orch.dagMap[dag.Config.Name]
 	if retrievedDAG.Config.DockerImage != newImageName {
