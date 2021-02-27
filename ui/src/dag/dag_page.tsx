@@ -6,6 +6,7 @@ import { RouterNavLink } from "../routing/router_nav";
 import { DAG, fetchDAG } from "../backend/fetch_calls";
 import { useState } from "react";
 import { useComponentWillMount } from "../hooks/component_will_mount";
+import { DAGConfigBody } from "./dag_config"
 
 function getPath(path: string, name: string) {
   return `${path}/${name}`;
@@ -46,14 +47,13 @@ function DagInfo() {
   const [currentActiveRun, setCurrentActiveRun] = useState("N/A");
   useComponentWillMount(() => {
     fetchDAG(name).then((restDAG) => {
-      console.log(restDAG);
       let dag = {
         config: restDAG.Config,
         isOn: restDAG.IsOn,
         DAGRuns: restDAG.DAGRuns,
       } as DAG;
       setDAG(dag);
-
+      console.log(dag.config);
       if (dag.DAGRuns.length !== 0) {
         setCurrentActiveRun(dag.DAGRuns[0].Name);
       }
@@ -92,29 +92,35 @@ function DagInfo() {
                 Ref="resources"
                 Label="Resource Usage"
               />
+              <CardTab Path={defaultURL} Ref="config" Label="Configuration" />
             </Nav>
           </Card.Header>
-          <Switch>
-            <Route path={getPath(defaultPath, "metrics")}>
-              <Card.Body>
-                <p>Current Job Name: {currentActiveRun}</p>
-                <p>Schedule: {dag.config.Schedule}</p>
-                <p>Successes: {0}</p>
-                <p>Failures: {0}</p>
-                <p>Max Memory Usage: {0}</p>
-                <p>Logs</p>
-              </Card.Body>
-            </Route>
-            <Route path={getPath(defaultPath, "timeline")}>
-              <Card.Body>Timeline!</Card.Body>
-            </Route>
-            <Route path={getPath(defaultPath, "runtimes")}>
-              <Card.Body>Run run run!</Card.Body>
-            </Route>
-            <Route path={getPath(defaultPath, "resources")}>
-              <Card.Body>mems and cps!</Card.Body>
-            </Route>
-          </Switch>
+          <Card.Body>
+            <Switch>
+              <Route path={getPath(defaultPath, "metrics")}>
+                <div>
+                  <p>Current Job Name: {currentActiveRun}</p>
+                  <p>Schedule: {dag.config.Schedule}</p>
+                  <p>Successes: {0}</p>
+                  <p>Failures: {0}</p>
+                  <p>Max Memory Usage: {0}</p>
+                  <p>Logs</p>
+                </div>
+              </Route>
+              <Route path={getPath(defaultPath, "timeline")}>
+                Timeline!
+              </Route>
+              <Route path={getPath(defaultPath, "runtimes")}>
+                Run run run!
+              </Route>
+              <Route path={getPath(defaultPath, "resources")}>
+                mems and cps!
+              </Route>
+              <Route path={getPath(defaultPath, "config")}>
+                <DAGConfigBody config={dag.config} />
+              </Route>
+            </Switch>
+          </Card.Body>
           <Card.Footer className="text-muted">Last Updated:</Card.Footer>
         </Card>
       </Row>

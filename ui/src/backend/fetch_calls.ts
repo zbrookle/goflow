@@ -16,6 +16,9 @@ export type DAGConfig = {
   Name: string;
   Namespace: string;
   Schedule: string;
+  Command: Array<string>;
+  Retries: number;
+  DockerImage: string;
 };
 
 type DAGRun = {
