@@ -120,6 +120,22 @@ func TestCollectDagUpdatedTime(t *testing.T) {
 	}
 }
 
+func TestUpdateDAGWhileRunning(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	orch.dagrunTableClient.CreateTable()
+	dag := getTestDAG(orch)
+	orch.collectDAG(&dag)
+	dag.AddNextDagRunIfReady(orch.channelHolder)
+	updatedDAG := getDagWithDifferentDockerImage(orch)
+	orch.collectDAG(&updatedDAG)
+	retrievedDAG := orch.dagMap[dag.Config.Name]
+	if retrievedDAG.Config.DockerImage != newImageName {
+		t.Errorf("Expected image name to be updated to \"%s\"", newImageName)
+	}
+}
+
 func TestCollectDags(t *testing.T) {
 	defer database.PurgeDB(sqlClient)
 	orch := testOrchestrator()
