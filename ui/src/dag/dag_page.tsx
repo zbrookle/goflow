@@ -3,13 +3,9 @@ import { Container, Row, Col, Card, Nav } from "react-bootstrap";
 import { OnOffButton } from "../buttons/on_off_button";
 import { Switch, Route, useRouteMatch, useParams } from "react-router-dom";
 import { RouterNavLink } from "../routing/router_nav";
-import { fetchDAG, fetchDAGObject } from "../backend/fetch_calls";
-
-// type DagInfoProps = DAGProps & {
-//   MaxMemoryUsage: number;
-//   Successes: number;
-//   Failures: number;
-// };
+import { DAG, fetchDAG } from "../backend/fetch_calls";
+import { useState } from "react";
+import { useCompoentWillMount as useComponentWillMount } from "../hooks/component_will_mount";
 
 function getPath(path: string, name: string) {
   return `${path}/${name}`;
@@ -43,11 +39,16 @@ function DagInfo() {
   let { path, url } = useRouteMatch();
 
   let { name } = useParams<DagPropName>();
-  let defaultPath = path.replace("/metrics", "")
-  let defaultURL = url.replace("/metrics", "")
-  let dag = fetchDAGObject(name);
-
-  // fetchDAG(name).then((data) => console.log(data));
+  let defaultPath = path.replace("/metrics", "");
+  let defaultURL = url.replace("/metrics", "");
+  let obj = { config: { Schedule: "", Name: "" } } as DAG;
+  const [dag, setDAG] = useState<DAG>(obj);
+  useComponentWillMount(() => {
+    fetchDAG(name).then((restDAG) => {
+      let dag = { config: restDAG.Config, isOn: restDAG.IsOn } as DAG;
+      setDAG(dag);
+    });
+  });
 
   return (
     <Container style={{ marginTop: "1%" }}>
@@ -69,18 +70,25 @@ function DagInfo() {
       <Row>
         <Card>
           <Card.Header>
-            <Nav variant="tabs" defaultActiveKey={getPath(defaultURL, "metrics")}>
+            <Nav
+              variant="tabs"
+              defaultActiveKey={getPath(defaultURL, "metrics")}
+            >
               <CardTab Path={defaultURL} Ref="metrics" Label="Metrics" />
               <CardTab Path={defaultURL} Ref="timeline" Label="Timeline" />
               <CardTab Path={defaultURL} Ref="runtimes" Label="Run Times" />
-              <CardTab Path={defaultURL} Ref="resources" Label="Resource Usage" />
+              <CardTab
+                Path={defaultURL}
+                Ref="resources"
+                Label="Resource Usage"
+              />
             </Nav>
           </Card.Header>
           <Switch>
             <Route path={getPath(defaultPath, "metrics")}>
               <Card.Body>
                 <p>Current Job Name: {"test"}</p>
-                <p>Schedule: {"dag.config.schedule"}</p>
+                <p>Schedule: {dag.config.Schedule}</p>
                 <p>Successes: {0}</p>
                 <p>Failures: {0}</p>
                 <p>Max Memory Usage: {0}</p>
