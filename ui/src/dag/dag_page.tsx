@@ -5,7 +5,7 @@ import { Switch, Route, useRouteMatch, useParams } from "react-router-dom";
 import { RouterNavLink } from "../routing/router_nav";
 import { DAG, fetchDAG } from "../backend/fetch_calls";
 import { useState } from "react";
-import { useCompoentWillMount as useComponentWillMount } from "../hooks/component_will_mount";
+import { useComponentWillMount } from "../hooks/component_will_mount";
 
 function getPath(path: string, name: string) {
   return `${path}/${name}`;
