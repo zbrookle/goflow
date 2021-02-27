@@ -3,7 +3,8 @@ import { Container, Row, Col, Card, Nav } from "react-bootstrap";
 import { OnOffButton } from "../buttons/on_off_button";
 import { Switch, Route, useRouteMatch, useParams } from "react-router-dom";
 import { RouterNavLink } from "../routing/router_nav";
-import { DAG, fetchDAG } from "../backend/fetch_calls";
+import { fetchDAG } from "../backend/fetch_calls";
+import { DAG } from "../typing/dag_types"
 import { useState } from "react";
 import { useComponentWillMount } from "../hooks/component_will_mount";
 import { DAGConfigBody } from "./dag_config"

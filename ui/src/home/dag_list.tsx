@@ -3,7 +3,8 @@ import Table from "react-bootstrap/Table";
 import { OnOffButton } from "../buttons/on_off_button";
 import CSS from "csstype";
 import { DAGProps } from "../typing/dag_types";
-import { fetchDAGs, DAG } from "../backend/fetch_calls";
+import { fetchDAGs } from "../backend/fetch_calls";
+import { DAG } from "../typing/dag_types"
 import { RouterNavLink } from "../routing/router_nav";
 
 const styles = {
