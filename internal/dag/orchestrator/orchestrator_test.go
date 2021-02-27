@@ -17,6 +17,8 @@ var configPath string
 var dagPath string
 var sqlClient *database.SQLClient
 
+const newImageName = "differentImage"
+
 func createFakeKubeClient() *fake.Clientset {
 	return fake.NewSimpleClientset()
 }
@@ -77,21 +79,44 @@ func TestRegisterDAG(t *testing.T) {
 	}
 }
 
+func getDagWithDifferentDockerImage(orch *Orchestrator) dagtype.DAG {
+	updatedDAG := getTestDAG(orch)
+	newConfig := updatedDAG.Config.Copy()
+	newConfig.DockerImage = newImageName
+	updatedDAG.Config = &newConfig
+	updatedDAG.Code = newConfig.String()
+	return updatedDAG
+}
+
 func TestDAGUpdate(t *testing.T) {
 	defer database.PurgeDB(sqlClient)
 	orch := testOrchestrator()
 	orch.dagTableClient.CreateTable()
 	dag := getTestDAG(orch)
 	orch.AddDAG(&dag)
-	updatedDAG := getTestDAG(orch)
-	newConfig := updatedDAG.Config.Copy()
-	const newImageName = "differentImage"
-	newConfig.DockerImage = newImageName
-	updatedDAG.Config = &newConfig
-	updatedDAG.Code = newConfig.String()
+	updatedDAG := getDagWithDifferentDockerImage(orch)
 	orch.UpdateDag(&updatedDAG)
 	if orch.dagMap[dag.Config.Name].Config.DockerImage != newImageName {
 		t.Errorf("Expected image name to be updated to \"%s\"", newImageName)
+	}
+}
+
+func TestCollectDagUpdatedTime(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	dag := getTestDAG(orch)
+	orch.collectDAG(&dag)
+	addedTime := dag.LastUpdated
+	updatedDAG := getDagWithDifferentDockerImage(orch)
+	orch.collectDAG(&updatedDAG)
+	foundLastUpdateTime := orch.dagMap[dag.Config.Name].LastUpdated
+	if !foundLastUpdateTime.After(addedTime) {
+		t.Errorf(
+			"Expected dag to have later update time than '%s', but found '%s'",
+			addedTime,
+			foundLastUpdateTime,
+		)
 	}
 }
 

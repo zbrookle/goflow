@@ -77,6 +77,7 @@ func (orchestrator *Orchestrator) AddDAG(dag *dagtype.DAG) {
 		dag.Config.Namespace,
 		jsonpanic.JSONPanicFormat(dag.Config),
 	)
+	dag.LastUpdated = time.Now()
 	orchestrator.dagMapLock.Lock()
 	orchestrator.dagMap[dag.Config.Name] = dag
 	orchestrator.dagMapLock.Unlock()
@@ -86,6 +87,7 @@ func (orchestrator *Orchestrator) AddDAG(dag *dagtype.DAG) {
 func (orchestrator *Orchestrator) UpdateDag(dag *dagtype.DAG) {
 	orchestrator.dagMapLock.Lock()
 	dagRef := orchestrator.dagMap[dag.Config.Name]
+	dagRef.LastUpdated = time.Now()
 	logs.InfoLogger.Printf(
 		"Updating DAG '%s' from namespace '%s', from configuration %s to configuration %s",
 		dag.Config.Name,

@@ -30,6 +30,7 @@ import (
 type ScheduleCache map[string]cron.Schedule
 
 // DAG is directed acyclic graph for hold job information
+// Note that LastUpdated is set in Orchestrator.collectDAG()
 type DAG struct {
 	Config              *dagconfig.DAGConfig
 	Code                string
@@ -195,7 +196,6 @@ func getDAGFromJSON(
 		return DAG{}, err
 	}
 	dagJSON.Code = string(dagBytes)
-	dagJSON.LastUpdated = time.Now()
 	return dagJSON, nil
 }
 
