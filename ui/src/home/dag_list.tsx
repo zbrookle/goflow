@@ -3,6 +3,8 @@ import Table from "react-bootstrap/Table";
 import { OnOffButton } from "../buttons/on_off_button";
 import CSS from "csstype";
 import { DAGProps } from "../typing/dag_types";
+import { fetchDAGs, DAG } from "../backend/fetch_calls";
+import { RouterNavLink } from "../routing/router_nav";
 
 const styles = {
   table: {
@@ -38,6 +40,7 @@ function DAGColumnHeaders() {
     <thead>
       <tr>
         <CenterColHead>Status</CenterColHead>
+        <CenterColHead>Namespace</CenterColHead>
         <CenterColHead>Schedule</CenterColHead>
         <CenterColHead>Name</CenterColHead>
         <CenterColHead>Last Run Time</CenterColHead>
@@ -48,17 +51,25 @@ function DAGColumnHeaders() {
   );
 }
 
-function DAG(props: DAGProps) {
+function DAGRow(props: DAGProps) {
   var date = new Date();
   const [lastRunTime] = useState(date.toISOString());
 
   return (
     <tr>
       <CenteredCol>
-        <OnOffButton Name={props.Name} IsOn={props.IsOn} />
+        <OnOffButton Name={props.dag.config.Name} IsOn={props.dag.isOn} />
       </CenteredCol>
-      <CenteredCol>{props.Schedule}</CenteredCol>
-      <CenteredCol>{props.Name}</CenteredCol>
+      <CenteredCol>{props.dag.config.Namespace}</CenteredCol>
+      <CenteredCol>{props.dag.config.Schedule}</CenteredCol>
+      <CenteredCol>
+        <RouterNavLink
+          link={`/dag/${props.dag.config.Name}/metrics`}
+          text={props.dag.config.Name}
+          style={{ color: "#999D9F" }}
+          hoverStyle={{ color: "#cccecf" }}
+        />
+      </CenteredCol>
       <CenteredCol>{lastRunTime}</CenteredCol>
       <CenteredCol>Success/failures</CenteredCol>
     </tr>
@@ -66,27 +77,20 @@ function DAG(props: DAGProps) {
 }
 
 function DAGContainer() {
-  const [dags, setDAGs] = useState<Record<string, DAGProps>>({});
+  const [dags, setDAGs] = useState<Record<string, DAG>>({});
   useEffect(() => {
     const intervalId = setInterval(() => {
-      fetch("http://localhost:8080/dags")
-        .then((res) => res.json())
-        .then((data) => {
-          var record: Record<string, DAGProps> = {};
-          data.forEach((dag: any) => {
-            record[dag.Config.Name] = {
-              Name: dag.Config.Name,
-              Schedule: dag.Config.Schedule,
-              LastRunTime: dag.MostRecentExecution,
-              IsOn: dag.IsOn,
-            };
-          });
-          setDAGs(record);
+      fetchDAGs().then((data) => {
+        var record: Record<string, DAG> = {};
+        data.forEach((restDAG: any) => {
+          let dag = { config: restDAG.Config } as DAG;
+          record[restDAG.Config.Name] = dag;
         });
-    }, 5000); // TODO Make this number changeable in the UI
+        setDAGs(record);
+      });
+    }, 10); // TODO Make this number changeable in the UI
     return () => clearInterval(intervalId);
   }, []);
-
   return (
     <div>
       <h1>My DAGs</h1>
@@ -94,15 +98,9 @@ function DAGContainer() {
       <Table responsive bordered variant="dark" style={styles.table} size="2">
         <DAGColumnHeaders />
         <tbody>
-          {Object.entries(dags).map((t, k) => (
-            <DAG
-              key={t[1].Name}
-              Name={t[1].Name}
-              Schedule={t[1].Schedule}
-              LastRunTime={t[1].LastRunTime}
-              IsOn={t[1].IsOn}
-            />
-          ))}
+          {Object.entries(dags).map((t, k) => {
+            return <DAGRow key={t[1].config.Name} dag={t[1]} />;
+          })}
         </tbody>
       </Table>
     </div>
