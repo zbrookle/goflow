@@ -1,6 +1,5 @@
+import { DAG } from "../backend/fetch_calls";
+
 export type DAGProps = {
-  Name: string;
-  Schedule: string;
-  LastRunTime: string;
-  IsOn: boolean;
+  dag: DAG;
 };
