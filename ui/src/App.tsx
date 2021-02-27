@@ -11,7 +11,7 @@ function Header() {
   return (
     <Navbar bg="dark" variant="dark" expand="lg" sticky="top">
       <Navbar.Toggle aria-controls="basic-navbar-nav"></Navbar.Toggle>
-      <LinkContainer to={"/home"}>
+      <LinkContainer to={"/"}>
         <Navbar.Brand>GoFlow</Navbar.Brand>
       </LinkContainer>
       <Navbar.Collapse>
@@ -39,15 +39,16 @@ function App() {
           </Route>
           <Route path="/dag/:name">
             <DagInfo
-              Namespace="default"
-              Name="test-dag"
-              Schedule="* * * *"
-              LastRunTime="Never"
-              IsOn={false}
-              JobName={"test-run"}
-              MaxMemoryUsage={20}
-              Successes={10}
-              Failures={5}
+            // dag={}
+            // Namespace="default"
+            // Name="test-dag"
+            // Schedule="* * * *"
+            // LastRunTime="Never"
+            // IsOn={false}
+            // JobName={"test-run"}
+            // MaxMemoryUsage={20}
+            // Successes={10}
+            // Failures={5}
             />
           </Route>
         </Switch>

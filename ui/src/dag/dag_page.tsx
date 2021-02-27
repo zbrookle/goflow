@@ -1,16 +1,15 @@
-import type { DAGProps } from "../typing/dag_types";
+// import type { DAGProps } from "../typing/dag_types";
 import { Container, Row, Col, Card, Nav } from "react-bootstrap";
 import { OnOffButton } from "../buttons/on_off_button";
 import { Switch, Route, useRouteMatch, useParams } from "react-router-dom";
 import { RouterNavLink } from "../routing/router_nav";
-import { fetchDAG } from "../backend/fetch_calls"
+import { fetchDAG, fetchDAGObject } from "../backend/fetch_calls";
 
-type DagInfoProps = DAGProps & {
-  JobName: string;
-  MaxMemoryUsage: number;
-  Successes: number;
-  Failures: number;
-};
+// type DagInfoProps = DAGProps & {
+//   MaxMemoryUsage: number;
+//   Successes: number;
+//   Failures: number;
+// };
 
 function getPath(path: string, name: string) {
   return `${path}/${name}`;
@@ -33,18 +32,18 @@ function CardTab(props: CardTabProps) {
 }
 
 type DagPropName = {
-  name: string
-}
+  name: string;
+};
 
-function DagInfo(props: DagInfoProps) {
+function DagInfo() {
   let { path, url } = useRouteMatch();
-  path += `/${props.Name}`
-  url += `/${props.Name}`
-  let { name } = useParams<DagPropName>()
 
-  fetchDAG(name).then(
-    (data) => console.log(data)
-  )
+  let { name } = useParams<DagPropName>();
+  path += `/${name}`;
+  url += `/${name}`;
+  let dag = fetchDAGObject(name);
+
+  fetchDAG(name).then((data) => console.log(data));
 
   return (
     <Container style={{ marginTop: "1%" }}>
@@ -57,7 +56,7 @@ function DagInfo(props: DagInfoProps) {
             display: "flex",
           }}
         >
-          <OnOffButton Name={name} IsOn={props.IsOn} />
+          <OnOffButton Name={name} IsOn={dag.isOn} />
         </div>
         <Col>
           <h1>{name}</h1>
@@ -76,10 +75,11 @@ function DagInfo(props: DagInfoProps) {
           <Switch>
             <Route exact path={getPath(path, "metrics")}>
               <Card.Body>
-                <p>Current Job Name: {props.JobName}</p>
-                <p>Successes: {props.Successes}</p>
-                <p>Failures: {props.Failures}</p>
-                <p>Max Memory Usage: {props.MaxMemoryUsage}</p>
+                <p>Current Job Name: {"test"}</p>
+                <p>Schedule: {"dag.config.schedule"}</p>
+                <p>Successes: {0}</p>
+                <p>Failures: {0}</p>
+                <p>Max Memory Usage: {0}</p>
                 <p>Logs</p>
               </Card.Body>
             </Route>
