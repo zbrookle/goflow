@@ -10,10 +10,10 @@ import { RouterNavLink } from "./routing/router_nav";
 type HeaderNavLinkProps = {
   link: string;
   text: string;
-}
+};
 
 function HeaderNavLink(props: HeaderNavLinkProps) {
-  return <RouterNavLink link={props.link} text={props.text}/>
+  return <RouterNavLink link={props.link} text={props.text} />;
 }
 
 function Header() {
