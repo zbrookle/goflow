@@ -27,3 +27,10 @@ export type DAGProps = {
 export type DAGConfigProps = {
   config: DAGConfig;
 };
+
+type configKey = keyof DAGConfig
+type configKeyArr = Array<configKey>
+
+export function getConfigKeys(config: DAGConfig) {
+  return Object.keys(config) as configKeyArr;
+}

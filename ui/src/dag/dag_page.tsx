@@ -54,7 +54,6 @@ function DagInfo() {
         DAGRuns: restDAG.DAGRuns,
       } as DAG;
       setDAG(dag);
-      console.log(dag.config);
       if (dag.DAGRuns.length !== 0) {
         setCurrentActiveRun(dag.DAGRuns[0].Name);
       }
