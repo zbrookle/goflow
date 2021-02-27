@@ -26,7 +26,12 @@ function CardTab(props: CardTabProps) {
 
   return (
     <Nav.Item>
-      <RouterNavLink link={link} text={props.Label} />
+      <RouterNavLink
+        link={link}
+        text={props.Label}
+        style={{ color: "black" }}
+        hoverStyle={{ color: "black" }}
+      />
     </Nav.Item>
   );
 }

@@ -66,6 +66,8 @@ function DAGRow(props: DAGProps) {
         <RouterNavLink
           link={`/dag/${props.dag.config.Name}/metrics`}
           text={props.dag.config.Name}
+          style={{ color: "#999D9F" }}
+          hoverStyle={{ color: "#cccecf" }}
         />
       </CenteredCol>
       <CenteredCol>{lastRunTime}</CenteredCol>

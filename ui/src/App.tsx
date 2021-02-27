@@ -7,18 +7,27 @@ import { LinkContainer } from "react-router-bootstrap";
 import { DagInfo } from "./dag/dag_page";
 import { RouterNavLink } from "./routing/router_nav";
 
+type HeaderNavLinkProps = {
+  link: string;
+  text: string;
+}
+
+function HeaderNavLink(props: HeaderNavLinkProps) {
+  return <RouterNavLink link={props.link} text={props.text}/>
+}
+
 function Header() {
   return (
     <Navbar bg="dark" variant="dark" expand="lg" sticky="top">
       <Navbar.Toggle aria-controls="basic-navbar-nav"></Navbar.Toggle>
-      <LinkContainer to={"/"}>
+      <LinkContainer to={"/home"}>
         <Navbar.Brand>GoFlow</Navbar.Brand>
       </LinkContainer>
       <Navbar.Collapse>
         <Nav>
-          <RouterNavLink link={"/home"} text="Home" />
-          <RouterNavLink link={"/metrics"} text="Metrics" />
-          <RouterNavLink link={"/settings"} text="Settings" />
+          <HeaderNavLink link={"/home"} text="Home" />
+          <HeaderNavLink link={"/metrics"} text="Metrics" />
+          <HeaderNavLink link={"/settings"} text="Settings" />
           <Nav.Link href="https://github.com/zbrookle/goflow">
             Documentation
           </Nav.Link>
@@ -38,18 +47,7 @@ function App() {
             <DAGContainer />
           </Route>
           <Route path="/dag/:name">
-            <DagInfo
-            // dag={}
-            // Namespace="default"
-            // Name="test-dag"
-            // Schedule="* * * *"
-            // LastRunTime="Never"
-            // IsOn={false}
-            // JobName={"test-run"}
-            // MaxMemoryUsage={20}
-            // Successes={10}
-            // Failures={5}
-            />
+            <DagInfo />
           </Route>
         </Switch>
       </div>
