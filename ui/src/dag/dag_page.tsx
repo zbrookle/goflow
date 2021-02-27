@@ -43,10 +43,20 @@ function DagInfo() {
   let defaultURL = url.replace("/metrics", "");
   let obj = { config: { Schedule: "", Name: "" } } as DAG;
   const [dag, setDAG] = useState<DAG>(obj);
+  const [currentActiveRun, setCurrentActiveRun] = useState("N/A");
   useComponentWillMount(() => {
     fetchDAG(name).then((restDAG) => {
-      let dag = { config: restDAG.Config, isOn: restDAG.IsOn } as DAG;
+      console.log(restDAG);
+      let dag = {
+        config: restDAG.Config,
+        isOn: restDAG.IsOn,
+        DAGRuns: restDAG.DAGRuns,
+      } as DAG;
       setDAG(dag);
+
+      if (dag.DAGRuns.length !== 0) {
+        setCurrentActiveRun(dag.DAGRuns[0].Name);
+      }
     });
   });
 
@@ -87,7 +97,7 @@ function DagInfo() {
           <Switch>
             <Route path={getPath(defaultPath, "metrics")}>
               <Card.Body>
-                <p>Current Job Name: {"test"}</p>
+                <p>Current Job Name: {currentActiveRun}</p>
                 <p>Schedule: {dag.config.Schedule}</p>
                 <p>Successes: {0}</p>
                 <p>Failures: {0}</p>
