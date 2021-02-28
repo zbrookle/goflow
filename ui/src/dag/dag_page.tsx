@@ -48,12 +48,16 @@ function DagInfo() {
   const [currentActiveRun, setCurrentActiveRun] = useState("N/A");
   useComponentWillMount(() => {
     fetchDAG(name).then((restDAG) => {
+      console.log(restDAG)
+      let lastUpdatedDate = new Date(restDAG.LastUpdated)
       let dag = {
         config: restDAG.Config,
         isOn: restDAG.IsOn,
         DAGRuns: restDAG.DAGRuns,
+        lastUpdated: lastUpdatedDate.toLocaleDateString() + " " + lastUpdatedDate.toLocaleTimeString()
       } as DAG;
       setDAG(dag);
+      console.log(dag)
       if (dag.DAGRuns.length !== 0) {
         setCurrentActiveRun(dag.DAGRuns[0].Name);
       }
@@ -119,7 +123,7 @@ function DagInfo() {
               </Route>
             </Switch>
           </Card.Body>
-          <Card.Footer className="text-muted">Last Updated:</Card.Footer>
+          <Card.Footer className="text-muted">Last Updated: {dag.lastUpdated}</Card.Footer>
         </Card>
       </Row>
     </Container>

@@ -18,6 +18,7 @@ export type DAG = {
   config: DAGConfig;
   isOn: boolean;
   DAGRuns: Array<DAGRun>;
+  lastUpdated: string;
 };
 
 export type DAGProps = {
