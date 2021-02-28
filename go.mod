@@ -3,13 +3,13 @@ module goflow
 go 1.15
 
 require (
-	github.com/google/go-cmp v0.4.0
+	github.com/google/go-cmp v0.5.2
 	github.com/gorilla/mux v1.8.0
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/mattn/go-sqlite3 v1.14.5
 	github.com/robfig/cron v1.2.0
-	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6 // indirect
-	k8s.io/api v0.19.0
-	k8s.io/apimachinery v0.19.0
-	k8s.io/client-go v0.19.0
+	k8s.io/api v0.20.4
+	k8s.io/apimachinery v0.20.4
+	k8s.io/client-go v0.20.4
+	k8s.io/metrics v0.20.4
 )
