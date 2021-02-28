@@ -1,8 +1,7 @@
-import React from "react";
 import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
 import { DAGContainer } from "./home/dag_list";
-import { BrowserRouter, Switch, Route } from "react-router-dom";
+import { BrowserRouter, Switch, Route, Redirect } from "react-router-dom";
 import { LinkContainer } from "react-router-bootstrap";
 import { DagInfo } from "./dag/dag_page";
 import { RouterNavLink } from "./routing/router_nav";
@@ -42,6 +41,9 @@ function App() {
       <div>
         <Header />
         <Switch>
+          <Route exact path="/">
+            <Redirect to="/home" />
+          </Route>
           <Route path="/home">
             <DAGContainer />
           </Route>
