@@ -17,6 +17,8 @@ var configPath string
 var dagPath string
 var sqlClient *database.SQLClient
 
+const newImageName = "differentImage"
+
 func createFakeKubeClient() *fake.Clientset {
 	return fake.NewSimpleClientset()
 }
@@ -37,11 +39,8 @@ func testOrchestrator() *Orchestrator {
 	return NewOrchestratorFromClientAndConfig(kubeClient, configuration)
 }
 
-func TestRegisterDAG(t *testing.T) {
-	defer database.PurgeDB(sqlClient)
-	orch := testOrchestrator()
-	orch.dagTableClient.CreateTable()
-	dag := dagtype.CreateDAG(&dagconfig.DAGConfig{
+func getTestDAG(orch *Orchestrator) dagtype.DAG {
+	config := &dagconfig.DAGConfig{
 		Name:          "test",
 		Namespace:     "default",
 		Schedule:      "* * * * *",
@@ -52,7 +51,24 @@ func TestRegisterDAG(t *testing.T) {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", orch.kubeClient, make(dagtype.ScheduleCache), orch.dagTableClient, "path", orch.dagrunTableClient, true)
+	}
+	return dagtype.CreateDAG(
+		config,
+		config.String(),
+		orch.kubeClient,
+		make(dagtype.ScheduleCache),
+		orch.dagTableClient,
+		"path",
+		orch.dagrunTableClient,
+		true,
+	)
+}
+
+func TestRegisterDAG(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	dag := getTestDAG(orch)
 	const expectedLength = 1
 	orch.AddDAG(&dag)
 	if orch.dagMap[dag.Config.Name] != &dag {
@@ -60,6 +76,65 @@ func TestRegisterDAG(t *testing.T) {
 	}
 	if len(orch.dagMap) != expectedLength {
 		t.Errorf("DAG map should have length %d", expectedLength)
+	}
+}
+
+func getDagWithDifferentDockerImage(orch *Orchestrator) dagtype.DAG {
+	updatedDAG := getTestDAG(orch)
+	newConfig := updatedDAG.Config.Copy()
+	newConfig.DockerImage = newImageName
+	updatedDAG.Config = &newConfig
+	updatedDAG.Code = newConfig.String()
+	return updatedDAG
+}
+
+func TestDAGUpdate(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	dag := getTestDAG(orch)
+	orch.AddDAG(&dag)
+	updatedDAG := getDagWithDifferentDockerImage(orch)
+	orch.UpdateDag(&updatedDAG)
+	if orch.dagMap[dag.Config.Name].Config.DockerImage != newImageName {
+		t.Errorf("Expected image name to be updated to \"%s\"", newImageName)
+	}
+}
+
+func TestCollectDagUpdatedTime(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	dag := getTestDAG(orch)
+	orch.collectDAG(&dag)
+	addedTime := dag.LastUpdated
+	updatedDAG := getDagWithDifferentDockerImage(orch)
+	orch.collectDAG(&updatedDAG)
+	foundLastUpdateTime := orch.dagMap[dag.Config.Name].LastUpdated
+	if !foundLastUpdateTime.After(addedTime) {
+		t.Errorf(
+			"Expected dag to have later update time than '%s', but found '%s'",
+			addedTime,
+			foundLastUpdateTime,
+		)
+	}
+}
+
+func TestUpdateDAGWhileRunning(t *testing.T) {
+	defer database.PurgeDB(sqlClient)
+	orch := testOrchestrator()
+	orch.dagTableClient.CreateTable()
+	orch.dagrunTableClient.CreateTable()
+	dag := getTestDAG(orch)
+	dag.IsOn = true
+	orch.collectDAG(&dag)
+	dag.AddNextDagRunIfReady(orch.channelHolder)
+	updatedDAG := getDagWithDifferentDockerImage(orch)
+	updatedDAG.IsOn = true
+	orch.collectDAG(&updatedDAG)
+	retrievedDAG := orch.dagMap[dag.Config.Name]
+	if retrievedDAG.Config.DockerImage != newImageName {
+		t.Errorf("Expected image name to be updated to \"%s\"", newImageName)
 	}
 }
 

@@ -30,6 +30,7 @@ import (
 type ScheduleCache map[string]cron.Schedule
 
 // DAG is directed acyclic graph for hold job information
+// Note that LastUpdated is set in Orchestrator.collectDAG()
 type DAG struct {
 	Config              *dagconfig.DAGConfig
 	Code                string
@@ -46,7 +47,13 @@ type DAG struct {
 	dagRunTableClient *dagruntable.TableClient
 	ID                int
 	IsOn              bool
+	LastUpdated       time.Time
 }
+
+// type DAGMetrics struct {
+// 	Successes int;
+// 	Failures int;
+// }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(dagFilePath)
