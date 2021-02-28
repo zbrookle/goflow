@@ -61,9 +61,9 @@ func TestMain(m *testing.M) {
 
 func TestGetAllPodMetrics(t *testing.T) {
 	metrics := metricsClient.GetPodMetrics(fakePodMetrics.Namespace, fakePodMetrics.Name)
-	metricsJSON, err := json.Marshal(metrics)
+	_, err := json.Marshal(metrics)
 	if err != nil {
 		panic(err)
 	}
-	t.Error(string(metricsJSON))
+	// t.Error(string(metricsJSON))
 }

@@ -5,6 +5,7 @@ import (
 	goflowconfig "goflow/internal/config"
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/dag/metrics"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/database"
 	k8sclient "goflow/internal/k8s/client"
@@ -31,6 +32,7 @@ var DAGPATH string
 var TABLECLIENT *dagtable.TableClient
 var SQLCLIENT *database.SQLClient
 var RUNTABLECLIENT *dagruntable.TableClient
+var METRICSCLIENT metrics.DAGMetricsClient
 
 func setUpNamespaces(client kubernetes.Interface) {
 	namespaceClient := client.CoreV1().Namespaces()
@@ -122,6 +124,7 @@ func TestDAGFromJSONBytes(t *testing.T) {
 	dag, err := createDAGFromJSONBytes(
 		[]byte(formattedJSONString),
 		fake.NewSimpleClientset(),
+		testutils.NewTestMetricsClient(),
 		goflowconfig.GoFlowConfig{},
 		make(ScheduleCache),
 		TABLECLIENT,
@@ -174,7 +177,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client, make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT, false)
+	}, "", client, testutils.NewTestMetricsClient(), make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT, false)
 	return &dag
 }
 

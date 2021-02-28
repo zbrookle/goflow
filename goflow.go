@@ -10,6 +10,7 @@ import (
 	"goflow/internal/paths"
 	"goflow/internal/rest"
 	"goflow/internal/termination"
+	"goflow/internal/testutils"
 	"io/ioutil"
 	"time"
 
@@ -38,9 +39,10 @@ func main() {
 
 	var orch *orchestrator.Orchestrator
 	if *testMode {
-		orch = orchestrator.NewOrchestratorFromClientAndConfig(
+		orch = orchestrator.NewOrchestratorFromClientsAndConfig(
 			fake.NewSimpleClientset(),
 			config.CreateConfig(*configPath),
+			testutils.NewTestMetricsClient(),
 		)
 	} else {
 		orch = orchestrator.NewOrchestrator(*configPath)

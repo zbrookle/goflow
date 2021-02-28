@@ -53,4 +53,12 @@ func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 		}
 		fmt.Fprint(w, dag.DAGRuns)
 	})
+
+	router.HandleFunc("/dag/{name}/metrics", func(w http.ResponseWriter, r *http.Request) {
+		dag := getDagFromRequest(orch, w, r)
+		if dag == nil {
+			return
+		}
+		fmt.Fprint(w, dag.Metrics())
+	})
 }

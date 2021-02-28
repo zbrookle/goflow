@@ -36,7 +36,11 @@ func testOrchestrator() *Orchestrator {
 	configuration := config.CreateConfig(configPath)
 	configuration.DAGPath = dagPath
 	configuration.DatabaseDNS = testutils.GetSQLiteLocation()
-	return NewOrchestratorFromClientAndConfig(kubeClient, configuration)
+	return NewOrchestratorFromClientsAndConfig(
+		kubeClient,
+		configuration,
+		testutils.NewTestMetricsClient(),
+	)
 }
 
 func getTestDAG(orch *Orchestrator) dagtype.DAG {
@@ -56,6 +60,7 @@ func getTestDAG(orch *Orchestrator) dagtype.DAG {
 		config,
 		config.String(),
 		orch.kubeClient,
+		orch.metricsClient,
 		make(dagtype.ScheduleCache),
 		orch.dagTableClient,
 		"path",

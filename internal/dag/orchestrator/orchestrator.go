@@ -4,6 +4,7 @@ import (
 	"fmt"
 	dagconfig "goflow/internal/dag/config"
 	dagtype "goflow/internal/dag/dagtype"
+	"goflow/internal/dag/metrics"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/database"
 	"goflow/internal/jsonpanic"
@@ -40,12 +41,14 @@ type Orchestrator struct {
 	closingChannel    chan struct{}
 	dagTableClient    *dagtable.TableClient
 	dagrunTableClient *dagruntable.TableClient
+	metricsClient     *metrics.DAGMetricsClient
 }
 
-// NewOrchestratorFromClientAndConfig creates an orchestractor from a given k8s client and goflow config
-func NewOrchestratorFromClientAndConfig(
+// NewOrchestratorFromClientsAndConfig creates an orchestractor from a given k8s client and goflow config
+func NewOrchestratorFromClientsAndConfig(
 	client kubernetes.Interface,
 	config *config.GoFlowConfig,
+	metricsClient *metrics.DAGMetricsClient,
 ) *Orchestrator {
 	sqlClient := database.NewSQLiteClient(config.DatabaseDNS)
 	return &Orchestrator{
@@ -58,14 +61,17 @@ func NewOrchestratorFromClientAndConfig(
 		make(chan struct{}),
 		dagtable.NewTableClient(sqlClient),
 		dagruntable.NewTableClient(sqlClient),
+		metricsClient,
 	}
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
 func NewOrchestrator(configPath string) *Orchestrator {
-	return NewOrchestratorFromClientAndConfig(
+	k8sMetricsClient := k8sclient.CreateMetricsClient()
+	return NewOrchestratorFromClientsAndConfig(
 		k8sclient.CreateKubeClient(),
 		config.CreateConfig(configPath),
+		metrics.NewDAGMetricsClient(k8sMetricsClient),
 	)
 }
 
@@ -176,6 +182,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 	dagSlice := dagtype.GetDAGSFromFolder(
 		orchestrator.config.DAGPath,
 		orchestrator.kubeClient,
+		orchestrator.metricsClient,
 		*orchestrator.config,
 		orchestrator.schedules,
 		orchestrator.dagTableClient,

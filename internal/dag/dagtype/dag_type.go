@@ -6,6 +6,7 @@ import (
 	goflowconfig "goflow/internal/config"
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/dag/metrics"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/jsonpanic"
 	"goflow/internal/k8s/pod/event/holder"
@@ -21,6 +22,8 @@ import (
 
 	dagtable "goflow/internal/dag/sql/dag"
 	dagruntable "goflow/internal/dag/sql/dagrun"
+
+	metrictype "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 
 	"github.com/robfig/cron"
 	"k8s.io/client-go/kubernetes"
@@ -48,12 +51,8 @@ type DAG struct {
 	ID                int
 	IsOn              bool
 	LastUpdated       time.Time
+	metricsClient     *metrics.DAGMetricsClient
 }
-
-// type DAGMetrics struct {
-// 	Successes int;
-// 	Failures int;
-// }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(dagFilePath)
@@ -76,6 +75,7 @@ func CreateDAG(
 	config *dagconfig.DAGConfig,
 	code string,
 	client kubernetes.Interface,
+	metricsClient *metrics.DAGMetricsClient,
 	schedules ScheduleCache,
 	tableClient *dagtable.TableClient,
 	filePath string,
@@ -101,6 +101,7 @@ func CreateDAG(
 		filePath:          filePath,
 		dagRunTableClient: dagRunTableClient,
 		IsOn:              defaultIsOn,
+		metricsClient:     metricsClient,
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -131,6 +132,7 @@ func newDagRow(dag *DAG) dagtable.Row {
 func createDAGFromJSONBytes(
 	dagBytes []byte,
 	client kubernetes.Interface,
+	metricsClient *metrics.DAGMetricsClient,
 	goflowConfig goflowconfig.GoFlowConfig,
 	scheduleCache ScheduleCache,
 	tableClient *dagtable.TableClient,
@@ -160,6 +162,7 @@ func createDAGFromJSONBytes(
 		&dagConfigStruct,
 		string(dagBytes),
 		client,
+		metricsClient,
 		scheduleCache,
 		tableClient,
 		filePath,
@@ -173,6 +176,7 @@ func createDAGFromJSONBytes(
 func getDAGFromJSON(
 	dagFilePath string,
 	client kubernetes.Interface,
+	metricsClient *metrics.DAGMetricsClient,
 	goflowConfig goflowconfig.GoFlowConfig,
 	scheduleCache ScheduleCache,
 	tableClient *dagtable.TableClient,
@@ -185,6 +189,7 @@ func getDAGFromJSON(
 	dagJSON, err := createDAGFromJSONBytes(
 		dagBytes,
 		client,
+		metricsClient,
 		goflowConfig,
 		scheduleCache,
 		tableClient,
@@ -230,6 +235,7 @@ func getDirSliceRecur(directory string) []string {
 func GetDAGSFromFolder(
 	folder string,
 	client kubernetes.Interface,
+	metricsClient *metrics.DAGMetricsClient,
 	goflowConfig goflowconfig.GoFlowConfig,
 	schedules ScheduleCache,
 	tableClient *dagtable.TableClient,
@@ -242,6 +248,7 @@ func GetDAGSFromFolder(
 			dag, err := getDAGFromJSON(
 				file,
 				client,
+				metricsClient,
 				goflowConfig,
 				schedules,
 				tableClient,
@@ -352,6 +359,11 @@ func (dag *DAG) ToggleOnOff() {
 
 func (dag *DAG) String() string {
 	return jsonpanic.JSONPanicFormat(dag)
+}
+
+// Metrics returns the metrics for this pod
+func (dag *DAG) Metrics() *metrictype.PodMetrics {
+	return dag.metricsClient.GetPodMetrics(dag.Config.Namespace, dag.Config.Name)
 }
 
 // DAGList is a list of dags
