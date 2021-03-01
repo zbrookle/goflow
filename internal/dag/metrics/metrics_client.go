@@ -18,6 +18,20 @@ func NewDAGMetricsClient(clientSet k8smetrics.Interface) *DAGMetricsClient {
 	return &DAGMetricsClient{clientSet}
 }
 
+// ListPodMetrics returns a list of all metrics for pods in a given namespace
+func (client *DAGMetricsClient) ListPodMetrics(namespace string) []metrictype.PodMetrics {
+	metrics, err := client.k8sMetricsClient.MetricsV1beta1().PodMetricses(
+		namespace,
+	).List(
+		context.TODO(),
+		v1.ListOptions{},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return metrics.Items
+}
+
 // GetPodMetrics returns all metrics for a pod including memory and cpu usage
 func (client *DAGMetricsClient) GetPodMetrics(namespace, name string) *metrictype.PodMetrics {
 	metrics, err := client.k8sMetricsClient.MetricsV1beta1().PodMetricses(
