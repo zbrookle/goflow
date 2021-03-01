@@ -14,6 +14,9 @@ import (
 	"io/ioutil"
 	"time"
 
+	core "k8s.io/api/core/v1"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -39,10 +42,18 @@ func main() {
 
 	var orch *orchestrator.Orchestrator
 	if *testMode {
+		kubeClient := fake.NewSimpleClientset()
+		kubeClient.Tracker().Add(&core.Namespace{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+		})
+		config := config.CreateConfig(*configPath)
+		config.DAGsOn = true
 		orch = orchestrator.NewOrchestratorFromClientsAndConfig(
-			fake.NewSimpleClientset(),
-			config.CreateConfig(*configPath),
-			testutils.NewTestMetricsClient(),
+			kubeClient,
+			config,
+			testutils.NewTestMetricsClient(kubeClient),
 		)
 	} else {
 		orch = orchestrator.NewOrchestrator(*configPath)
