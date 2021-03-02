@@ -23,8 +23,6 @@ import (
 	dagtable "goflow/internal/dag/sql/dag"
 	dagruntable "goflow/internal/dag/sql/dagrun"
 
-	metrictype "k8s.io/metrics/pkg/apis/metrics/v1beta1"
-
 	"github.com/robfig/cron"
 	"k8s.io/client-go/kubernetes"
 )
@@ -362,8 +360,13 @@ func (dag *DAG) String() string {
 }
 
 // Metrics returns the metrics for this pod
-func (dag *DAG) Metrics() *metrictype.PodMetrics {
-	return dag.metricsClient.GetPodMetrics(dag.Config.Namespace, dag.Config.Name)
+func (dag *DAG) Metrics() []metrics.PodMetrics {
+	metrics := make([]metrics.PodMetrics, 0)
+	for _, run := range dag.DAGRuns {
+		podMetrics := dag.metricsClient.GetPodMetrics(dag.Config.Namespace, run.Name)
+		metrics = append(metrics, podMetrics)
+	}
+	return metrics
 }
 
 // DAGList is a list of dags

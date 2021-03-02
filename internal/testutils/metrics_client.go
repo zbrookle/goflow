@@ -76,9 +76,5 @@ func registerPodsIntoMetrics(
 
 // NewTestMetricsClient returns a new metrics client for testing only
 func NewTestMetricsClient(interfaces ...kubernetes.Interface) *metrics.DAGMetricsClient {
-	fakeMetricsClientSet := fakemetrics.NewSimpleClientset()
-	for _, inter := range interfaces {
-		go registerPodsIntoMetrics(inter, fakeMetricsClientSet)
-	}
-	return metrics.NewDAGMetricsClient(fakeMetricsClientSet)
+	return metrics.NewDAGMetricsClient(interfaces[0])
 }

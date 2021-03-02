@@ -1,6 +1,7 @@
 package orchestrator
 
 import (
+	"context"
 	"fmt"
 	dagconfig "goflow/internal/dag/config"
 	dagtype "goflow/internal/dag/dagtype"
@@ -27,6 +28,7 @@ import (
 	"path"
 
 	"github.com/kennygrant/sanitize"
+	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -67,11 +69,11 @@ func NewOrchestratorFromClientsAndConfig(
 
 // NewOrchestrator creates an empty instance of Orchestrator
 func NewOrchestrator(configPath string) *Orchestrator {
-	k8sMetricsClient := k8sclient.CreateMetricsClient()
+	kubeClient := k8sclient.CreateKubeClient()
 	return NewOrchestratorFromClientsAndConfig(
-		k8sclient.CreateKubeClient(),
+		kubeClient,
 		config.CreateConfig(configPath),
-		metrics.NewDAGMetricsClient(k8sMetricsClient),
+		metrics.NewDAGMetricsClient(kubeClient),
 	)
 }
 
@@ -246,6 +248,7 @@ func (orchestrator *Orchestrator) Start(cycleDuration time.Duration) {
 		cycleDuration,
 		"Run DAGs",
 	)
+	go orchestrator.StoreMetricsEvery(2)
 }
 
 // Wait blocks the current thread until the orchestrator has terminated
@@ -281,4 +284,27 @@ func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) (int
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, err
+}
+
+// StoreMetricsEvery stores usage metrics for all pods every 'seconds' unit of time
+func (orchestrator *Orchestrator) StoreMetricsEvery(seconds time.Duration) {
+	for {
+		namespaces, err := orchestrator.kubeClient.CoreV1().Namespaces().List(
+			context.TODO(),
+			k8sapi.ListOptions{},
+		)
+		if err != nil {
+			panic(err)
+		}
+		for _, namespace := range namespaces.Items {
+			if namespace.Name[:4] == "kube" {
+				continue
+			}
+			fmt.Println(namespace.Name)
+			fmt.Println("-------------")
+			metrics := orchestrator.metricsClient.ListPodMetrics(namespace.Name)
+			fmt.Println(metrics)
+		}
+		time.Sleep(seconds * time.Second)
+	}
 }
