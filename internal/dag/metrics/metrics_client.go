@@ -29,8 +29,8 @@ type DAGMetricsClient struct {
 type PodMetrics struct {
 	PodName string
 	Time    time.Time
-	Memory  uint32
-	CPU     uint32
+	Memory  int64
+	CPU     int64
 }
 
 func (metric PodMetrics) String() string {
@@ -71,26 +71,26 @@ func getContainerOutput(options getMetricsOptions) ([]byte, error) {
 	return reader.data, nil
 }
 
-func getContainerIntMetric(options getMetricsOptions) (uint32, error) {
+func getContainerIntMetric(options getMetricsOptions) (int64, error) {
 	if options.testMode {
-		min := int32(1000000)
-		return uint32(rand.Int31n(min*10)) + uint32(min), nil
+		min := int64(1000000)
+		return int64(rand.Int63n(min*10)) + int64(min), nil
 	}
 	data, err := getContainerOutput(options)
 	if err != nil {
 		return 0, err
 	}
-	return binary.BigEndian.Uint32(data), nil
+	return int64(binary.BigEndian.Uint64(data)), nil
 }
 
 // getContainerMemory returns the container's current memory usage in bytes
-func getContainerMemory(options getMetricsOptions) (uint32, error) {
+func getContainerMemory(options getMetricsOptions) (int64, error) {
 	options.command = "cat /sys/fs/cgroup/memory/memory.usage_in_bytes"
 	return getContainerIntMetric(options)
 }
 
 // getContainerCPU returns the container's current cpu usage in bytes
-func getContainerCPU(options getMetricsOptions) (uint32, error) {
+func getContainerCPU(options getMetricsOptions) (int64, error) {
 	options.command = "cat /sys/fs/cgroup/cpuacct/cpuacct.usage"
 	return getContainerIntMetric(options)
 }
