@@ -37,7 +37,7 @@ func (client *TableClient) GetMetricsForDag(dagName string, startTime, endTime t
 	client.sqlClient.QueryIntoResults(
 		&result,
 		fmt.Sprintf(
-			"SELECT * FROM metrics WHERE dag_name = '%s' and %s between %s and %s ORDER BY %s DESC",
+			"SELECT * FROM metrics WHERE dag_name = '%s' and %s between %s and %s ORDER BY %s ASC",
 			dagName,
 			metricsTimeName,
 			fmtSQLDate(startTime),
