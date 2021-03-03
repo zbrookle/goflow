@@ -11,6 +11,7 @@ import (
 	"goflow/internal/paths"
 	"goflow/internal/rest"
 	"goflow/internal/termination"
+	"goflow/internal/testutils"
 	"io/ioutil"
 	"time"
 
@@ -47,6 +48,7 @@ func main() {
 				Name: "default",
 			},
 		})
+		testutils.RegisterContainerStatusesToPods(kubeClient)
 		config := config.CreateConfig(*configPath)
 		config.DAGsOn = true
 		orch = orchestrator.NewOrchestratorFromClientsAndConfig(
