@@ -1,62 +1,37 @@
-package dag
+package metrics
 
 import (
 	"database/sql"
-	"fmt"
 	"goflow/internal/database"
 	"goflow/internal/dateutils"
+	"goflow/internal/jsonpanic"
 	"time"
 )
 
 // Row is a struct containing data about a particular dag
 type Row struct {
-	ID              int
-	IsOn            bool
-	Name            string
-	Namespace       string
-	Version         string
-	FilePath        string
-	FileFormat      string
-	CreatedDate     time.Time
-	LastUpdatedDate time.Time
+	ID               int
+	DagName, PodName string
+	Memory, CPU      int64
+	MetricTime       time.Time
+	CreatedDate      time.Time
+	LastUpdatedDate  time.Time
 }
 
 // IDName is the column name for the primary id column
 const IDName = "id"
-
-const isOnName = "is_on"
+const metricsTimeName = "metrics_time"
 
 // NewRow returns a new row with the appropriate update and create time stamps
-func NewRow(id int, isOn bool, name, namespace, version, filePath, fileFormat string) Row {
+func NewRow(id int, dagName, podName string, memory, cpu int64, metricTime time.Time) Row {
 	creationTime := dateutils.GetDateTimeNowMilliSecond()
 	return Row{
-		id, isOn, name, namespace, version, filePath, fileFormat, creationTime, creationTime,
+		id, dagName, podName, memory, cpu, metricTime, creationTime, creationTime,
 	}
 }
 
 func (row Row) String() string {
-	return fmt.Sprintf(
-		`{
-		  id: %d, 
-		  isOn: %t,
-		  name: %s, 
-		  namespace: %s,
-		  version: %s, 
-		  filePath: %s,
-		  fileFormat: %s, 
-		  createDate: %s, 
-		  lastUpdatedDate: %s
-		}`,
-		row.ID,
-		row.IsOn,
-		row.Name,
-		row.Namespace,
-		row.Version,
-		row.FilePath,
-		row.FileFormat,
-		row.CreatedDate.String(),
-		row.LastUpdatedDate.String(),
-	)
+	return jsonpanic.JSONPanicFormat(row)
 }
 
 type dagRowResult struct {
@@ -65,28 +40,24 @@ type dagRowResult struct {
 }
 
 func newRowResult(n int) dagRowResult {
-	return dagRowResult{
+
+	result := dagRowResult{
 		returnedRows: make([]Row, 0, n), hasUnlimitedCapacity: n == 0,
 	}
+	return result
 }
 
 func (row Row) columnar() database.ColumnWithValueSlice {
 	return []database.ColumnWithValue{
 		{Column: database.Column{Name: IDName, DType: database.Int{Val: row.ID}}},
-		{Column: database.Column{Name: isOnName, DType: database.Bool{Val: row.IsOn}}},
-		{Column: database.Column{Name: nameName, DType: database.String{Val: row.Name}}},
+		{Column: database.Column{Name: "dag_name", DType: database.String{Val: row.DagName}}},
+		{Column: database.Column{Name: "pod_name", DType: database.String{Val: row.PodName}}},
+		{Column: database.Column{Name: "memory", DType: database.Int64{Val: row.Memory}}},
+		{Column: database.Column{Name: "cpu", DType: database.Int64{Val: row.CPU}}},
 		{
 			Column: database.Column{
-				Name:  namespaceName,
-				DType: database.String{Val: row.Namespace},
-			},
-		},
-		{Column: database.Column{Name: "version", DType: database.String{Val: row.Version}}},
-		{Column: database.Column{Name: "file_path", DType: database.String{Val: row.FilePath}}},
-		{
-			Column: database.Column{
-				Name:  "file_format",
-				DType: database.String{Val: row.FileFormat},
+				Name:  metricsTimeName,
+				DType: database.TimeStamp{Val: row.MetricTime},
 			},
 		},
 		{
@@ -108,18 +79,18 @@ func (result *dagRowResult) ScanAppend(rows *sql.Rows) error {
 	row := Row{}
 	err := rows.Scan(
 		&row.ID,
-		&row.IsOn,
-		&row.Name,
-		&row.Namespace,
-		&row.Version,
-		&row.FilePath,
-		&row.FileFormat,
+		&row.DagName,
+		&row.PodName,
+		&row.Memory,
+		&row.CPU,
+		&row.MetricTime,
 		&row.CreatedDate,
 		&row.LastUpdatedDate,
 	)
 	result.returnedRows = append(result.returnedRows, row)
 	return err
 }
+
 func (result *dagRowResult) Capacity() int {
 	return cap(result.returnedRows)
 }

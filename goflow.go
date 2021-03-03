@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"goflow/internal/config"
+	"goflow/internal/dag/metrics"
 	"goflow/internal/dag/orchestrator"
 	"goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/utils"
@@ -13,6 +14,9 @@ import (
 	"io/ioutil"
 	"time"
 
+	core "k8s.io/api/core/v1"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -20,7 +24,6 @@ var host string
 var port int
 
 func main() {
-	defer utils.CleanUpEnvironment(client.CreateKubeClient())
 	configPath := flag.String(
 		"path",
 		paths.GetGoDefaultHomePath(),
@@ -38,11 +41,21 @@ func main() {
 
 	var orch *orchestrator.Orchestrator
 	if *testMode {
-		orch = orchestrator.NewOrchestratorFromClientAndConfig(
-			fake.NewSimpleClientset(),
-			config.CreateConfig(*configPath),
+		kubeClient := fake.NewSimpleClientset()
+		kubeClient.Tracker().Add(&core.Namespace{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+		})
+		config := config.CreateConfig(*configPath)
+		config.DAGsOn = true
+		orch = orchestrator.NewOrchestratorFromClientsAndConfig(
+			kubeClient,
+			config,
+			metrics.NewDAGMetricsClient(kubeClient, true),
 		)
 	} else {
+		defer utils.CleanUpEnvironment(client.CreateKubeClient())
 		orch = orchestrator.NewOrchestrator(*configPath)
 	}
 	orch.Start(1 * time.Second)

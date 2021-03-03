@@ -66,32 +66,38 @@ func setUpTestTable() {
 }
 
 func TestGetLastNDagRuns(t *testing.T) {
-	defer database.PurgeDB(sqlClient)
-	setUpDagTable()
-	setUpTestTable()
 
-	const insertedDays = 31
-	expectedRows := insertDaysOfRuns(insertedDays)
+	for _, expectedRowCount := range []int{0, 5} {
+		func() {
+			defer database.PurgeDB(sqlClient)
+			setUpDagTable()
+			setUpTestTable()
 
-	const expectedRowCount = 5
-	foundRows := tableClient.GetLastNRunsForDagID(testDagRow.ID, expectedRowCount)
+			const insertedDays = 31
+			expectedRows := insertDaysOfRuns(insertedDays)
 
-	length := len(foundRows)
-	if length != expectedRowCount {
-		t.Errorf("Expected %d rows, found %d", expectedRowCount, length)
+			// const expectedRowCount = 5
+			foundRows := tableClient.GetLastNRunsForDagID(testDagRow.ID, expectedRowCount)
+
+			if expectedRowCount == 0 {
+				expectedRowCount = insertedDays
+			}
+			length := len(foundRows)
+			if length != expectedRowCount {
+				t.Errorf("Expected %d rows, found %d", expectedRowCount, length)
+			}
+			for i, row := range foundRows {
+				expectedRow := expectedRows[i+insertedDays-expectedRowCount]
+				if row != expectedRow {
+					t.Errorf("expected row %s, found row %s", expectedRow, row)
+				}
+			}
+		}()
 	}
-	for i, row := range foundRows {
-		expectedRow := expectedRows[i+insertedDays-expectedRowCount]
-		if row != expectedRow {
-			t.Errorf("expected row %s, found row %s", expectedRow, row)
-			panic("test")
-		}
-	}
-
 }
 
 func getTestRows() []Row {
-	result := dagRowResult{}
+	result := dagRowResult{hasUnlimitedCapacity: true}
 	tableClient.sqlClient.QueryIntoResults(&result, "SELECT * FROM "+tableName)
 	return result.returnedRows
 }

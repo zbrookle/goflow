@@ -68,7 +68,7 @@ func TestIsDagInDagTable(t *testing.T) {
 }
 
 func getTestRows() []Row {
-	result := dagRowResult{}
+	result := dagRowResult{hasUnlimitedCapacity: true}
 	tableClient.sqlClient.QueryIntoResults(&result, "SELECT * FROM "+TableName)
 	return result.returnedRows
 }

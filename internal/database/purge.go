@@ -7,8 +7,9 @@ import (
 )
 
 type depQueryResult struct {
-	rows         *sql.Rows
-	returnedRows []foreignKeyTableRow
+	rows                 *sql.Rows
+	returnedRows         []foreignKeyTableRow
+	hasUnlimitedCapacity bool
 }
 
 type foreignKeyTableRow struct {
@@ -26,6 +27,10 @@ func (result *depQueryResult) ScanAppend(rows *sql.Rows) error {
 
 func (result *depQueryResult) Capacity() int {
 	return cap(result.returnedRows)
+}
+
+func (result *depQueryResult) HasUnlimitedCapacity() bool {
+	return result.hasUnlimitedCapacity
 }
 
 // getDependentTables returns a slice of table names that are dependent on this table

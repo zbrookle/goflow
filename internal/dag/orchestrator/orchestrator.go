@@ -1,9 +1,11 @@
 package orchestrator
 
 import (
+	"context"
 	"fmt"
 	dagconfig "goflow/internal/dag/config"
 	dagtype "goflow/internal/dag/dagtype"
+	"goflow/internal/dag/metrics"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/database"
 	"goflow/internal/jsonpanic"
@@ -17,6 +19,7 @@ import (
 	"goflow/internal/config"
 	dagtable "goflow/internal/dag/sql/dag"
 	dagruntable "goflow/internal/dag/sql/dagrun"
+	metricstable "goflow/internal/dag/sql/metrics"
 	k8sclient "goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/event/holder"
 	"goflow/internal/k8s/pod/inform"
@@ -26,26 +29,30 @@ import (
 	"path"
 
 	"github.com/kennygrant/sanitize"
+	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Orchestrator holds information for all DAGs
 type Orchestrator struct {
-	dagMapLock        *sync.RWMutex
-	dagMap            map[string]*dagtype.DAG
-	kubeClient        kubernetes.Interface
-	config            *config.GoFlowConfig
-	channelHolder     *holder.ChannelHolder
-	schedules         dagtype.ScheduleCache
-	closingChannel    chan struct{}
-	dagTableClient    *dagtable.TableClient
-	dagrunTableClient *dagruntable.TableClient
+	dagMapLock         *sync.RWMutex
+	dagMap             map[string]*dagtype.DAG
+	kubeClient         kubernetes.Interface
+	config             *config.GoFlowConfig
+	channelHolder      *holder.ChannelHolder
+	schedules          dagtype.ScheduleCache
+	closingChannel     chan struct{}
+	dagTableClient     *dagtable.TableClient
+	dagrunTableClient  *dagruntable.TableClient
+	metricsClient      *metrics.DAGMetricsClient
+	metricsTableClient *metricstable.TableClient
 }
 
-// NewOrchestratorFromClientAndConfig creates an orchestractor from a given k8s client and goflow config
-func NewOrchestratorFromClientAndConfig(
+// NewOrchestratorFromClientsAndConfig creates an orchestractor from a given k8s client and goflow config
+func NewOrchestratorFromClientsAndConfig(
 	client kubernetes.Interface,
 	config *config.GoFlowConfig,
+	metricsClient *metrics.DAGMetricsClient,
 ) *Orchestrator {
 	sqlClient := database.NewSQLiteClient(config.DatabaseDNS)
 	return &Orchestrator{
@@ -58,14 +65,18 @@ func NewOrchestratorFromClientAndConfig(
 		make(chan struct{}),
 		dagtable.NewTableClient(sqlClient),
 		dagruntable.NewTableClient(sqlClient),
+		metricsClient,
+		metricstable.NewTableClient(sqlClient),
 	}
 }
 
 // NewOrchestrator creates an empty instance of Orchestrator
 func NewOrchestrator(configPath string) *Orchestrator {
-	return NewOrchestratorFromClientAndConfig(
-		k8sclient.CreateKubeClient(),
+	kubeClient := k8sclient.CreateKubeClient()
+	return NewOrchestratorFromClientsAndConfig(
+		kubeClient,
 		config.CreateConfig(configPath),
+		metrics.NewDAGMetricsClient(kubeClient, false),
 	)
 }
 
@@ -176,6 +187,7 @@ func (orchestrator *Orchestrator) CollectDAGs() {
 	dagSlice := dagtype.GetDAGSFromFolder(
 		orchestrator.config.DAGPath,
 		orchestrator.kubeClient,
+		orchestrator.metricsClient,
 		*orchestrator.config,
 		orchestrator.schedules,
 		orchestrator.dagTableClient,
@@ -239,6 +251,7 @@ func (orchestrator *Orchestrator) Start(cycleDuration time.Duration) {
 		cycleDuration,
 		"Run DAGs",
 	)
+	go orchestrator.StoreMetricsEvery(2)
 }
 
 // Wait blocks the current thread until the orchestrator has terminated
@@ -274,4 +287,48 @@ func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) (int
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, err
+}
+
+func (orchestrator *Orchestrator) podToDAGMap() map[string]string {
+	dagMap := make(map[string]string)
+	for dagName, dagStruct := range orchestrator.dagMap {
+		dagRecord := orchestrator.dagTableClient.GetDagRecord(dagName, dagStruct.Config.Namespace)
+		dagRecords := orchestrator.dagrunTableClient.GetLastNRunsForDagID(dagRecord.ID, 3)
+		fmt.Println(dagRecords)
+	}
+	return dagMap
+}
+
+// StoreMetricsEvery stores usage metrics for all pods every 'seconds' unit of time
+func (orchestrator *Orchestrator) StoreMetricsEvery(seconds time.Duration) {
+	for {
+		namespaces, err := orchestrator.kubeClient.CoreV1().Namespaces().List(
+			context.TODO(),
+			k8sapi.ListOptions{},
+		)
+		if err != nil {
+			panic(err)
+		}
+		podNameMap := orchestrator.podToDAGMap()
+		for _, namespace := range namespaces.Items {
+			if namespace.Name[:4] == "kube" {
+				continue
+			}
+			fmt.Println(namespace.Name)
+			fmt.Println("-------------")
+			metrics := orchestrator.metricsClient.ListPodMetrics(namespace.Name)
+			for _, metric := range metrics {
+				row := metricstable.NewRow(
+					0,
+					metric.PodName,
+					podNameMap[metric.PodName],
+					metric.Memory,
+					metric.CPU,
+					metric.Time,
+				)
+				orchestrator.metricsTableClient.InsertMetric(row)
+			}
+		}
+		time.Sleep(seconds * time.Second)
+	}
 }

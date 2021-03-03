@@ -182,8 +182,9 @@ type resultType struct {
 }
 
 type testQueryResult struct {
-	rows         *sql.Rows
-	returnedRows []resultType
+	rows                 *sql.Rows
+	returnedRows         []resultType
+	hasUnlimitedCapacity bool
 }
 
 func (result *testQueryResult) ScanAppend(rows *sql.Rows) error {
@@ -199,6 +200,10 @@ func (result *testQueryResult) Rows() *sql.Rows {
 
 func (result *testQueryResult) Capacity() int {
 	return cap(result.returnedRows)
+}
+
+func (result *testQueryResult) HasUnlimitedCapacity() bool {
+	return result.hasUnlimitedCapacity
 }
 
 func (result *testQueryResult) SetRows(rows *sql.Rows) {
@@ -262,7 +267,7 @@ func TestQueryRowsIntoResult(t *testing.T) {
 	setUpTableAndInsertOneRow()
 
 	returnedRows := make([]resultType, 0, 1)
-	result := testQueryResult{returnedRows: returnedRows}
+	result := testQueryResult{returnedRows: returnedRows, hasUnlimitedCapacity: false}
 	client.QueryIntoResults(&result, fmt.Sprintf("SELECT * FROM %s", testTable))
 	firstRow := result.returnedRows[0]
 	if firstRow.name != expectedName {
