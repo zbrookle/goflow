@@ -318,7 +318,6 @@ func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) (ready bool) 
 // TerminateAndDeleteRuns removes all active DAG runs and their associated pods
 func (dag *DAG) TerminateAndDeleteRuns() {
 	for _, run := range dag.DAGRuns {
-		fmt.Println(run.MostRecentPod())
 		run.DeletePod()
 	}
 }
