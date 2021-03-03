@@ -2,10 +2,7 @@ package metrics
 
 import (
 	"context"
-	// "fmt"
 	"io"
-
-	// "net/url"
 
 	"os"
 
