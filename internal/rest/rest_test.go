@@ -6,6 +6,7 @@ import (
 	"goflow/internal/config"
 	dagconfig "goflow/internal/dag/config"
 	"goflow/internal/dag/dagtype"
+	"goflow/internal/dag/metrics"
 	"goflow/internal/dag/orchestrator"
 	dagrun "goflow/internal/dag/run"
 	dagtable "goflow/internal/dag/sql/dag"
@@ -40,7 +41,7 @@ func getTestOrchestrator(configuration *config.GoFlowConfig) *orchestrator.Orche
 	return orchestrator.NewOrchestratorFromClientsAndConfig(
 		kubeClient,
 		configuration,
-		testutils.NewTestMetricsClient(),
+		metrics.NewDAGMetricsClient(kubeClient, true),
 	)
 }
 
@@ -60,11 +61,12 @@ func TestMain(m *testing.M) {
 	dagRunTableClient := dagruntable.NewTableClient(SQLCLIENT)
 	dagTableClient.CreateTable()
 	dagRunTableClient.CreateTable()
+	kubeClient := fake.NewSimpleClientset()
 	testDag = dagtype.CreateDAG(&dagconfig.DAGConfig{
 		Name:          "test",
 		StartDateTime: "2019-01-01",
 		MaxActiveRuns: 1,
-	}, "", fake.NewSimpleClientset(), testutils.NewTestMetricsClient(), dagtype.ScheduleCache{}, dagTableClient, "", dagRunTableClient, false)
+	}, "", kubeClient, metrics.NewDAGMetricsClient(kubeClient, true), dagtype.ScheduleCache{}, dagTableClient, "", dagRunTableClient, false)
 	testTime = time.Now()
 	orch.AddDAG(&testDag)
 	testDAG2 := copyDAG(testDag)

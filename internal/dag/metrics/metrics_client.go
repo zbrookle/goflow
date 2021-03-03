@@ -21,6 +21,7 @@ import (
 type DAGMetricsClient struct {
 	kubeClient kubernetes.Interface
 	restConfig *restclient.Config
+	testMode   bool
 }
 
 // PodMetrics holds information about the resource usage of a given pod
@@ -40,8 +41,8 @@ func newPodMetrics(podName string) PodMetrics {
 }
 
 // NewDAGMetricsClient returns a new DAGMetricsClient from a metrics clientset
-func NewDAGMetricsClient(clientSet kubernetes.Interface) *DAGMetricsClient {
-	return &DAGMetricsClient{clientSet, getRestConfig()}
+func NewDAGMetricsClient(clientSet kubernetes.Interface, testMode bool) *DAGMetricsClient {
+	return &DAGMetricsClient{clientSet, getRestConfig(), testMode}
 }
 
 type getMetricsOptions struct {

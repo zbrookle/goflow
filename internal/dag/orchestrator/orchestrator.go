@@ -73,7 +73,7 @@ func NewOrchestrator(configPath string) *Orchestrator {
 	return NewOrchestratorFromClientsAndConfig(
 		kubeClient,
 		config.CreateConfig(configPath),
-		metrics.NewDAGMetricsClient(kubeClient),
+		metrics.NewDAGMetricsClient(kubeClient, false),
 	)
 }
 

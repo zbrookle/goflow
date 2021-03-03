@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"goflow/internal/config"
+	"goflow/internal/dag/metrics"
 	"goflow/internal/dag/orchestrator"
 	"goflow/internal/k8s/client"
 	"goflow/internal/k8s/pod/utils"
@@ -10,7 +11,6 @@ import (
 	"goflow/internal/paths"
 	"goflow/internal/rest"
 	"goflow/internal/termination"
-	"goflow/internal/testutils"
 	"io/ioutil"
 	"time"
 
@@ -53,7 +53,7 @@ func main() {
 		orch = orchestrator.NewOrchestratorFromClientsAndConfig(
 			kubeClient,
 			config,
-			testutils.NewTestMetricsClient(kubeClient),
+			metrics.NewDAGMetricsClient(kubeClient, true),
 		)
 	} else {
 		orch = orchestrator.NewOrchestrator(*configPath)

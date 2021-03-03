@@ -121,10 +121,11 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		timeLock:            &sync.Mutex{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
+	kubeClient := fake.NewSimpleClientset()
 	dag, err := createDAGFromJSONBytes(
 		[]byte(formattedJSONString),
-		fake.NewSimpleClientset(),
-		testutils.NewTestMetricsClient(),
+		kubeClient,
+		metrics.NewDAGMetricsClient(kubeClient, true),
 		goflowconfig.GoFlowConfig{},
 		make(ScheduleCache),
 		TABLECLIENT,
@@ -177,7 +178,7 @@ func getTestDAG(client kubernetes.Interface) *DAG {
 		MaxActiveRuns: 1,
 		StartDateTime: "2019-01-01",
 		EndDateTime:   "",
-	}, "", client, testutils.NewTestMetricsClient(), make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT, false)
+	}, "", client, metrics.NewDAGMetricsClient(client, true), make(ScheduleCache), TABLECLIENT, "path", RUNTABLECLIENT, false)
 	return &dag
 }
 

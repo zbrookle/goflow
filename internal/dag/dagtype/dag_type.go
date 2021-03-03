@@ -359,16 +359,6 @@ func (dag *DAG) String() string {
 	return jsonpanic.JSONPanicFormat(dag)
 }
 
-// Metrics returns the metrics for this pod
-func (dag *DAG) Metrics() []metrics.PodMetrics {
-	metrics := make([]metrics.PodMetrics, 0)
-	for _, run := range dag.DAGRuns {
-		podMetrics := dag.metricsClient.GetPodMetrics(dag.Config.Namespace, run.Name)
-		metrics = append(metrics, podMetrics)
-	}
-	return metrics
-}
-
 // DAGList is a list of dags
 type DAGList []*DAG
 

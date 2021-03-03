@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/dag/metrics"
 	"goflow/internal/database"
 	"goflow/internal/testutils"
 	"testing"
@@ -39,7 +40,7 @@ func testOrchestrator() *Orchestrator {
 	return NewOrchestratorFromClientsAndConfig(
 		kubeClient,
 		configuration,
-		testutils.NewTestMetricsClient(),
+		metrics.NewDAGMetricsClient(kubeClient, true),
 	)
 }
 

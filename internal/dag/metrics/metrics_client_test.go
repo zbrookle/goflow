@@ -3,67 +3,50 @@ package metrics
 import (
 	// "context"
 	// "fmt"
-	"encoding/json"
 	"testing"
 
 	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	k8sapi "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	metricsapi "k8s.io/metrics/pkg/apis/metrics/v1beta1"
-	"k8s.io/metrics/pkg/client/clientset/versioned/fake"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var metricsClient *DAGMetricsClient
-var fakePodMetrics *metricsapi.PodMetrics
-var fakeContainerMetrics *metricsapi.ContainerMetrics
+var fakePod *core.Pod
+var fakeContainer *core.Container
 
-func getFakeContainer() metricsapi.ContainerMetrics {
-	return metricsapi.ContainerMetrics{
-		Name: "testContainer",
-		Usage: map[core.ResourceName]resource.Quantity{
-			"": {
-				Format: "",
-			},
-		},
+func getFakeContainerStatus() core.ContainerStatus {
+	started := true
+	return core.ContainerStatus{
+		Name:    "task",
+		Ready:   true,
+		Started: &started,
 	}
 }
 
-func getFakePod() *metricsapi.PodMetrics {
-	container := getFakeContainer()
-	return &metricsapi.PodMetrics{
+func getFakePod() *core.Pod {
+	container := getFakeContainerStatus()
+	return &core.Pod{
 		ObjectMeta: k8sapi.ObjectMeta{
 			Name:      "test",
 			Namespace: "default",
 		},
-		// Window: k8sapi.Duration{
-		// 	Duration: 0,
-		// },
-		Containers: []metricsapi.ContainerMetrics{container},
+		Status: core.PodStatus{
+			ContainerStatuses: []core.ContainerStatus{container},
+		},
 	}
 }
 
 func TestMain(m *testing.M) {
-	fakePodMetrics = getFakePod()
-	fakeMetricsClient := fake.NewSimpleClientset(fakePodMetrics)
-	fakeMetricsClient.Tracker().Create(
-		schema.GroupVersionResource{
-			Group:    "metrics.k8s.io",
-			Version:  "v1beta1",
-			Resource: "pods",
-		},
-		fakePodMetrics,
-		"default",
-	)
-	metricsClient = NewDAGMetricsClient(fakeMetricsClient)
+	fakePod = getFakePod()
+	fakeMetricsClient := fake.NewSimpleClientset(fakePod)
+	metricsClient = NewDAGMetricsClient(fakeMetricsClient, true)
 	m.Run()
 }
 
 func TestGetAllPodMetrics(t *testing.T) {
-	metrics := metricsClient.GetPodMetrics(fakePodMetrics.Namespace, fakePodMetrics.Name)
-	_, err := json.Marshal(metrics)
+	metrics, err := metricsClient.GetPodMetrics(*fakePod)
 	if err != nil {
 		panic(err)
 	}
-	// t.Error(string(metricsJSON))
+	t.Error(metrics)
 }
