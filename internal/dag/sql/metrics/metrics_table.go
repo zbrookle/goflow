@@ -34,9 +34,6 @@ func fmtSQLDate(dateStruct time.Time) string {
 // GetMetricsForDag retrieves the metrics rows for a given dag id
 func (client *TableClient) GetMetricsForDag(dagName string, times ...time.Time) ([]Row, error) {
 	result := newRowResult(0)
-	if len(times) > 2 {
-
-	}
 	timeLength := len(times)
 	query := ""
 	switch {

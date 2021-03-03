@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -232,6 +234,7 @@ func (orchestrator *Orchestrator) getTaskInformer() inform.TaskInformer {
 func (orchestrator *Orchestrator) setupDatabaseTables() {
 	orchestrator.dagTableClient.CreateTable()
 	orchestrator.dagrunTableClient.CreateTable()
+	orchestrator.metricsTableClient.CreateTable()
 }
 
 // Start begins the orchestrator event loop
@@ -289,14 +292,13 @@ func (orchestrator *Orchestrator) WriteDAGFile(config *dagconfig.DAGConfig) (int
 	return http.StatusOK, err
 }
 
-func (orchestrator *Orchestrator) podToDAGMap() map[string]string {
-	dagMap := make(map[string]string)
-	for dagName, dagStruct := range orchestrator.dagMap {
-		dagRecord := orchestrator.dagTableClient.GetDagRecord(dagName, dagStruct.Config.Namespace)
-		dagRecords := orchestrator.dagrunTableClient.GetLastNRunsForDagID(dagRecord.ID, 3)
-		fmt.Println(dagRecords)
+func extractDAGFromPodName(podName string) string {
+	re := regexp.MustCompile(`(?P<name>.*)-\d{4}-\d{2}-\d{4}-\d{2}-\d{2}plus\d{4}utc`)
+	matches := re.FindStringSubmatch(podName)
+	if len(matches) < 2 {
+		logs.ErrorLogger.Println("Error in DAG name extraction from pod")
 	}
-	return dagMap
+	return matches[1]
 }
 
 // StoreMetricsEvery stores usage metrics for all pods every 'seconds' unit of time
@@ -309,19 +311,16 @@ func (orchestrator *Orchestrator) StoreMetricsEvery(seconds time.Duration) {
 		if err != nil {
 			panic(err)
 		}
-		podNameMap := orchestrator.podToDAGMap()
 		for _, namespace := range namespaces.Items {
 			if namespace.Name[:4] == "kube" {
 				continue
 			}
-			fmt.Println(namespace.Name)
-			fmt.Println("-------------")
 			metrics := orchestrator.metricsClient.ListPodMetrics(namespace.Name)
 			for _, metric := range metrics {
 				row := metricstable.NewRow(
 					0,
+					extractDAGFromPodName(metric.PodName),
 					metric.PodName,
-					podNameMap[metric.PodName],
 					metric.Memory,
 					metric.CPU,
 					metric.Time,
@@ -331,4 +330,29 @@ func (orchestrator *Orchestrator) StoreMetricsEvery(seconds time.Duration) {
 		}
 		time.Sleep(seconds * time.Second)
 	}
+}
+
+// MetricRowList is a list of metrics table rows
+type MetricRowList []metricstable.Row
+
+func (rowList MetricRowList) String() string {
+	builder := strings.Builder{}
+	fmt.Fprint(&builder, "[")
+	for i, row := range rowList {
+		fmtString := "%s, "
+		if i == len(rowList)-1 {
+			fmtString = "%s"
+		}
+		fmt.Fprintf(&builder, fmtString, row)
+	}
+	fmt.Fprint(&builder, "]")
+	return builder.String()
+}
+
+// RetrieveDAGMetrics returns the metrics for a dag within an optional date range
+func (orchestrator *Orchestrator) RetrieveDAGMetrics(
+	dagName string,
+	timeRange ...time.Time,
+) (MetricRowList, error) {
+	return orchestrator.metricsTableClient.GetMetricsForDag(dagName, timeRange...)
 }
