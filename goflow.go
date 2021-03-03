@@ -24,7 +24,6 @@ var host string
 var port int
 
 func main() {
-	defer utils.CleanUpEnvironment(client.CreateKubeClient())
 	configPath := flag.String(
 		"path",
 		paths.GetGoDefaultHomePath(),
@@ -56,6 +55,7 @@ func main() {
 			metrics.NewDAGMetricsClient(kubeClient, true),
 		)
 	} else {
+		defer utils.CleanUpEnvironment(client.CreateKubeClient())
 		orch = orchestrator.NewOrchestrator(*configPath)
 	}
 	orch.Start(1 * time.Second)
