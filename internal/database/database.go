@@ -122,7 +122,7 @@ func (client *SQLClient) Update(table string, values, conditions ColumnWithValue
 	}
 }
 
-// Tables returns a list of the table names in the databse
+// Tables returns a list of the table names in the database
 func (client *SQLClient) Tables() []string {
 	rows, err := client.database.Query("SELECT name FROM sqlite_master WHERE type = 'table'")
 	if err != nil {
