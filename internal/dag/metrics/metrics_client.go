@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"goflow/internal/jsonpanic"
 	"goflow/internal/logs"
+	"math/rand"
 	"time"
 
 	restclient "k8s.io/client-go/rest"
@@ -49,6 +50,7 @@ type getMetricsOptions struct {
 	kubeClient                      kubernetes.Interface
 	restConfig                      *restclient.Config
 	podName, command, containerName string
+	testMode                        bool
 }
 
 func getContainerOutput(options getMetricsOptions) ([]byte, error) {
@@ -70,6 +72,10 @@ func getContainerOutput(options getMetricsOptions) ([]byte, error) {
 }
 
 func getContainerIntMetric(options getMetricsOptions) (uint32, error) {
+	if options.testMode {
+		min := int32(1000000)
+		return uint32(rand.Int31n(min*10)) + uint32(min), nil
+	}
 	data, err := getContainerOutput(options)
 	if err != nil {
 		return 0, err
@@ -106,6 +112,7 @@ func (client *DAGMetricsClient) GetPodMetrics(
 			podName:       pod.Name,
 			containerName: containerStatus.Name,
 			restConfig:    client.restConfig,
+			testMode:      client.testMode,
 		}
 
 		memory, err := getContainerMemory(options)

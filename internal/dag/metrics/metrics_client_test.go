@@ -23,11 +23,11 @@ func getFakeContainerStatus() core.ContainerStatus {
 	}
 }
 
-func getFakePod() *core.Pod {
+func getFakePod(name string) *core.Pod {
 	container := getFakeContainerStatus()
 	return &core.Pod{
 		ObjectMeta: k8sapi.ObjectMeta{
-			Name:      "test",
+			Name:      name,
 			Namespace: "default",
 		},
 		Status: core.PodStatus{
@@ -37,16 +37,24 @@ func getFakePod() *core.Pod {
 }
 
 func TestMain(m *testing.M) {
-	fakePod = getFakePod()
-	fakeMetricsClient := fake.NewSimpleClientset(fakePod)
+	fakePod = getFakePod("test1")
+	fakePod2 := getFakePod("test2")
+	fakeMetricsClient := fake.NewSimpleClientset(fakePod, fakePod2)
 	metricsClient = NewDAGMetricsClient(fakeMetricsClient, true)
 	m.Run()
 }
 
-func TestGetAllPodMetrics(t *testing.T) {
-	metrics, err := metricsClient.GetPodMetrics(*fakePod)
+// This is really just to ensure the code doesn't fail in test mode
+func TestGetTestPodMetrics(t *testing.T) {
+	_, err := metricsClient.GetPodMetrics(*fakePod)
 	if err != nil {
 		panic(err)
 	}
-	t.Error(metrics)
+}
+
+func TestGetAllMetrics(t *testing.T) {
+	metrics := metricsClient.ListPodMetrics(fakePod.Namespace)
+	if len(metrics) != 2 {
+		t.Error("Only expected two pods worth of metrics")
+	}
 }
