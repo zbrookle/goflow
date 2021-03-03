@@ -35,6 +35,7 @@ func NewSQLiteClient(dsn string) *SQLClient {
 type QueryResult interface {
 	ScanAppend(*sql.Rows) error
 	Capacity() int
+	HasUnlimitedCapacity() bool
 }
 
 // queryErrorMessage returns the error message along with the associated query
@@ -47,7 +48,7 @@ func PutNRowValues(result QueryResult, rows *sql.Rows) {
 	defer rows.Close()
 	i := 0
 	for rows.Next() {
-		if i == result.Capacity() && result.Capacity() != unlimitedCapacity {
+		if i == result.Capacity() && !result.HasUnlimitedCapacity() {
 			break
 		}
 		err := result.ScanAppend(rows)

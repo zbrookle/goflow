@@ -53,13 +53,14 @@ func (rl RowList) Swap(i, j int) {
 }
 
 type dagRowResult struct {
-	rows         *sql.Rows
-	returnedRows RowList
+	rows                 *sql.Rows
+	returnedRows         RowList
+	hasUnlimitedCapacity bool
 }
 
 func newRowResult(n int) dagRowResult {
 	return dagRowResult{
-		returnedRows: make([]Row, 0, n),
+		returnedRows: make([]Row, 0, n), hasUnlimitedCapacity: n == 0,
 	}
 }
 
@@ -106,7 +107,9 @@ func (result *dagRowResult) ScanAppend(rows *sql.Rows) error {
 	result.returnedRows = append(result.returnedRows, row)
 	return err
 }
-
 func (result *dagRowResult) Capacity() int {
 	return cap(result.returnedRows)
+}
+func (result *dagRowResult) HasUnlimitedCapacity() bool {
+	return result.hasUnlimitedCapacity
 }
