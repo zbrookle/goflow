@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"database/sql"
-	"fmt"
 	"goflow/internal/database"
 	"goflow/internal/dateutils"
 	"goflow/internal/jsonpanic"
@@ -44,7 +43,6 @@ func newRowResult(n int) dagRowResult {
 	result := dagRowResult{
 		returnedRows: make([]Row, 0, n),
 	}
-	fmt.Println(cap(result.returnedRows))
 	return result
 }
 
@@ -93,5 +91,5 @@ func (result *dagRowResult) ScanAppend(rows *sql.Rows) error {
 }
 
 func (result *dagRowResult) Capacity() int {
-	return cap(result.returnedRows)
+	return 0
 }
