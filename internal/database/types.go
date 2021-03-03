@@ -39,7 +39,7 @@ func (i Int64) typeName() string {
 	return "BIGINT"
 }
 func (i Int64) getValRep() string {
-	return fmt.Sprint(i)
+	return fmt.Sprint(i.Val)
 }
 
 // TimeStamp is a time stamp sql datatype
