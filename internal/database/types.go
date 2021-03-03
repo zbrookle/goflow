@@ -32,6 +32,16 @@ func (i Int) getValRep() string {
 	return fmt.Sprint(i.Val)
 }
 
+// Int64 is a long in sql datatype
+type Int64 struct{ Val int64 }
+
+func (i Int64) typeName() string {
+	return "BIGINT"
+}
+func (i Int64) getValRep() string {
+	return fmt.Sprint(i)
+}
+
 // TimeStamp is a time stamp sql datatype
 type TimeStamp struct {
 	Val time.Time
