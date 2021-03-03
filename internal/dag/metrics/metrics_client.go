@@ -125,8 +125,6 @@ func (client *DAGMetricsClient) GetPodMetrics(
 			logs.WarningLogger.Println("Error retrieving CPU from container", err)
 			continue
 		}
-		fmt.Println("Memory:", memory)
-		fmt.Println("CPU:", cpu)
 		metrics.Memory += memory
 		metrics.CPU += cpu
 	}
