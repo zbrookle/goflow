@@ -49,7 +49,6 @@ type DAG struct {
 	ID                int
 	IsOn              bool
 	LastUpdated       time.Time
-	metricsClient     *metrics.DAGMetricsClient
 }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
@@ -73,7 +72,6 @@ func CreateDAG(
 	config *dagconfig.DAGConfig,
 	code string,
 	client kubernetes.Interface,
-	metricsClient *metrics.DAGMetricsClient,
 	schedules ScheduleCache,
 	tableClient *dagtable.TableClient,
 	filePath string,
@@ -99,7 +97,6 @@ func CreateDAG(
 		filePath:          filePath,
 		dagRunTableClient: dagRunTableClient,
 		IsOn:              defaultIsOn,
-		metricsClient:     metricsClient,
 	}
 	dag.StartDateTime = getDateFromString(dag.Config.StartDateTime)
 	if dag.Config.EndDateTime != "" {
@@ -130,7 +127,6 @@ func newDagRow(dag *DAG) dagtable.Row {
 func createDAGFromJSONBytes(
 	dagBytes []byte,
 	client kubernetes.Interface,
-	metricsClient *metrics.DAGMetricsClient,
 	goflowConfig goflowconfig.GoFlowConfig,
 	scheduleCache ScheduleCache,
 	tableClient *dagtable.TableClient,
@@ -160,7 +156,6 @@ func createDAGFromJSONBytes(
 		&dagConfigStruct,
 		string(dagBytes),
 		client,
-		metricsClient,
 		scheduleCache,
 		tableClient,
 		filePath,
@@ -187,7 +182,6 @@ func getDAGFromJSON(
 	dagJSON, err := createDAGFromJSONBytes(
 		dagBytes,
 		client,
-		metricsClient,
 		goflowConfig,
 		scheduleCache,
 		tableClient,

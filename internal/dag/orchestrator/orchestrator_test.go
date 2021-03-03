@@ -61,7 +61,6 @@ func getTestDAG(orch *Orchestrator) dagtype.DAG {
 		config,
 		config.String(),
 		orch.kubeClient,
-		orch.metricsClient,
 		make(dagtype.ScheduleCache),
 		orch.dagTableClient,
 		"path",
