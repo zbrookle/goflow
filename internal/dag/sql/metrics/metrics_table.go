@@ -32,20 +32,48 @@ func fmtSQLDate(dateStruct time.Time) string {
 }
 
 // GetMetricsForDag retrieves the metrics rows for a given dag id
-func (client *TableClient) GetMetricsForDag(dagName string, startTime, endTime time.Time) []Row {
+func (client *TableClient) GetMetricsForDag(dagName string, times ...time.Time) ([]Row, error) {
 	result := newRowResult(0)
-	client.sqlClient.QueryIntoResults(
-		&result,
-		fmt.Sprintf(
+	if len(times) > 2 {
+
+	}
+	timeLength := len(times)
+	query := ""
+	switch {
+	case timeLength == 0:
+		query = fmt.Sprintf(
+			"SELECT * FROM metrics WHERE dag_name = '%s' ORDER BY %s ASC",
+			dagName,
+			metricsTimeName,
+		)
+	case timeLength == 1:
+		startTime := times[0]
+		query = fmt.Sprintf(
+			"SELECT * FROM metrics WHERE dag_name = '%s' and %s > %s ORDER BY %s ASC",
+			dagName,
+			metricsTimeName,
+			fmtSQLDate(startTime),
+			metricsTimeName,
+		)
+	case timeLength == 2:
+		startTime := times[0]
+		endTime := times[1]
+		query = fmt.Sprintf(
 			"SELECT * FROM metrics WHERE dag_name = '%s' and %s between %s and %s ORDER BY %s ASC",
 			dagName,
 			metricsTimeName,
 			fmtSQLDate(startTime),
 			fmtSQLDate(endTime),
 			metricsTimeName,
-		),
+		)
+	default:
+		return nil, fmt.Errorf("Cannot have more that 2 times")
+	}
+	client.sqlClient.QueryIntoResults(
+		&result,
+		query,
 	)
-	return result.returnedRows
+	return result.returnedRows, nil
 }
 
 // InsertMetric inserts the given metric row
