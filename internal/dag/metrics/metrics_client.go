@@ -20,6 +20,7 @@ import (
 // DAGMetricsClient handles all interactions with DAG metrics
 type DAGMetricsClient struct {
 	kubeClient kubernetes.Interface
+	restConfig *restclient.Config
 }
 
 // PodMetrics holds information about the resource usage of a given pod
@@ -40,7 +41,7 @@ func newPodMetrics(podName string) PodMetrics {
 
 // NewDAGMetricsClient returns a new DAGMetricsClient from a metrics clientset
 func NewDAGMetricsClient(clientSet kubernetes.Interface) *DAGMetricsClient {
-	return &DAGMetricsClient{clientSet}
+	return &DAGMetricsClient{clientSet, getRestConfig()}
 }
 
 type getMetricsOptions struct {
@@ -87,10 +88,9 @@ func getContainerCPU(options getMetricsOptions) (uint32, error) {
 	return getContainerIntMetric(options)
 }
 
-func getPodMetrics(
+// GetPodMetrics returns the total usage metrics for the containers in a given pod
+func (client *DAGMetricsClient) GetPodMetrics(
 	pod core.Pod,
-	kubeClient kubernetes.Interface,
-	restConfig *restclient.Config,
 ) (PodMetrics, error) {
 	metrics := newPodMetrics(pod.Name)
 	hasActiveContainers := false
@@ -101,10 +101,10 @@ func getPodMetrics(
 		}
 		hasActiveContainers = true
 		options := getMetricsOptions{
-			kubeClient:    kubeClient,
+			kubeClient:    client.kubeClient,
 			podName:       pod.Name,
 			containerName: containerStatus.Name,
-			restConfig:    restConfig,
+			restConfig:    client.restConfig,
 		}
 
 		memory, err := getContainerMemory(options)
@@ -140,38 +140,11 @@ func (client *DAGMetricsClient) ListPodMetrics(namespace string) []PodMetrics {
 	if err != nil {
 		panic(err)
 	}
-	restConfig := getRestConfig()
 	for _, pod := range pods.Items {
-		metrics, err := getPodMetrics(pod, client.kubeClient, restConfig)
+		metrics, err := client.GetPodMetrics(pod)
 		if err == nil {
 			metricList = append(metricList, metrics)
 		}
 	}
 	return metricList
 }
-
-// GetPodMetrics returns all metrics for a pod including memory and cpu usage
-func (client *DAGMetricsClient) GetPodMetrics(namespace, name string) PodMetrics {
-	// metrics, err := client.kubeClient.MetricsV1beta1().PodMetricses(
-	// 	namespace,
-	// ).Get(
-	// 	context.TODO(),
-	// 	name,
-	// 	k8sapi.GetOptions{},
-	// )
-	// if err != nil {
-	// 	panic(err)
-	// }
-	metrics := PodMetrics{}
-	return metrics
-}
-
-// GetPodMemory returns the current memory usage of the given pod
-func (client *DAGMetricsClient) GetPodMemory() {
-	return
-}
-
-// // GetPodCPU returns the current CPU usage of the given pod
-// func (client *DAGMetricsClient) GetPodCPU(namespace, name string) int {
-// 	return 0
-// }
