@@ -12,13 +12,20 @@ import (
 
 const missingDagMsg = "\"There is no DAG with given name\""
 
+func getDAGNameFromRequest(orch *orchestrator.Orchestrator,
+	w http.ResponseWriter,
+	r *http.Request) string {
+	vars := mux.Vars(r)
+	dagName := vars["name"]
+	return dagName
+}
+
 func getDagFromRequest(
 	orch *orchestrator.Orchestrator,
 	w http.ResponseWriter,
 	r *http.Request,
 ) *dagtype.DAG {
-	vars := mux.Vars(r)
-	dagName := vars["name"]
+	dagName := getDAGNameFromRequest(orch, w, r)
 	dag := orch.GetDag(dagName)
 	if dag == nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -52,5 +59,16 @@ func registerGetHandles(orch *orchestrator.Orchestrator, router *mux.Router) {
 			return
 		}
 		fmt.Fprint(w, dag.DAGRuns)
+	})
+
+	router.HandleFunc("/dag/{name}/metrics", func(w http.ResponseWriter, r *http.Request) {
+		dagName := getDAGNameFromRequest(orch, w, r)
+		metrics, err := orch.RetrieveDAGMetrics(dagName)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, err.Error())
+		}
+		setHeaders(w)
+		fmt.Fprint(w, metrics)
 	})
 }

@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"goflow/internal/logs"
 	"strings"
 
 	sqlite "github.com/mattn/go-sqlite3"
@@ -35,6 +36,7 @@ func NewSQLiteClient(dsn string) *SQLClient {
 type QueryResult interface {
 	ScanAppend(*sql.Rows) error
 	Capacity() int
+	HasUnlimitedCapacity() bool
 }
 
 // queryErrorMessage returns the error message along with the associated query
@@ -47,7 +49,7 @@ func PutNRowValues(result QueryResult, rows *sql.Rows) {
 	defer rows.Close()
 	i := 0
 	for rows.Next() {
-		if i == result.Capacity() && result.Capacity() != unlimitedCapacity {
+		if i == result.Capacity() && !result.HasUnlimitedCapacity() {
 			break
 		}
 		err := result.ScanAppend(rows)
@@ -104,6 +106,11 @@ func (client *SQLClient) Insert(table string, columns []ColumnWithValue) {
 	)
 	err := client.Exec(query)
 	if err != nil {
+		fmt.Println(err.Error())
+		if strings.Contains(err.Error(), "no such table") {
+			logs.ErrorLogger.Println("Insert table", table, "is missing")
+			return
+		}
 		panic(queryErrorMessage(query, err))
 	}
 }
@@ -122,7 +129,7 @@ func (client *SQLClient) Update(table string, values, conditions ColumnWithValue
 	}
 }
 
-// Tables returns a list of the table names in the databse
+// Tables returns a list of the table names in the database
 func (client *SQLClient) Tables() []string {
 	rows, err := client.database.Query("SELECT name FROM sqlite_master WHERE type = 'table'")
 	if err != nil {

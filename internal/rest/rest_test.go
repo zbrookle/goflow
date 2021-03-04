@@ -6,6 +6,7 @@ import (
 	"goflow/internal/config"
 	dagconfig "goflow/internal/dag/config"
 	"goflow/internal/dag/dagtype"
+	"goflow/internal/dag/metrics"
 	"goflow/internal/dag/orchestrator"
 	dagrun "goflow/internal/dag/run"
 	dagtable "goflow/internal/dag/sql/dag"
@@ -20,6 +21,8 @@ import (
 	"time"
 
 	"net/http"
+
+	httpretry "github.com/hashicorp/go-retryablehttp"
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/client-go/kubernetes/fake"
@@ -37,7 +40,11 @@ func getTestOrchestrator(configuration *config.GoFlowConfig) *orchestrator.Orche
 	kubeClient := fake.NewSimpleClientset()
 	configuration.DAGPath = testutils.GetDagsFolder()
 	configuration.DatabaseDNS = testutils.GetSQLiteLocation()
-	return orchestrator.NewOrchestratorFromClientAndConfig(kubeClient, configuration)
+	return orchestrator.NewOrchestratorFromClientsAndConfig(
+		kubeClient,
+		configuration,
+		metrics.NewDAGMetricsClient(kubeClient, true),
+	)
 }
 
 func copyDAG(dag dagtype.DAG) dagtype.DAG {
@@ -56,11 +63,12 @@ func TestMain(m *testing.M) {
 	dagRunTableClient := dagruntable.NewTableClient(SQLCLIENT)
 	dagTableClient.CreateTable()
 	dagRunTableClient.CreateTable()
+	kubeClient := fake.NewSimpleClientset()
 	testDag = dagtype.CreateDAG(&dagconfig.DAGConfig{
 		Name:          "test",
 		StartDateTime: "2019-01-01",
 		MaxActiveRuns: 1,
-	}, "", fake.NewSimpleClientset(), dagtype.ScheduleCache{}, dagTableClient, "", dagRunTableClient, false)
+	}, "", kubeClient, dagtype.ScheduleCache{}, dagTableClient, "", dagRunTableClient, false)
 	testTime = time.Now()
 	orch.AddDAG(&testDag)
 	testDAG2 := copyDAG(testDag)
@@ -79,7 +87,7 @@ func getURL(suffix string) string {
 func post(suffix string, content string) *http.Response {
 	url := getURL(suffix)
 	reader := strings.NewReader(content)
-	resp, err := http.Post(url, "json", reader)
+	resp, err := httpretry.Post(url, "json", reader)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +96,7 @@ func post(suffix string, content string) *http.Response {
 
 func get(suffix string) *http.Response {
 	url := getURL(suffix)
-	resp, err := http.Get(url)
+	resp, err := httpretry.Get(url)
 	if err != nil {
 		panic(err)
 	}
@@ -97,8 +105,8 @@ func get(suffix string) *http.Response {
 
 func put(suffix string) *http.Response {
 	url := getURL(suffix)
-	client := &http.Client{}
-	request, err := http.NewRequest("PUT", url, strings.NewReader(""))
+	client := httpretry.NewClient()
+	request, err := httpretry.NewRequest("PUT", url, strings.NewReader(""))
 	if err != nil {
 		panic(err)
 	}

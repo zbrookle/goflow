@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/dag/metrics"
 	"goflow/internal/database"
 	"goflow/internal/testutils"
 	"testing"
@@ -36,7 +37,11 @@ func testOrchestrator() *Orchestrator {
 	configuration := config.CreateConfig(configPath)
 	configuration.DAGPath = dagPath
 	configuration.DatabaseDNS = testutils.GetSQLiteLocation()
-	return NewOrchestratorFromClientAndConfig(kubeClient, configuration)
+	return NewOrchestratorFromClientsAndConfig(
+		kubeClient,
+		configuration,
+		metrics.NewDAGMetricsClient(kubeClient, true),
+	)
 }
 
 func getTestDAG(orch *Orchestrator) dagtype.DAG {

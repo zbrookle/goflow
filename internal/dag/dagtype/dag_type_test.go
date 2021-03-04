@@ -5,6 +5,7 @@ import (
 	goflowconfig "goflow/internal/config"
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/dag/metrics"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/database"
 	k8sclient "goflow/internal/k8s/client"
@@ -31,6 +32,7 @@ var DAGPATH string
 var TABLECLIENT *dagtable.TableClient
 var SQLCLIENT *database.SQLClient
 var RUNTABLECLIENT *dagruntable.TableClient
+var METRICSCLIENT metrics.DAGMetricsClient
 
 func setUpNamespaces(client kubernetes.Interface) {
 	namespaceClient := client.CoreV1().Namespaces()
@@ -119,9 +121,10 @@ func TestDAGFromJSONBytes(t *testing.T) {
 		timeLock:            &sync.Mutex{},
 	}
 	expectedJSONString := string(expectedDAG.Marshal())
+	kubeClient := fake.NewSimpleClientset()
 	dag, err := createDAGFromJSONBytes(
 		[]byte(formattedJSONString),
-		fake.NewSimpleClientset(),
+		kubeClient,
 		goflowconfig.GoFlowConfig{},
 		make(ScheduleCache),
 		TABLECLIENT,
@@ -239,8 +242,6 @@ func TestAddDagRun(t *testing.T) {
 }
 
 func TestAddDagRunIfReady(t *testing.T) {
-	defer database.PurgeDB(SQLCLIENT)
-	setUpDatabase()
 	actionCases := []struct {
 		actionFunc   func(dag *DAG)
 		expectedRuns int
@@ -257,6 +258,7 @@ func TestAddDagRunIfReady(t *testing.T) {
 
 	for _, action := range actionCases {
 		func() {
+			setUpDatabase()
 			client := getNewTestClient()
 			testDAG := getTestDAGFakeClient(client)
 			testDAG.IsOn = true // Turn on DAG
@@ -271,8 +273,9 @@ func TestAddDagRunIfReady(t *testing.T) {
 				testDAG.ActiveRuns.Dec()
 			}
 			for testDAG.ActiveRuns.Get() != 0 {
-				time.Sleep(1000)
+				time.Sleep(10000)
 			}
 		}()
 	}
+	database.PurgeDB(SQLCLIENT)
 }

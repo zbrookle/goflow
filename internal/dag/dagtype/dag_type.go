@@ -6,6 +6,7 @@ import (
 	goflowconfig "goflow/internal/config"
 	"goflow/internal/dag/activeruns"
 	dagconfig "goflow/internal/dag/config"
+	"goflow/internal/dag/metrics"
 	dagrun "goflow/internal/dag/run"
 	"goflow/internal/jsonpanic"
 	"goflow/internal/k8s/pod/event/holder"
@@ -49,11 +50,6 @@ type DAG struct {
 	IsOn              bool
 	LastUpdated       time.Time
 }
-
-// type DAGMetrics struct {
-// 	Successes int;
-// 	Failures int;
-// }
 
 func readDAGFile(dagFilePath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(dagFilePath)
@@ -173,6 +169,7 @@ func createDAGFromJSONBytes(
 func getDAGFromJSON(
 	dagFilePath string,
 	client kubernetes.Interface,
+	metricsClient *metrics.DAGMetricsClient,
 	goflowConfig goflowconfig.GoFlowConfig,
 	scheduleCache ScheduleCache,
 	tableClient *dagtable.TableClient,
@@ -230,6 +227,7 @@ func getDirSliceRecur(directory string) []string {
 func GetDAGSFromFolder(
 	folder string,
 	client kubernetes.Interface,
+	metricsClient *metrics.DAGMetricsClient,
 	goflowConfig goflowconfig.GoFlowConfig,
 	schedules ScheduleCache,
 	tableClient *dagtable.TableClient,
@@ -242,6 +240,7 @@ func GetDAGSFromFolder(
 			dag, err := getDAGFromJSON(
 				file,
 				client,
+				metricsClient,
 				goflowConfig,
 				schedules,
 				tableClient,
@@ -319,7 +318,6 @@ func (dag *DAG) AddNextDagRunIfReady(holder *holder.ChannelHolder) (ready bool) 
 // TerminateAndDeleteRuns removes all active DAG runs and their associated pods
 func (dag *DAG) TerminateAndDeleteRuns() {
 	for _, run := range dag.DAGRuns {
-		fmt.Println(run.MostRecentPod())
 		run.DeletePod()
 	}
 }
