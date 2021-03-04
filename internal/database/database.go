@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"goflow/internal/logs"
 	"strings"
 
 	sqlite "github.com/mattn/go-sqlite3"
@@ -105,6 +106,11 @@ func (client *SQLClient) Insert(table string, columns []ColumnWithValue) {
 	)
 	err := client.Exec(query)
 	if err != nil {
+		fmt.Println(err.Error())
+		if strings.Contains(err.Error(), "no such table") {
+			logs.ErrorLogger.Println("Insert table", table, "is missing")
+			return
+		}
 		panic(queryErrorMessage(query, err))
 	}
 }
