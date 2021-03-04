@@ -1,4 +1,3 @@
-// import type { DAGProps } from "../typing/dag_types";
 import { Container, Row, Col, Card, Nav } from "react-bootstrap";
 import { OnOffButton } from "../buttons/on_off_button";
 import { Switch, Route, useRouteMatch, useParams } from "react-router-dom";
