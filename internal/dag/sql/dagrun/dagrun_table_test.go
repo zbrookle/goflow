@@ -76,7 +76,6 @@ func TestGetLastNDagRuns(t *testing.T) {
 			const insertedDays = 31
 			expectedRows := insertDaysOfRuns(insertedDays)
 
-			// const expectedRowCount = 5
 			foundRows := tableClient.GetLastNRunsForDagID(testDagRow.ID, expectedRowCount)
 
 			if expectedRowCount == 0 {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"goflow/internal/stringutils"
+	"time"
 )
 
 type depQueryResult struct {
@@ -55,6 +56,21 @@ func getDependentTables(table string, client *SQLClient) []string {
 	return tables
 }
 
+// VerifyTableDrop returns true if the given table has been successfully dropped
+func VerifyTableDrop(tableName string, client *SQLClient) bool {
+	rows, err := client.Query(
+		fmt.Sprintf("SELECT tbl_name FROM sqlite_master WHERE tbl_name = '%s'", tableName),
+	)
+	if err != nil {
+		panic(err)
+	}
+	rowCount := 0
+	for rows.Next() {
+		rowCount++
+	}
+	return rowCount != 0
+}
+
 // PurgeDB removes all tables from the database
 func PurgeDB(client *SQLClient) {
 	tables := client.Tables()
@@ -80,6 +96,9 @@ func PurgeDB(client *SQLClient) {
 						panic(err)
 					}
 					tableSet.Remove(currTable)
+					for VerifyTableDrop(table, client) {
+						time.Sleep(1 * time.Second)
+					}
 				default:
 					stack = append(stack, currTable)
 					stack = append(stack, dependents...)

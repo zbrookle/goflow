@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"net/http"
+
 	httpretry "github.com/hashicorp/go-retryablehttp"
 
 	"github.com/google/go-cmp/cmp"
