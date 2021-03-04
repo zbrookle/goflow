@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/google/go-cmp v0.5.2
 	github.com/gorilla/mux v1.8.0
+	github.com/hashicorp/go-retryablehttp v0.6.8
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/mattn/go-sqlite3 v1.14.5
 	github.com/robfig/cron v1.2.0

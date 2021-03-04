@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"net/http"
+	httpretry "github.com/hashicorp/go-retryablehttp"
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/client-go/kubernetes/fake"
@@ -85,7 +86,7 @@ func getURL(suffix string) string {
 func post(suffix string, content string) *http.Response {
 	url := getURL(suffix)
 	reader := strings.NewReader(content)
-	resp, err := http.Post(url, "json", reader)
+	resp, err := httpretry.Post(url, "json", reader)
 	if err != nil {
 		panic(err)
 	}
@@ -94,7 +95,7 @@ func post(suffix string, content string) *http.Response {
 
 func get(suffix string) *http.Response {
 	url := getURL(suffix)
-	resp, err := http.Get(url)
+	resp, err := httpretry.Get(url)
 	if err != nil {
 		panic(err)
 	}
@@ -103,8 +104,8 @@ func get(suffix string) *http.Response {
 
 func put(suffix string) *http.Response {
 	url := getURL(suffix)
-	client := &http.Client{}
-	request, err := http.NewRequest("PUT", url, strings.NewReader(""))
+	client := httpretry.NewClient()
+	request, err := httpretry.NewRequest("PUT", url, strings.NewReader(""))
 	if err != nil {
 		panic(err)
 	}
