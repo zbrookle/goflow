@@ -1,7 +1,6 @@
 import { DAGConfigProps, getConfigKeys } from "../typing/dag_types";
 import { AppTable } from "../tables/table";
 
-
 export function DAGConfigBody(props: DAGConfigProps) {
   let settingNames = getConfigKeys(props.config);
   let config = props.config;

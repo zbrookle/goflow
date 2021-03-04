@@ -23,3 +23,7 @@ export function fetchDAGObject(dagName: string) {
   });
   return dag;
 }
+
+export function fetchDAGMetrics(dagName: string) {
+  return fetchJSON(`${hostName}/dag/${dagName}/metrics`);
+}

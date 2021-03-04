@@ -7,6 +7,7 @@ import { DAG } from "../typing/dag_types";
 import { useState } from "react";
 import { useComponentWillMount } from "../hooks/component_will_mount";
 import { DAGConfigBody } from "./dag_config";
+import { DAGResourceUsageBody } from "./dag_resources";
 
 function getPath(path: string, name: string) {
   return `${path}/${name}`;
@@ -32,7 +33,7 @@ function CardTab(props: CardTabProps) {
   );
 }
 
-type DagPropName = {
+export type DagPropName = {
   name: string;
 };
 
@@ -47,16 +48,17 @@ function DagInfo() {
   const [currentActiveRun, setCurrentActiveRun] = useState("N/A");
   useComponentWillMount(() => {
     fetchDAG(name).then((restDAG) => {
-      console.log(restDAG)
-      let lastUpdatedDate = new Date(restDAG.LastUpdated)
+      let lastUpdatedDate = new Date(restDAG.LastUpdated);
       let dag = {
         config: restDAG.Config,
         isOn: restDAG.IsOn,
         DAGRuns: restDAG.DAGRuns,
-        lastUpdated: lastUpdatedDate.toLocaleDateString() + " " + lastUpdatedDate.toLocaleTimeString()
+        lastUpdated:
+          lastUpdatedDate.toLocaleDateString() +
+          " " +
+          lastUpdatedDate.toLocaleTimeString(),
       } as DAG;
       setDAG(dag);
-      console.log(dag)
       if (dag.DAGRuns.length !== 0) {
         setCurrentActiveRun(dag.DAGRuns[0].Name);
       }
@@ -115,14 +117,16 @@ function DagInfo() {
                 Run run run!
               </Route>
               <Route path={getPath(defaultPath, "resources")}>
-                mems and cps!
+                <DAGResourceUsageBody />
               </Route>
               <Route path={getPath(defaultPath, "config")}>
                 <DAGConfigBody config={dag.config} />
               </Route>
             </Switch>
           </Card.Body>
-          <Card.Footer className="text-muted">Last Updated: {dag.lastUpdated}</Card.Footer>
+          <Card.Footer className="text-muted">
+            Last Updated: {dag.lastUpdated}
+          </Card.Footer>
         </Card>
       </Row>
     </Container>
