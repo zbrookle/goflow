@@ -258,7 +258,6 @@ func TestAddDagRunIfReady(t *testing.T) {
 
 	for _, action := range actionCases {
 		func() {
-			defer database.PurgeDB(SQLCLIENT)
 			setUpDatabase()
 			client := getNewTestClient()
 			testDAG := getTestDAGFakeClient(client)
@@ -278,4 +277,5 @@ func TestAddDagRunIfReady(t *testing.T) {
 			}
 		}()
 	}
+	database.PurgeDB(SQLCLIENT)
 }

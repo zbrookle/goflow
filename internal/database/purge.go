@@ -45,8 +45,7 @@ func getDependentTables(table string, client *SQLClient) []string {
 						sqlite_master m
 						JOIN pragma_foreign_key_list(m.name) p 
 						ON m.name != p."table"
-					WHERE m.type = 'table' and p."table" = '%s'
-					ORDER BY m.name`,
+					WHERE m.type = 'table' and p."table" = '%s'`,
 			table),
 	)
 	tables := make([]string, 0, len(result.returnedRows))
@@ -73,8 +72,15 @@ func VerifyTableDrop(tableName string, client *SQLClient) bool {
 
 // PurgeDB removes all tables from the database
 func PurgeDB(client *SQLClient) {
+	const dagRun = "dagrun"
 	tables := client.Tables()
+	fmt.Println("Tables Present", tables)
 	tableSet := stringutils.NewStringSet(tables)
+	if tableSet.Contains(dagRun) {
+		fmt.Println("Dropping dagrun first")
+		client.Exec(fmt.Sprintf("DROP TABLE %s", dagRun))
+		tableSet.Remove(dagRun)
+	}
 
 	stack := make([]string, 0, len(tables))
 	for len(tableSet) != 0 {
@@ -89,8 +95,10 @@ func PurgeDB(client *SQLClient) {
 			stack = stack[:n]
 			if tableSet.Contains(currTable) {
 				dependents := getDependentTables(currTable, client)
+				fmt.Println("Dependents of ", currTable, " are ", dependents)
 				switch len(dependents) {
 				case 0:
+					fmt.Println("DROPPING", currTable)
 					_, err := client.database.Exec(fmt.Sprintf("DROP TABLE %s", currTable))
 					if err != nil {
 						panic(err)
