@@ -354,5 +354,9 @@ func (orchestrator *Orchestrator) RetrieveDAGMetrics(
 	dagName string,
 	timeRange ...time.Time,
 ) (MetricRowList, error) {
+	_, ok := orchestrator.dagMap[dagName]
+	if !ok {
+		return nil, fmt.Errorf("Given DAG not present")
+	}
 	return orchestrator.metricsTableClient.GetMetricsForDag(dagName, timeRange...)
 }
