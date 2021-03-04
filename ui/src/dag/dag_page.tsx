@@ -83,7 +83,7 @@ function DagInfo() {
         </Col>
       </Row>
       <Row>
-        <Card>
+        <Card style={{ marginLeft: "5%", width: "90%", marginBottom: 20 }}>
           <Card.Header>
             <Nav
               variant="tabs"
@@ -100,7 +100,7 @@ function DagInfo() {
               <CardTab Path={defaultURL} Ref="config" Label="Configuration" />
             </Nav>
           </Card.Header>
-          <Card.Body>
+          <Card.Body style={{ overflowX: "scroll" }}>
             <Switch>
               <Route path={getPath(defaultPath, "metrics")}>
                 <div>
