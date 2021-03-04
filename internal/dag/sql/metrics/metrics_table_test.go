@@ -54,7 +54,6 @@ func insertMetrics(n int) []Row {
 		insertedRows = append(insertedRows, newRow)
 		sqlClient.Insert(tableName, newRow.columnar())
 	}
-	fmt.Println(insertedRows)
 	return insertedRows
 }
 
@@ -69,8 +68,10 @@ func TestGetMetricsForDAG(t *testing.T) {
 	const insertedDays = 5
 	expectedRows := insertMetrics(insertedDays)
 
-	foundRows := tableClient.GetMetricsForDag(testName, getTime(0), getTime(insertedDays))
-	fmt.Println(foundRows)
+	foundRows, err := tableClient.GetMetricsForDag(testName, getTime(0), getTime(insertedDays))
+	if err != nil {
+		panic(err)
+	}
 
 	length := len(foundRows)
 	if length != insertedDays {

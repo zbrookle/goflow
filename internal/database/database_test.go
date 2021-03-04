@@ -320,6 +320,11 @@ func TestRequireForeignKeys(t *testing.T) {
 		}
 	}()
 	client.CreateTable(table)
+	err := client.Exec(createTableQuery)
+	if err != nil {
+		panic(err)
+	}
+
 	client.Insert(
 		table.Name, []ColumnWithValue{{Column{
 			Name:  refColumn.Name,
