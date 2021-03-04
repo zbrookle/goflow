@@ -242,8 +242,6 @@ func TestAddDagRun(t *testing.T) {
 }
 
 func TestAddDagRunIfReady(t *testing.T) {
-	defer database.PurgeDB(SQLCLIENT)
-	setUpDatabase()
 	actionCases := []struct {
 		actionFunc   func(dag *DAG)
 		expectedRuns int
@@ -260,6 +258,8 @@ func TestAddDagRunIfReady(t *testing.T) {
 
 	for _, action := range actionCases {
 		func() {
+			defer database.PurgeDB(SQLCLIENT)
+			setUpDatabase()
 			client := getNewTestClient()
 			testDAG := getTestDAGFakeClient(client)
 			testDAG.IsOn = true // Turn on DAG
@@ -274,7 +274,7 @@ func TestAddDagRunIfReady(t *testing.T) {
 				testDAG.ActiveRuns.Dec()
 			}
 			for testDAG.ActiveRuns.Get() != 0 {
-				time.Sleep(1000)
+				time.Sleep(10000)
 			}
 		}()
 	}
